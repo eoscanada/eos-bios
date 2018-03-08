@@ -132,12 +132,7 @@ This process would:
 
     * Generates a new keypair, displays it.
 
-    * The operator sets these values along with the boot account (`eosio`) in the BIOS Boot node `config.ini`:
-
-```ini
-producer-name = eosio
-private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]
-```
+    * The operator sets these values along with the boot account (`eosio`) in his node's `config.ini` (`producer-name = eosio` and `private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]`)
 
     * The operator boots the node, which starts producing.
 
