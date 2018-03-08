@@ -22,8 +22,9 @@ producers:
   url: https://example.com
 ```
 
-This repo holds a tentative BIOS program, that strives to streamline
-and automate the process of kickstarting a new EOS network.
+The current repository drafts a tentative BIOS program, that strives
+to streamline and automate the process of kickstarting a new EOS
+network.
 
 It can be installed by downloading Go from https://golang.org/dl and running:
 
@@ -78,13 +79,12 @@ eos-bios --launch-data ./launch.yaml                 \
          --opening-balances-snapshot ./snapshot.csv
 ```
 
-> `--bp-api-address` is the target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.
-> `--bp-p2p-address` is the endpoint which will be published at the end of the process
-> `--eosio-my-account` is what links the `launch.yml` with the current instance of the program.
-> `--eosio-private-key` must correspond to the `eosio_public_key` of the current instance's `producers` stanza in `launch.yaml`.
-> `--eosio-system-code` and `--eosio-system-abi` point to the compiled eosio.system contract
-> `--keybase-key` would point to the PGP key, or Keybase something, to decrypt payloads.
->
+> * `--bp-api-address` is the target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.
+> * `--bp-p2p-address` is the endpoint which will be published at the end of the process
+> * `--eosio-my-account` is what links the `launch.yml` with the current instance of the program.
+> * `--eosio-private-key` must correspond to the `eosio_public_key` of the current instance's `producers` stanza in `launch.yaml`.
+> * `--eosio-system-code` and `--eosio-system-abi` point to the compiled eosio.system contract
+> * `--keybase-key` would point to the PGP key, or Keybase something, to decrypt payloads.
 
 
 This process would:
