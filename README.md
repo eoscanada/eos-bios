@@ -246,18 +246,9 @@ This process would:
 
   * `eos-bios` quits, and says thanks or something.
 
-
-Sabotaging the network
-----------------------
-
-Sabotaging the network means rendering their BP account useless (just
-like the `eosio` account is being rendered useless by replacing the
-permissions with known-to-be-unknown keys, like
-EOS000000000000000000...).
-
-If all ABPs run the BIOS software, they should all sabotage the
-network together, and if you falsely sabotage the network, you lost
-your chance of being a BP !
+  * The rest of the steps in Thomas Cox's would probably be handled a
+    posteri, or by the system contract itself. Some code still needs
+    to be written to clarify it all.
 
 
 
@@ -314,14 +305,18 @@ private_key_used: 123123123123123123123123
 
 
 
-To be fleshed out
------------------
+Sabotaging the network
+----------------------
 
-* Figure our where `genesis.json` fits in.. perhaps in
-  https://github.com/eosioca/eos-bios-launch-data agreed upon by the
-  community.
+Sabotaging the network means rendering their BP account useless (just
+like the `eosio` account is being rendered useless by replacing the
+permissions with known-to-be-unknown keys, like
+EOS000000000000000000...).
 
-  * We could add a check by all ABPs
+If all ABPs run the BIOS software, they should all sabotage the
+network together, and if you falsely sabotage the network, you lost
+your chance of being a BP !
+
 
 
 
@@ -337,3 +332,21 @@ Candidates listed in this repository could be less filtered, and it
 would be up to the communities to agree on a common `launch.yaml`.  It
 is to be expected that strong teams will want to partner with other
 strong teams to build the strongest network.
+
+
+
+
+To be fleshed out
+-----------------
+
+* Figure our where `genesis.json` fits in.. perhaps in
+  https://github.com/eosioca/eos-bios-launch-data agreed upon by the
+  community.
+
+  * We could add a check by all ABPs
+
+* Regarding initial inflation, and BP average:
+
+  * Good chances that inflation is set a posteri, when the
+    constitution kicks in or something, and real Block Producers are
+    voted with stakes.. then an avg can be made on their proposition.
