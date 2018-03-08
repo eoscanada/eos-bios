@@ -134,7 +134,7 @@ This process would:
 
     * The operator sets these values along with the boot account (`eosio`) in the BIOS Boot node `config.ini`:
 
-      ```ini
+```ini
 producer-name = eosio
 private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]
 ```
