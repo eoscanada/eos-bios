@@ -72,7 +72,7 @@ eos-bios --launch-data ./launch.yaml                 \
          --eosio-my-account acctname                 \
          --eosio-private-key ./eospriv.key           \
          --keybase-key ./file.key                    \
-         --bp-api-address 1.2.3.4:8888               \
+         --bp-api-address http://1.2.3.4:8888        \
          --bp-p2p-address 1.2.3.4:9876               \
          --eosio-system-code ./eosio-system.wast     \
          --eosio-system-abi ./eosio-system.abi       \
@@ -99,6 +99,8 @@ This process would:
 
 * Verify there are no duplicates within all these fields from `launch.yaml`:
   `eosio_account_name`, `keybase_user`, `agent_name`, `eosio_public_key`
+
+* Verify there are at least 50 candidates in `producers` list.
 
 * Fetch the Bitcoin block at height
   `launch.yaml:launch_btc_block_height`, take its Merkle Root, massage
@@ -143,16 +145,12 @@ This process would:
         the code for the `eosio` account (both `--eosio-system-code`
         and `--eosio-system-abi`).
 
-      * it also `create account [producer's eosio_account_name] [producer's eosio_public_key] [producer's eosio_public_key]`
+      * it also `create account [producer's eosio_account_name] [producer's eosio_public_key] [producer's eosio_public_key]` for all 21 ABPs (except himself) [NOTE: why not for *all* producers listed in the `launch.yaml` file ?]
 
-      * it signs a transaction to `updateauth` with public key similar
-        to
+      * it signs a transaction to `updateauth` on the account `eosio`
+        he had control over, with a public key similar to
         `EOS0000000000000000000000000000000000000000000000000000000000`,
         rendering the `eosio` account unusable.
-
-      * it can then publish its private key to social media accounts,
-        watched by all the ABPs and those watching the event live on
-        YouTube (hrmm..)
 
       * `eos-bios` will create the _Kickstart data_ file, encrypt it
         for the 21 other ABPs and print it on screen.
@@ -165,14 +163,9 @@ This process would:
         the sole exception that he knows the address of one of the
         nodes, and can watch the other ones connect.
 
-  * While the Boot node boots and does the prior things, the other 21
-    ABPs would now wait on standard input, for the operator to paste
-    the _Kickstart data_ (see below) from the BIOS Boot node.
-
-    * Just before that, `eos-bios` would ask for the private key of
-      the block producer, to be able to sabotage the network if checks
-      are invalid. This key is only kept in memory for as long as the
-      `eos-bios` process lives.
+  * While the Boot node does the steps above, the other 21 ABPs wait
+    on standard input, for the operator to paste the _Kickstart data_
+    (see below) from the BIOS Boot node, somewhere on the interwebs.
 
     * When your launch team discovers that data, it pastes it in
       stdin, and if you're part of the 21 ABPs, you will have the key
@@ -180,7 +173,8 @@ This process would:
       or shelling to `pgp` or something) to decrypt the file and know
       how to continue.
 
-      * This reveals the location of the BIOS Boot node.
+      * This reveals the location of the BIOS Boot node, and the
+        private key used to bootstrap that first node.
 
     * `eos-bios` then does one of:
 
@@ -190,22 +184,33 @@ This process would:
 
       2. If the `eosio::net_api_plugin` isn't enabled, `eos-bios`
          would also print the `config.ini` snippet needed, the
-         operator does it manually and boots is node.
-
-      3. `eos-bios` would then wait for an ENTER keypress to
-         continue.
+         operator does it manually and boots is node, which would
+         connect to the Boot node.
 
     * At this point, the network syncs, shouldn't be too long.
 
-    * The 21 ABPs poll their node until they get the hash of
-      block 1. They used the `private_key_used` in the _Kickstart
-      data_ to re-sign block 1, proving it was the BIOS Boot node.
+    * The 21 ABPs poll their node (through `--bp-api-address`) until
+      they obtain the hash of block 1. They used the
+      `private_key_used` in the _Kickstart data_ to re-sign block 1,
+      proving it was the BIOS Boot node.
 
-      * If it wasn't, yel on social media. Again, good rehearsal
-        should prevent this.
+      * If it wasn't, sabotage the network (see below). A few good
+        rehearsals should prevent this.
+
+    * The 21 verify that all of the 21 that were voted have their
+      account properly set up with the pubkey in the `launch.yaml`
+      file, otherwise they sabotage the network (if they can and
+      they're not the ones that were left out with no account/key)
+
+    * `eos-bios` pushes a signed transactions to `eosio` system
+      contract, with the `regproducer` action (with
+      `--eosio-my-account` and the matching `eosio_public_key` in the
+      matching `producers` definition in `launch.yaml`), effectively
+      registering the producer on the chain.
 
     * When all checks are done `eos-bios` will poll the node and try
-      to discover all the other participants.
+      to discover all the other participants, and display them on
+      screen.
 
   * At this point, BIOS Boot node is back to normal, as one of the 50+
     persons waiting for which nothing has happened (except perhaps
@@ -213,9 +218,7 @@ This process would:
     on standard input for the next stage.
 
   * It is now the job of the 21 ABPs to finish validation, sabotage
-    the network if they find anything odd (if they falsely sabotage
-    the network, they literally kill themselves out of the game of
-    Block Production).
+    the network if they find anything odd.
 
     * The 21 interim BPs verify the integrity of the Opening Balances
       in the new nascent network, against the locally loaded
@@ -233,6 +236,28 @@ This process would:
         null key, making this network unuseable, requiring the teams
         to start over.
 
+  * We come to a point where anyone feeling comfortable can start
+    publishing addresses for the whole world to connect, or publishing
+    the _Kickstart data_ unencrypted.
+
+    * This would allow all the 50+ who were still waiting, to join in
+      using the same logic, albeit with validation disabled (so they
+      wouldn't sabotage their account!)
+
+  * `eos-bios` quits, and says thanks or something.
+
+
+Sabotaging the network
+----------------------
+
+Sabotaging the network means rendering their BP account useless (just
+like the `eosio` account is being rendered useless by replacing the
+permissions with known-to-be-unknown keys, like
+EOS000000000000000000...).
+
+If all ABPs run the BIOS software, they should all sabotage the
+network together, and if you falsely sabotage the network, you lost
+your chance of being a BP !
 
 
 
