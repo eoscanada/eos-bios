@@ -11,6 +11,6 @@ type ProducerData struct {
 	EOSIOPublicKey   string `json:"eosio_public_key"`
 	KeybaseUser      string `json:"keybase_user"`
 	PGPPublicKey     string `json:"pgp_public_key"`
-	UserAgent        string `json:"user_agent"`
+	AgentName        string `json:"agent_name"`
 	URL              string `json:"url"`
 }

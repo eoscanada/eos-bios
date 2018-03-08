@@ -18,11 +18,8 @@ producers:
 - eosio_account_name: acctname
   eosio_public_key: EOSexample
   keybase_user: example
-  user_agent: Example EOS.IO BP
+  agent_name: Example EOS.IO BP
   url: https://example.com
-
-# Insert your candidate here. The order is not important, as it will
-# be shuffled by `eos-bios`.
 ```
 
 This repo holds a tentative BIOS program, that strives to streamline
@@ -101,7 +98,7 @@ This process would:
   verify with the community.
 
 * Verify there are no duplicates within all these fields from `launch.yaml`:
-  `eosio_account_name`, `keybase_user`, `user_agent`, `eosio_public_key`
+  `eosio_account_name`, `keybase_user`, `agent_name`, `eosio_public_key`
 
 * Fetch the Bitcoin block at height
   `launch.yaml:launch_btc_block_height`, take its Merkle Root, massage
