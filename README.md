@@ -33,8 +33,7 @@ It can be installed by downloading Go from https://golang.org/dl and running:
 It will build and install a binary in `~/go/bin/eos-bios`.
 
 We will also publish releases for convenience, but building it
-yourself is recommended (although we are grateful that you trust us to
-build public releases).
+yourself is recommended.
 
 
 ### Preparation
