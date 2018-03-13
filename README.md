@@ -99,6 +99,9 @@ This process would:
 * Verify there are no duplicates within all these fields from `launch.yaml`:
   `eosio_account_name`, `keybase_user`, `agent_name`, `eosio_public_key`
 
+  * That no `eosio_account_name` equal `eosio`, `eosio.auth`,
+    `eosio.system` or a few other names that wouldn't be cool.
+
 * Verify there are at least 50 candidates in `producers` list.
 
 * Fetch the Bitcoin block at height
@@ -129,9 +132,11 @@ This process would:
         the Keybase account listed in `launch.yaml`, to display them
         in case Keybase.io goes down while the launch is running.
 
-  * The BIOS Boot node's `eos-bios` continues:
+  * The **BIOS Boot node**'s `eos-bios` continues:
 
-    * Generates a new keypair, displays it.
+    * Generates a new keypair, displays it. Let's call that one the
+      `ephemeral key` (to contrast with the producer's key passed
+      through `--eosio-secret-key`)
 
     * The operator sets these values along with the boot account (`eosio`) in his node's `config.ini` (`producer-name = eosio` and `private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]`)
 
@@ -144,12 +149,26 @@ This process would:
         the code for the `eosio` account (both `--eosio-system-code`
         and `--eosio-system-abi`).
 
-      * it also `create account [producer's eosio_account_name] [producer's eosio_public_key] [producer's eosio_public_key]` for all 21 ABPs (except himself) [NOTE: why not for *all* producers listed in the `launch.yaml` file ?]
+      * it also `create account [producer's eosio_account_name]
+        [producer's eosio_public_key] [producer's eosio_public_key]`
+        for all producers listed in `launch.yaml`, in order of the
+        shuffle. This is to simplify the takeoff after votes come in.
 
-      * it signs a transaction to `updateauth` on the account `eosio`
-        he had control over, with a public key similar to
+      * it `issue`s all opening balances in `eosio` with the contents
+        of `snapshot.csv` and creates all the corresponding accounts
+        (`newaccount`), and assigned the privkeys.
+
+      * it signs a transaction with the ephemeral key to `updateauth`
+        on the account `eosio` he had control over, with a public key
+        similar to
         `EOS0000000000000000000000000000000000000000000000000000000000`,
         rendering the `eosio` account unusable.
+
+        * PERHAPS we should have something more intrinsic, that would
+          make that key null, either a privileged primitive that skips
+          the `updateauth` checks (that verify the owner key is valid,
+          thresholds are sufficient, etc..), and render the account
+          permanently disabled.
 
       * `eos-bios` will create the _Kickstart data_ file, encrypt it
         for the 21 other ABPs and print it on screen.
@@ -190,8 +209,8 @@ This process would:
 
     * The 21 ABPs poll their node (through `--bp-api-address`) until
       they obtain the hash of block 1. They used the
-      `private_key_used` in the _Kickstart data_ to re-sign block 1,
-      proving it was the BIOS Boot node.
+      `private_key_used` in the _Kickstart data_ to validate the
+      signare on block 1, proving it was from the BIOS Boot node.
 
       * If it wasn't, sabotage the network (see below). A few good
         rehearsals should prevent this.
@@ -201,8 +220,17 @@ This process would:
       file, otherwise they sabotage the network (if they can and
       they're not the ones that were left out with no account/key)
 
-    * `eos-bios` pushes a signed transactions to `eosio` system
-      contract, with the `regproducer` action (with
+    * The 21 interim BPs verify the integrity of the Opening Balances
+      in the new nascent network, against the locally loaded
+      `snapshot.csv`.
+
+      * `eos-bios` takes a snapshot of `eosio`'s `currency` table and
+        compares it locally with `snapshot.csv`.
+
+      * Any failure in verifications would initiate a sabotage.
+
+    * The `eos-bios` program pushes a signed transactions to `eosio`
+      system contract, with the `regproducer` action (with
       `--eosio-my-account` and the matching `eosio_public_key` in the
       matching `producers` definition in `launch.yaml`), effectively
       registering the producer on the chain.
@@ -215,25 +243,6 @@ This process would:
     persons waiting for which nothing has happened (except perhaps
     seeing who were the ABPs and the BIOS Boot node). They're waiting
     on standard input for the next stage.
-
-  * It is now the job of the 21 ABPs to finish validation, sabotage
-    the network if they find anything odd.
-
-    * The 21 interim BPs verify the integrity of the Opening Balances
-      in the new nascent network, against the locally loaded
-      `snapshot.csv`.
-
-      * They could query their own node for a few seconds, taking a
-        sample of accounts and failing if anything is missing or
-        faulty.
-
-      * They could take a full dump of the currency table and compare
-        it with the local `snapshot.csv`.
-
-      * Any failure in verifications would initiate a sabotage: like
-        the BIOS Boot node did, overwrite their permissions with a
-        null key, making this network unuseable, requiring the teams
-        to start over.
 
   * We come to a point where anyone feeling comfortable can start
     publishing addresses for the whole world to connect, or publishing

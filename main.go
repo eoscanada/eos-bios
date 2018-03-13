@@ -16,9 +16,22 @@ var eosioSystemCodePath = flag.String("eosio-system-code", "./eosio-system.wast"
 var eosioSystemABIPath = flag.String("eosio-system-abi", "./eosio-system.abi", "Path to an eosio.system .abi file")
 var openingBalancesSnapshotPath = flag.String("opening-balances-snapshot", "./snapshot.csv", "Path to a fresh snapshot of the ERC-20 Crowdsale token")
 var keybaseKeyPath = flag.String("keybase-key", "", "Path to a PGP key, or keybase thing.. TBD")
+var launchData = flag.String("launch-data", "launch.yaml", "Path to the launch.yaml file")
 
 func main() {
 	flag.Parse()
+
+	config, err := loadLaunchFile(*launchData, *openingBalancesSnapshotPath, *eosioSystemCodePath, *eosioSystemABIPath)
+	if err != nil {
+		log.Fatalln("launch data error:", err)
+	}
+
+	_ = config.LaunchBitcoinBlockHeight
+	// Implement the Bitcoin block fetcher, and merkle root checker..
+	//    Implement 3 sources, connect to BTC node, use one of the block explorers, check their APIs.
+	// Seed `rand.Seed`
+
+	//
 
 	api := eosapi.New(*producerAPIAddress)
 	info, err := api.GetInfo()
