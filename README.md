@@ -60,6 +60,8 @@ yourself is recommended.
 * Established DDoS-proof communication channels to send info between
   ABPs. (See below)
 
+* Sync your system clock with the rest of the world (run `ntpdate`).
+
 
 ### Go-Live
 
@@ -138,29 +140,49 @@ This process would:
       `ephemeral key` (to contrast with the producer's key passed
       through `--eosio-secret-key`)
 
-    * The operator sets these values along with the boot account (`eosio`) in his node's `config.ini` (`producer-name = eosio` and `private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]`)
+    * Generates a `genesis.json` file, which includes:
+
+      * `initial_key`, set to the generated _ephemeral key_.  This is
+        the key used to sign the first transactions and setup the
+        chain (see `chain_initializer::get_chain_start_producers`).
+
+      * `initial_timestamp` will be reset to the time of the BTC
+        block, or `now()`.
+
+      * `initial_chain_id` will be set to [insert something not dumb]
+        (encoded title of a news article of the day?! :)
+
+    * The operator sets these values in his node's `config.ini` (`producer-name = eosio` and `private-key = ["EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"]`)
 
     * The operator boots the node, which starts producing.
 
-    * `eos-bios` is now capable of injecting the system contracts, setup the initial producers (unrewarded ABPs):
+    * `eos-bios` is now capable of injecting the system contracts,
+      setup the initial producers (unrewarded ABPs). Any transaction
+      herein is signed with the `ephemeral key` generated on boot, and
+      passed as `initial_key` in the `genesis.json`:
 
-      * `eos-bios` uses the `--bp-api-address` to submit a signed
-        `setcode` transaction (it has the generated keys), to inject
-        the code for the `eosio` account (both `--eosio-system-code`
-        and `--eosio-system-abi`).
+      * `eos-bios` uses the `--bp-api-address` to submit a `setcode`
+        transaction to inject the code for the `eosio` account (with
+        both `--eosio-system-code` and `--eosio-system-abi`).
 
       * it also `create account [producer's eosio_account_name]
         [producer's eosio_public_key] [producer's eosio_public_key]`
-        for all producers listed in `launch.yaml`, in order of the
+        for **all producers** listed in `launch.yaml`, in order of the
         shuffle. This is to simplify the takeoff after votes come in.
 
       * it `issue`s all opening balances in `eosio` with the contents
         of `snapshot.csv` and creates all the corresponding accounts
-        (`newaccount`), and assigned the privkeys.
+        and assigns the pubkeys.  These actions can be batched in a
+        few transactions hopefully, maxed at
+        `chain_config.max_block_size` (currently 1024*1024 bytes)
+        minus some overhead.
 
-      * it signs a transaction with the ephemeral key to `updateauth`
-        on the account `eosio` he had control over, with a public key
-        similar to
+        * TODO: We need to figure out how the Ethereum addresses come
+          into play.  For those who haven't registered/claimed, that's
+          sort of the last call!
+
+      * is pushes an `updateauth` on the account `eosio` he had
+        control over, with a public key similar to
         `EOS0000000000000000000000000000000000000000000000000000000000`,
         rendering the `eosio` account unusable.
 
@@ -170,7 +192,7 @@ This process would:
           thresholds are sufficient, etc..), and render the account
           permanently disabled.
 
-      * `eos-bios` will create the _Kickstart data_ file, encrypt it
+      * `eos-bios` will then create the _Kickstart data_ file, encrypt it
         for the 21 other ABPs and print it on screen.
 
       * The operator will publish that content on its social media
