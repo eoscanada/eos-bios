@@ -75,7 +75,7 @@ eos-bios --launch-data ./launch.yaml                 \
          --keybase-key ./file.key                    \
          --bp-api-address http://1.2.3.4:8888        \
          --bp-p2p-address 1.2.3.4:9876               \
-         --eosio-system-code ./eosio-system.wast     \
+         --eosio-system-code ./eosio-system.wasm     \
          --eosio-system-abi ./eosio-system.abi       \
          --opening-balances-snapshot ./snapshot.csv
 ```
