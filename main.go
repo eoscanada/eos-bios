@@ -9,34 +9,47 @@ import (
 	"github.com/eosioca/eosapi"
 )
 
-var producerAPIAddress = flag.String("bp-api-address", "", "Target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.")
-var producerP2PAddress = flag.String("bp-p2p-address", "", "Endpoint which will be published at the end of the process. Needs to be externally routable.")
-var eosioMyAccount = flag.String("eosio-my-account", "", "Endpoint which will be published at the end of the process. Needs to be externally routable.")
-var eosioSystemCodePath = flag.String("eosio-system-code", "./eosio-system.wasm", "Path to a compiled eosio.system contract .wasm file")
-var eosioSystemABIPath = flag.String("eosio-system-abi", "./eosio-system.abi", "Path to an eosio.system .abi file")
-var openingBalancesSnapshotPath = flag.String("opening-balances-snapshot", "./snapshot.csv", "Path to a fresh snapshot of the ERC-20 Crowdsale token")
-var keybaseKeyPath = flag.String("keybase-key", "", "Path to a PGP key, or keybase thing.. TBD")
-var launchData = flag.String("launch-data", "launch.yaml", "Path to the launch.yaml file")
+var localConfig = flag.String("local-config", "", "Local .yaml configuration file.")
+var launchData = flag.String("launch-data", "launch.yaml", "Path to a launch.yaml file, your community-agreed ignition configuration.")
 
 func main() {
 	flag.Parse()
 
-	config, err := loadLaunchFile(*launchData, *openingBalancesSnapshotPath, *eosioSystemCodePath, *eosioSystemABIPath)
+	config, err := LoadLocalConfig(*localConfig)
+	if err != nil {
+		log.Fatalln("local config load error:", err)
+	}
+
+	launch, err := loadLaunchFile(*launchData, config)
 	if err != nil {
 		log.Fatalln("launch data error:", err)
 	}
 
-	_ = config.LaunchBitcoinBlockHeight
+	_ = launch.LaunchBitcoinBlockHeight
 	// Implement the Bitcoin block fetcher, and merkle root checker..
 	//    Implement 3 sources, connect to BTC node, use one of the block explorers, check their APIs.
 	// Seed `rand.Seed`
 
 	//
+	chainID := "0000000000000000000000000000000000000000000000000000000000000000"
 
-	api := eosapi.New(*producerAPIAddress)
+	// chainID will become the HASH of the Constitution, we could start with a sample constitution and hash it ? waddayouthink ?
+	api, err := eosapi.New(config.Producer.APIAddress, chainID)
+	if err != nil {
+		log.Fatalln("producer node error:", err)
+	}
+
+	wallet, err := eosapi.New(config.Producer.WalletAddress, chainID)
+	if err != nil {
+		log.Fatalln("wallet api:", err)
+	}
+
+	api.SetSigner(eosapi.NewWalletSigner(wallet))
+
+	// Checking producer node
 	info, err := api.GetInfo()
 	if err != nil {
-		log.Fatalf("Local node not accessible: %s", err)
+		log.Fatalf("Producer node not accessible: %s", err)
 	}
 
 	log.Println("Server version:", info.ServerVersion)
@@ -44,6 +57,14 @@ func main() {
 		log.Fatalf("Your node is at block %d, aren't we booting a new network?", info.HeadBlockNum)
 		os.Exit(1)
 	}
+
+	// Checking wallet node
+	info, err = wallet.GetInfo()
+	if err != nil {
+		log.Fatalf("Wallet node not accessible: %s", err)
+	}
+
+	// Start the process
 
 	fmt.Println("More things to come...")
 }
