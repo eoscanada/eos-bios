@@ -41,3 +41,7 @@ func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 	}
 	return false
 }
+
+func (b *BIOS) AmIAppointedBlockProducer() bool {
+	return b.IsAppointedBlockProducer(b.Config.Producer.MyAccount)
+}

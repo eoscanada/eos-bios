@@ -34,7 +34,7 @@ func testBIOS(t *testing.T, launchyaml string, config string) *BIOS {
 
 	b.Config.NoShuffle = true
 
-	b.ShuffleProducers([]byte{})
+	require.NoError(t, b.ShuffleProducers([]byte{}))
 
 	return b
 }
