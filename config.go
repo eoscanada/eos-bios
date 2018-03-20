@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
+
+	"text/template"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -43,23 +46,33 @@ type Config struct {
 
 	NoShuffle bool `json:"disable_shuffling" yaml:"disable_shuffling"`
 
-	// WebHooks are called at different stages in the process, for
+	// Hooks are called at different stages in the process, for
 	// remote systems to be notified and act.  They are simply `http`
 	// endpoints to which a POST will be sent with pre-defined structs
-	// as JSON.  See `webhooks.go`
-	Webhooks struct {
-		Init                      WebhookConfig `json:"init"`
-		ConfigReady               WebhookConfig `json:"config_ready"`
-		PublishKickstartEncrypted WebhookConfig `json:"publish_kickstart_encrypted"`
-		PublishKickstartPublic    WebhookConfig `json:"publish_kickstart_public"`
-		ConnectToBIOS             WebhookConfig `json:"connect_to_bios"`
-	} `json:"webhooks"`
+	// as JSON.  See `hooks.go`
+	Hooks struct {
+		Init                      HookConfig `json:"init"`
+		ConfigReady               HookConfig `json:"config_ready"`
+		PublishKickstartEncrypted HookConfig `json:"publish_kickstart_encrypted"`
+		PublishKickstartPublic    HookConfig `json:"publish_kickstart_public"`
+		ConnectToBIOS             HookConfig `json:"connect_to_bios"`
+	} `json:"hooks"` // TODO: transform this in a map ? or keep it for simplicity ?
 }
 
-type WebhookConfig struct {
-	URL         string `json:"url"`
-	Exec        string `json:"exec"`
-	TweetAPIKey string `json:"tweet_api_key"` // for example, we could have those things support tweets !
+type HookConfig struct {
+	URL          string `json:"url"`
+	Exec         string `json:"exec"`
+	execTemplate *template.Template
+	TweetAPIKey  string `json:"tweet_api_key"` // for example, we could have those things support tweets !
+}
+
+func (c HookConfig) parseTemplate() (*template.Template, error) {
+	if c.Exec == "" {
+		return nil, nil
+	}
+
+	tpl, err := template.New("exec").Parse(c.Exec)
+	return tpl, err
 }
 
 func LoadLocalConfig(localConfigPath string) (*Config, error) {
@@ -75,6 +88,17 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 
 	// TODO: do more checks on configuration...
 	// TODO: test all Webhook URLs if defined
+	// TODO: test all Hooks's Exec templates, and compile them right away..
+	h := c.Hooks
+	for name, hconf := range map[string]HookConfig{
+		"init":         h.Init,
+		"config_ready": h.ConfigReady,
+	} {
+		_, err := hconf.parseTemplate()
+		if err != nil {
+			return fmt.Printf(`parsing "exec" template for hook %q: %s`, name, err)
+		}
+	}
 
 	return c, nil
 }

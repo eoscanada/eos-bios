@@ -6,61 +6,109 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
+
+	shellwords "github.com/mattn/go-shellwords"
 )
 
-type WebhookInit struct{}
+type HookInit struct{}
 
-type WebhookConfigReady struct{}
+type HookConfigReady struct{}
 
-type WebhookPublishKickstartEncrypted struct {
+type HookPublishKickstartEncrypted struct {
 	Data []byte
 }
 
-type WebhookConnectToBIOS struct {
+type HookConnectToBIOS struct {
 	P2PAddress     string `json:"p2p_address"`
 	PrivateKeyUsed string `json:"private_key_used"`
 }
 
-type WebhookPublishKickstartPublic struct {
+type HookPublishKickstartPublic struct {
 	P2PAddress     string `json:"p2p_address"`
 	PrivateKeyUsed string `json:"private_key_used"`
 }
 
 func (b *BIOS) DispatchInit() error {
-	conf := b.Config.Webhooks.Init
-	return webhookCall(conf.URL, &WebhookInit{})
+	conf := b.Config.Hooks.Init
+	return b.dispatch(conf, &HookInit{})
 }
 
 func (b *BIOS) DispatchConfigReady() error {
-	conf := b.Config.Webhooks.ConfigReady
-	return webhookCall(conf.URL, &WebhookConfigReady{})
+	conf := b.Config.Hooks.ConfigReady
+	return b.dispatch(conf, &HookConfigReady{})
 }
 
 func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {
-	conf := b.Config.Webhooks.PublishKickstartEncrypted
-	return webhookCall(conf.URL, &WebhookPublishKickstartEncrypted{
+	conf := b.Config.Hooks.PublishKickstartEncrypted
+	return b.dispatch(conf, &HookPublishKickstartEncrypted{
 		Data: kickstartData,
 	})
 }
 
 func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string) error {
-	conf := b.Config.Webhooks.ConnectToBIOS
-	return webhookCall(conf.URL, &WebhookConnectToBIOS{
+	conf := b.Config.Hooks.ConnectToBIOS
+	return b.dispatch(conf, &HookConnectToBIOS{
 		P2PAddress:     p2pAddress,
 		PrivateKeyUsed: privateKeyUsed,
 	})
 }
 
 func (b *BIOS) DispatchPublishKickstartPublic(p2pAddress, privateKeyUsed string) error {
-	conf := b.Config.Webhooks.PublishKickstartPublic
-	return webhookCall(conf.URL, &WebhookPublishKickstartPublic{
+	conf := b.Config.Hooks.PublishKickstartPublic
+	return b.dispatch(conf, &HookPublishKickstartPublic{
 		P2PAddress:     p2pAddress,
 		PrivateKeyUsed: privateKeyUsed,
 	})
 }
 
-func webhookCall(endpoint string, data interface{}) error {
-	if endpoint == "" {
+// dispatch to both `exec` calls, and remote web hooks.
+func (b *BIOS) dispatch(conf HookConfig, data interface{}) error {
+	if err := b.execCall(conf, data); err != nil {
+		return err
+	}
+
+	if err := b.webhookCall(conf, data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *BIOS) execCall(conf HookConfig, data interface{}) error {
+	execTpl, err := conf.parseTemplate()
+	if err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+	if err := execTpl.Execute(&buf, data); err != nil {
+		return err
+	}
+
+	p := shellwords.NewParser()
+	p.ParseEnv = true
+	args, err := p.Parse(buf.String())
+	if err != nil {
+		return err
+	}
+
+	var cmd *exec.Cmd
+	if len(args) > 1 {
+		cmd = exec.Command(args[0], args[1:]...)
+	} else {
+		cmd = exec.Command(args[0])
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	// cmd.Stdin = os.Stdin
+	cmd.Env = os.Environ()
+	return cmd.Start()
+}
+
+func (b *BIOS) webhookCall(conf HookConfig, data interface{}) error {
+	if conf.URL == "" {
 		return nil
 	}
 
@@ -69,7 +117,7 @@ func webhookCall(endpoint string, data interface{}) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", endpoint, jsonBody)
+	req, err := http.NewRequest("POST", conf.URL, jsonBody)
 	if err != nil {
 		return fmt.Errorf("NewRequest: %s", err)
 	}

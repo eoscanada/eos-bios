@@ -386,8 +386,8 @@ To be fleshed out
     voted with stakes.. then an avg can be made on their proposition.
 
 
-Webhooks
---------
+Hooks
+-----
 
 To ensure a speedy ignition, we've designed a *super simple* remote
 control protocol, and provided a binary for you to hook in.  It's
@@ -400,3 +400,11 @@ can it react to the different steps in the booting process, for ex:
 * reset the storage upon boot
 * write some `config.ini` bits and restart your node
 * update a `genesis.json` file remotely, and kickstart the node
+
+See `hooks.go`
+
+WARNING: you are on the hook (ha ha) to do any input validation. If a
+rogue BP writes an exploit to the `Kickstart data`, it could execute
+things on your infrastructure if you haven't checked your things.
+`eos-bios` will validate as much as possible its inputs, but be
+mindful on your end.

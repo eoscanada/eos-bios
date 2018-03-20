@@ -82,6 +82,7 @@ func (b *BIOS) RunABPStage1() error {
 	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
 	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
 	// Decrypt the Kickstart data
+	//   Do extensive validation on the input (tight regexp for address, for private key?)
 	// Call `api.NetConnect()` on the `p2p_address` therein.
 	// Dispatch Webhook ConnectToBIOS
 	//   Display `config.ini` snippets to inject and wait on keypress.
@@ -99,6 +100,7 @@ func (b *BIOS) WaitStage1End() error {
 	// Wait on stdin
 	//   Input should be simply the p2p endpoint of any node that initialized
 	// It'll be an armored GPG-signed (base64) blob containing each producer's `Kickstart Data`, relaying the original `PrivateKeyUsed`, but with their own `p2p_address`
+	//   Again, do extensive validation on the input, anything reaching webhooks.
 	// Dispatch webhook ConnectToBIOS, relaying the `PrivateKeyUsed` discovered by the ABPs
 	// We can then run the same verifications, without sabotage being enabled or risked.
 	// At this point, our node is sync'd with the network
