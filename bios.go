@@ -1,15 +1,23 @@
 package main
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/eosioca/eosapi"
+	"github.com/eosioca/eosapi/ecc"
 )
 
 type BIOS struct {
-	LaunchData        *LaunchData
-	Config            *Config
-	API               *eosapi.EOSAPI
+	LaunchData   *LaunchData
+	Config       *Config
+	API          *eosapi.EOSAPI
+	ShuffleBlock struct {
+		Time       time.Time
+		MerkleRoot []byte
+	}
 	ShuffledProducers []*ProducerDef
 }
 
@@ -60,8 +68,22 @@ func (b *BIOS) AnnounceAppointedBlockProducers() {
 }
 
 func (b *BIOS) RunBootNodeStage1() error {
-	// Generate keypair
-	// Generate genesis.json
+	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
+	if err != nil {
+		return err
+	}
+
+	genesisData, err := b.GenerateGenesisJSON(ephemeralPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	log.Println("This is your genesis data:", string(genesisData))
+	log.Println("We will trigger the `ConfigReady` hook")
+
+	if err := b.DispatchConfigReady(genesisData, ephemeralPrivateKey.PublicKey().String(), ephemeralPrivateKey.String()); err != nil {
+		return err
+	}
 	// Produce a config.ini
 	// Call webhook ConfigReady
 	//   If no such webhook, wait for ENTER keypress after printing the config material.
@@ -79,6 +101,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 }
 
 func (b *BIOS) RunABPStage1() error {
+	log.Println("Waiting on kickstart data from the BIOS Node. Check their social presence!")
+
 	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
 	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
 	// Decrypt the Kickstart data
@@ -97,6 +121,7 @@ func (b *BIOS) RunABPStage1() error {
 }
 
 func (b *BIOS) WaitStage1End() error {
+	log.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
 	// Wait on stdin
 	//   Input should be simply the p2p endpoint of any node that initialized
 	// It'll be an armored GPG-signed (base64) blob containing each producer's `Kickstart Data`, relaying the original `PrivateKeyUsed`, but with their own `p2p_address`
@@ -108,15 +133,32 @@ func (b *BIOS) WaitStage1End() error {
 	return nil
 }
 
+func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
+	return ecc.NewRandomPrivateKey()
+}
+
+func (b *BIOS) GenerateGenesisJSON(privKey *ecc.PrivateKey) ([]byte, error) {
+	cnt, err := json.Marshal(&GenesisJSON{
+		InitialTimestamp: b.ShuffleBlock.Time.UTC().Format("2006-01-02T15:04:05"),
+		InitialKey:       privKey.PublicKey().String(),
+		InitialChainID:   hex.EncodeToString(b.API.ChainID),
+	})
+	return cnt, err
+}
+
 /// Setup
 
-func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte) error {
+func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error {
 	// we'll shuffle later :)
 	if b.Config.NoShuffle {
 		b.ShuffledProducers = b.LaunchData.Producers
+		b.ShuffleBlock.Time = time.Now().UTC()
+		b.ShuffleBlock.MerkleRoot = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	} else {
 		// FIXME: put an algorithm here..
 		b.ShuffledProducers = b.LaunchData.Producers
+		b.ShuffleBlock.Time = blockTime
+		b.ShuffleBlock.MerkleRoot = btcMerkleRoot
 	}
 	return nil
 }

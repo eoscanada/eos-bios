@@ -14,7 +14,11 @@ import (
 
 type HookInit struct{}
 
-type HookConfigReady struct{}
+type HookConfigReady struct {
+	GenesisData []byte
+	PublicKey   string
+	PrivateKey  string
+}
 
 type HookPublishKickstartEncrypted struct {
 	Data []byte
@@ -35,9 +39,13 @@ func (b *BIOS) DispatchInit() error {
 	return b.dispatch(conf, &HookInit{})
 }
 
-func (b *BIOS) DispatchConfigReady() error {
+func (b *BIOS) DispatchConfigReady(genesisData []byte, publicKey string, privateKey string) error {
 	conf := b.Config.Hooks.ConfigReady
-	return b.dispatch(conf, &HookConfigReady{})
+	return b.dispatch(conf, &HookConfigReady{
+		GenesisData: genesisData,
+		PublicKey:   publicKey,
+		PrivateKey:  privateKey,
+	})
 }
 
 func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {

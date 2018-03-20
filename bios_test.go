@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func testBIOS(t *testing.T, launchyaml string, config string) *BIOS {
 
 	b.Config.NoShuffle = true
 
-	require.NoError(t, b.ShuffleProducers([]byte{}))
+	require.NoError(t, b.ShuffleProducers([]byte{}, time.Date(2006, time.January, 1, 0, 0, 0, 0, time.UTC)))
 
 	return b
 }

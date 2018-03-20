@@ -96,7 +96,7 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 	} {
 		_, err := hconf.parseTemplate()
 		if err != nil {
-			return fmt.Printf(`parsing "exec" template for hook %q: %s`, name, err)
+			return nil, fmt.Errorf(`parsing "exec" template for hook %q: %s`, name, err)
 		}
 	}
 

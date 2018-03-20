@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"github.com/eosioca/eosapi"
 )
@@ -65,7 +66,9 @@ func main() {
 
 	// Start the process
 	bios := NewBIOS(launch, config, api)
-	bios.ShuffleProducers([]byte{})
+
+	// FIXME: replcae by the BTC data.
+	bios.ShuffleProducers([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, time.Now().UTC())
 	if err := bios.Run(); err != nil {
 		log.Fatalf("error running bios: %s", err)
 	}
