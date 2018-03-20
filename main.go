@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -65,6 +64,11 @@ func main() {
 	}
 
 	// Start the process
+	bios := NewBIOS(launch, config, api)
+	bios.ShuffleProducers([]byte{})
+	if err := bios.Run(); err != nil {
+		log.Fatalf("error running bios: %s", err)
+	}
 
-	fmt.Println("More things to come...")
+	log.Println("Done")
 }

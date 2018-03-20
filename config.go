@@ -42,6 +42,24 @@ type Config struct {
 	} `json:"pgp" yaml:"pgp"`
 
 	NoShuffle bool `json:"disable_shuffling" yaml:"disable_shuffling"`
+
+	// WebHooks are called at different stages in the process, for
+	// remote systems to be notified and act.  They are simply `http`
+	// endpoints to which a POST will be sent with pre-defined structs
+	// as JSON.  See `webhooks.go`
+	Webhooks struct {
+		Init                      WebhookConfig `json:"init"`
+		ConfigReady               WebhookConfig `json:"config_ready"`
+		PublishKickstartEncrypted WebhookConfig `json:"publish_kickstart_encrypted"`
+		PublishKickstartPublic    WebhookConfig `json:"publish_kickstart_public"`
+		ConnectToBIOS             WebhookConfig `json:"connect_to_bios"`
+	} `json:"webhooks"`
+}
+
+type WebhookConfig struct {
+	URL         string `json:"url"`
+	Exec        string `json:"exec"`
+	TweetAPIKey string `json:"tweet_api_key"` // for example, we could have those things support tweets !
 }
 
 func LoadLocalConfig(localConfigPath string) (*Config, error) {
@@ -56,6 +74,7 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 	}
 
 	// TODO: do more checks on configuration...
+	// TODO: test all Webhook URLs if defined
 
 	return c, nil
 }

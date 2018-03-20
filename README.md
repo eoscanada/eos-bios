@@ -331,8 +331,12 @@ Sample contents:
 ```
 bios_boot_node: 1.2.3.4:9876
 private_key_used: 123123123123123123123123
+bitcoin_merkle_root: abcdef123123
 ```
 
+The `bitcoin_merkle_root` would correspond to the height agreed upon
+in `launch.yaml`, so that everyone can check this was created after
+Bitcoin's block, and cannot be replayed.
 
 
 Sabotaging the network
@@ -380,3 +384,19 @@ To be fleshed out
   * Good chances that inflation is set a posteri, when the
     constitution kicks in or something, and real Block Producers are
     voted with stakes.. then an avg can be made on their proposition.
+
+
+Webhooks
+--------
+
+To ensure a speedy ignition, we've designed a *super simple* remote
+control protocol, and provided a binary for you to hook in.  It's
+totally optional but can help you speed up the deployment.
+
+By running `eos-bios-rc` near your node and securely port-forwarding
+(using `ssh -L`, `kubectl port-forward` or other VPN solution), you
+can it react to the different steps in the booting process, for ex:
+
+* reset the storage upon boot
+* write some `config.ini` bits and restart your node
+* update a `genesis.json` file remotely, and kickstart the node

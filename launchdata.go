@@ -11,18 +11,22 @@ import (
 )
 
 type LaunchData struct {
-	LaunchBitcoinBlockHeight    int             `json:"launch_btc_block_height" yaml:"launch_btc_block_height"`
-	OpeningBalancesSnapshotHash string          `json:"opening_balances_snapshot_hash" yaml:"opening_balances_snapshot_hash"`
-	SystemContractHash          string          `json:"system_contract_hash" yaml:"system_contract_hash"`
-	Producers                   []*ProducerData `json:"producers" yaml:"producers"`
+	LaunchBitcoinBlockHeight    int            `json:"launch_btc_block_height" yaml:"launch_btc_block_height"`
+	OpeningBalancesSnapshotHash string         `json:"opening_balances_snapshot_hash" yaml:"opening_balances_snapshot_hash"`
+	SystemContractHash          string         `json:"system_contract_hash" yaml:"system_contract_hash"`
+	Producers                   []*ProducerDef `json:"producers" yaml:"producers"`
 }
-type ProducerData struct {
+type ProducerDef struct {
 	EOSIOAccountName string `json:"eosio_account_name" yaml:"eosio_account_name"`
 	EOSIOPublicKey   string `json:"eosio_public_key" yaml:"eosio_public_key"`
 	KeybaseUser      string `json:"keybase_user" yaml:"keybase_user"`
 	PGPPublicKey     string `json:"pgp_public_key" yaml:"pgp_public_key"`
 	AgentName        string `json:"agent_name" yaml:"agent_name"`
 	URL              string `json:"url" yaml:"url"`
+}
+
+func (p *ProducerDef) String() string {
+	return fmt.Sprintf("Account: % 32s  Keybase: https://keybase.io/%s     Agent: %q          URL: %s\n", p.EOSIOAccountName, p.KeybaseUser, p.AgentName, p.URL)
 }
 
 // snapshotPath, codePath, abiPath string
