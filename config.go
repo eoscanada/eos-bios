@@ -50,13 +50,7 @@ type Config struct {
 	// remote systems to be notified and act.  They are simply `http`
 	// endpoints to which a POST will be sent with pre-defined structs
 	// as JSON.  See `hooks.go`
-	Hooks struct {
-		Init                      HookConfig `json:"init"`
-		ConfigReady               HookConfig `json:"config_ready"`
-		PublishKickstartEncrypted HookConfig `json:"publish_kickstart_encrypted"`
-		PublishKickstartPublic    HookConfig `json:"publish_kickstart_public"`
-		ConnectToBIOS             HookConfig `json:"connect_to_bios"`
-	} `json:"hooks"` // TODO: transform this in a map ? or keep it for simplicity ?
+	Hooks map[string]*HookConfig `json:"connect_to_bios"`
 }
 
 type HookConfig struct {
@@ -90,14 +84,26 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 	// TODO: test all Webhook URLs if defined
 	// TODO: test all Hooks's Exec templates, and compile them right away..
 	h := c.Hooks
-	for name, hconf := range map[string]HookConfig{
-		"init":         h.Init,
-		"config_ready": h.ConfigReady,
-	} {
-		_, err := hconf.parseTemplate()
-		if err != nil {
-			return nil, fmt.Errorf(`parsing "exec" template for hook %q: %s`, name, err)
+	fmt.Println("Hooks runtime config (see `hooks.go`):")
+	for _, hook := range configuredHooks {
+		hconf := h[hook.Key]
+		if hconf == nil {
+			fmt.Printf("Hook %q NOT configured\n", hook.Key)
 		}
+
+		if hconf.Exec != "" {
+			fmt.Printf("Hook %q configured to EXEC\n", hook.Key)
+		}
+		if hconf.URL != "" {
+			fmt.Printf("Hook %q configured to POST via HTTP\n", hook.Key)
+		}
+
+		tpl, err := hconf.parseTemplate()
+		if err != nil {
+			return nil, fmt.Errorf(`Hook %q parsing FAILED: invalid "exec" template: %s`, hook.Key, err)
+		}
+
+		hconf.execTemplate = tpl
 	}
 
 	return c, nil

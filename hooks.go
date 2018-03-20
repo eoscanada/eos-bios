@@ -12,12 +12,24 @@ import (
 	shellwords "github.com/mattn/go-shellwords"
 )
 
+var configuredHooks = []HookDef{
+	HookDef{"init", "Dispatch when we start the program."},
+	HookDef{"config_ready", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
+	HookDef{"publish_kickstart_encrypted", "Dispatched with the contents of the encrypted Kickstart data, to be published to your social / web properties."},
+	HookDef{"connect_to_bios", "Dispatched by ABPs with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to the BIOS Node's p2p address."},
+}
+
+type HookDef struct {
+	Key  string
+	Desc string
+}
+
 type HookInit struct{}
 
 type HookConfigReady struct {
-	GenesisData []byte
-	PublicKey   string
-	PrivateKey  string
+	GenesisJSON string `json:"genesis_json"`
+	PublicKey   string `json:"public_key"`
+	PrivateKey  string `json:"private_key"`
 }
 
 type HookPublishKickstartEncrypted struct {
@@ -35,44 +47,36 @@ type HookPublishKickstartPublic struct {
 }
 
 func (b *BIOS) DispatchInit() error {
-	conf := b.Config.Hooks.Init
-	return b.dispatch(conf, &HookInit{})
+	return b.dispatch(b.Config.Hooks["init"], &HookInit{})
 }
 
-func (b *BIOS) DispatchConfigReady(genesisData []byte, publicKey string, privateKey string) error {
-	conf := b.Config.Hooks.ConfigReady
-	return b.dispatch(conf, &HookConfigReady{
-		GenesisData: genesisData,
+func (b *BIOS) DispatchConfigReady(genesisJSON string, publicKey string, privateKey string) error {
+	return b.dispatch(b.Config.Hooks["config_ready"], &HookConfigReady{
+		GenesisJSON: genesisJSON,
 		PublicKey:   publicKey,
 		PrivateKey:  privateKey,
 	})
 }
 
 func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {
-	conf := b.Config.Hooks.PublishKickstartEncrypted
-	return b.dispatch(conf, &HookPublishKickstartEncrypted{
+	return b.dispatch(b.Config.Hooks["publish_kickstart_encrypted"], &HookPublishKickstartEncrypted{
 		Data: kickstartData,
 	})
 }
 
 func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string) error {
-	conf := b.Config.Hooks.ConnectToBIOS
-	return b.dispatch(conf, &HookConnectToBIOS{
+	return b.dispatch(b.Config.Hooks["connect_to_bios"], &HookConnectToBIOS{
 		P2PAddress:     p2pAddress,
 		PrivateKeyUsed: privateKeyUsed,
 	})
 }
 
-func (b *BIOS) DispatchPublishKickstartPublic(p2pAddress, privateKeyUsed string) error {
-	conf := b.Config.Hooks.PublishKickstartPublic
-	return b.dispatch(conf, &HookPublishKickstartPublic{
-		P2PAddress:     p2pAddress,
-		PrivateKeyUsed: privateKeyUsed,
-	})
-}
+// dispatch to both exec calls, and remote web hooks.
+func (b *BIOS) dispatch(conf *HookConfig, data interface{}) error {
+	if conf == nil {
+		return nil
+	}
 
-// dispatch to both `exec` calls, and remote web hooks.
-func (b *BIOS) dispatch(conf HookConfig, data interface{}) error {
 	if err := b.execCall(conf, data); err != nil {
 		return err
 	}
@@ -84,14 +88,13 @@ func (b *BIOS) dispatch(conf HookConfig, data interface{}) error {
 	return nil
 }
 
-func (b *BIOS) execCall(conf HookConfig, data interface{}) error {
-	execTpl, err := conf.parseTemplate()
-	if err != nil {
-		return err
+func (b *BIOS) execCall(conf *HookConfig, data interface{}) error {
+	if conf.execTemplate == nil {
+		return nil
 	}
 
 	var buf bytes.Buffer
-	if err := execTpl.Execute(&buf, data); err != nil {
+	if err := conf.execTemplate.Execute(&buf, data); err != nil {
 		return err
 	}
 
@@ -115,7 +118,7 @@ func (b *BIOS) execCall(conf HookConfig, data interface{}) error {
 	return cmd.Start()
 }
 
-func (b *BIOS) webhookCall(conf HookConfig, data interface{}) error {
+func (b *BIOS) webhookCall(conf *HookConfig, data interface{}) error {
 	if conf.URL == "" {
 		return nil
 	}

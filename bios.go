@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -73,20 +74,29 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return err
 	}
 
-	genesisData, err := b.GenerateGenesisJSON(ephemeralPrivateKey)
+	pubKey := ephemeralPrivateKey.PublicKey().String()
+	privKey := ephemeralPrivateKey.String()
+
+	genesisData := b.GenerateGenesisJSON(privKey)
+
+	log.Println("This is your genesis data:", genesisData)
+
+	log.Println("We will trigger the `ConfigReady` hook")
+
+	err = b.DispatchConfigReady(genesisData, pubKey, privKey)
 	if err != nil {
 		return err
 	}
 
-	log.Println("This is your genesis data:", string(genesisData))
-	log.Println("We will trigger the `ConfigReady` hook")
+	log.Println("If working manually (with no hooks), add these bits to your `config.ini`:")
+	fmt.Printf("\n")
+	fmt.Printf("producer-name = %q\n", b.ShuffledProducers[0].EOSIOAccountName)
+	fmt.Printf("private-key = [%q, %q]\n", pubKey, privKey)
+	fmt.Printf("enable-stale-production = true\n")
+	fmt.Printf("plugin = eosio::producer_plugin\n")
+	fmt.Printf("\n")
 
-	if err := b.DispatchConfigReady(genesisData, ephemeralPrivateKey.PublicKey().String(), ephemeralPrivateKey.String()); err != nil {
-		return err
-	}
-	// Produce a config.ini
-	// Call webhook ConfigReady
-	//   If no such webhook, wait for ENTER keypress after printing the config material.
+	// TODO:   If no such webhook, wait for ENTER keypress after printing the config material.
 	// Call `setcode` and inject system contract
 	// Call `newaccount` for all producers listed in b.LaunchData
 	// Call `issue` for everyone in `snapshot.csv`
@@ -137,13 +147,13 @@ func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
 	return ecc.NewRandomPrivateKey()
 }
 
-func (b *BIOS) GenerateGenesisJSON(privKey *ecc.PrivateKey) ([]byte, error) {
-	cnt, err := json.Marshal(&GenesisJSON{
+func (b *BIOS) GenerateGenesisJSON(privKey string) string {
+	cnt, _ := json.Marshal(&GenesisJSON{
 		InitialTimestamp: b.ShuffleBlock.Time.UTC().Format("2006-01-02T15:04:05"),
-		InitialKey:       privKey.PublicKey().String(),
+		InitialKey:       privKey,
 		InitialChainID:   hex.EncodeToString(b.API.ChainID),
-	})
-	return cnt, err
+	}) // known not to fail
+	return string(cnt)
 }
 
 /// Setup
