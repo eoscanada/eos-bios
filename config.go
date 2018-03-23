@@ -16,6 +16,18 @@ type Config struct {
 		Hash     string `json:"hash" yaml:"hash"`
 	} `json:"system_contract" yaml:"system_contract"`
 
+	MsigContract struct {
+		CodePath string `json:"code_path" yaml:"code_path"`
+		ABIPath  string `json:"abi_path" yaml:"abi_path"`
+		Hash     string `json:"hash" yaml:"hash"`
+	} `json:"system_contract" yaml:"system_contract"`
+
+	TokensContract struct {
+		CodePath string `json:"code_path" yaml:"code_path"`
+		ABIPath  string `json:"abi_path" yaml:"abi_path"`
+		Hash     string `json:"hash" yaml:"hash"`
+	} `json:"system_contract" yaml:"system_contract"`
+
 	// Producer describes your producing node.
 	Producer struct {
 		// MyAccount is the name of the `account_name` this producer will be using on chain

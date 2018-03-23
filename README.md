@@ -170,6 +170,11 @@ This process would:
         for **all producers** listed in `launch.yaml`, in order of the
         shuffle. This is to simplify the takeoff after votes come in.
 
+        * delegate 1 EOS net/bandwidth to all of these, from the
+          account on the first line of `snapshot.csv` (the B1
+          account), so the BPs listed in `launch.yaml` can write a
+          transaction from the get go, if necessary.
+
       * it `issue`s all opening balances in `eosio` with the contents
         of `snapshot.csv` and creates all the corresponding accounts
         and assigns the pubkeys.  These actions can be batched in a
@@ -177,9 +182,20 @@ This process would:
         `chain_config.max_block_size` (currently 1024*1024 bytes)
         minus some overhead.
 
+        * REVISE: assign unregistered accounts for Ethereum claims post-launch.
+
+        * REVISE with issue / transfer split.
+          * Stake 50/50 net band / cpu band, to EVERYONE, so they can vote but not yet transfer.
+
+        * Assign PRIVILEGED to eosio.msig account.
+
+        * DOUBLE-CHECK: any assignation of powers to producers?
+          something with multisig powers? (ref. Thomas's mind)
+
         * TODO: We need to figure out how the Ethereum addresses come
           into play.  For those who haven't registered/claimed, that's
           sort of the last call!
+
 
       * is pushes an `updateauth` on the account `eosio` he had
         control over, with a public key similar to
@@ -203,18 +219,31 @@ This process would:
         the sole exception that he knows the address of one of the
         nodes, and can watch the other ones connect.
 
-  * While the Boot node does the steps above, the other 21 ABPs wait
-    on standard input, for the operator to paste the _Kickstart data_
-    (see below) from the BIOS Boot node, somewhere on the interwebs.
+  * While the Boot node does the steps above, the other 21 ABPs run this process in parallel:
 
-    * When your launch team discovers that data, it pastes it in
-      stdin, and if you're part of the 21 ABPs, you will have the key
-      (through `--keybase-key` or a locally running `keybase` instance
-      or shelling to `pgp` or something) to decrypt the file and know
-      how to continue.
+    * Their node is started with production disabled (for now),
+      keeping the capacity to interconnect with peers.
 
-      * This reveals the location of the BIOS Boot node, and the
-        private key used to bootstrap that first node.
+    * They print out an encrypted _Kickstart data_ with their OWN
+      `p2p_address`, and encrypt it with Keybase/GPG (same as the BIOS
+      Node) for a number of ABP (3, 5, all?), in a deterministic
+      fashion.. as to create an interesting topology once everyone
+      inter-connects.
+
+    * They publish it on their social / web properties.
+
+    * `LOOP HERE`: They pick up the other folks' Kickstart data, and paste it in
+      (waiting on stdin).  `eos-bios` would then decrypt it (if it's
+      able to).
+
+      * This would reveal the IP of some other nodes, potentially the
+        BIOS Boot node.
+
+      * The incoming _Kickstart data_ would be from the BIOS Boot node,
+        **or** from one of the ABPs.  What distinguishes the BISO Boot is
+        the presence of the private key.
+
+      * This reveals the location of the remote node.
 
     * `eos-bios` then does one of:
 
@@ -227,29 +256,36 @@ This process would:
          operator does it manually and boots is node, which would
          connect to the Boot node.
 
-    * At this point, the network syncs, shouldn't be too long.
+    * At this point:
 
-    * The 21 ABPs poll their node (through `--bp-api-address`) until
-      they obtain the hash of block 1. They used the
-      `private_key_used` in the _Kickstart data_ to validate the
-      signare on block 1, proving it was from the BIOS Boot node.
+      * If the BIOS Boot Node is connected through the mesh, the
+        network syncs, otherwise, we're just waiting on the BIOS to
+        publish it's kickstart data, and we're going back to `LOOP
+        HERE`, to connect more nodes.
 
-      * If it wasn't, sabotage the network (see below). A few good
-        rehearsals should prevent this.
+      * The 21 ABPs poll their node (through `--bp-api-address`) until
+        they obtain the hash of block 1. They used the
+        `private_key_used` in the _Kickstart data_ to validate the
+        signare on block 1, proving it was from the BIOS Boot node.
+
+        * If it wasn't, sabotage the network (see below). A few good
+          rehearsals should prevent this.
+
+    * At this point, the chain is sync'd from the BIOS Boot, and a
+      decently solid network is established.
 
     * The 21 verify that all of the 21 that were voted have their
       account properly set up with the pubkey in the `launch.yaml`
       file, otherwise they sabotage the network (if they can and
       they're not the ones that were left out with no account/key)
 
-    * The 21 interim BPs verify the integrity of the Opening Balances
-      in the new nascent network, against the locally loaded
-      `snapshot.csv`.
+    * The 21 verify the integrity of the Opening Balances in the new
+      nascent network, against the locally loaded `snapshot.csv`.
 
       * `eos-bios` takes a snapshot of `eosio`'s `currency` table and
         compares it locally with `snapshot.csv`.
 
-      * Any failure in verifications would initiate a sabotage.
+      * Any failure in verifications would trigger a sabotage.
 
     * The `eos-bios` program pushes a signed transactions to `eosio`
       system contract, with the `regproducer` action (with
@@ -338,6 +374,8 @@ The `bitcoin_merkle_root` would correspond to the height agreed upon
 in `launch.yaml`, so that everyone can check this was created after
 Bitcoin's block, and cannot be replayed.
 
+The `private_key_used` would only be present in the _Kickstart data_
+coming from the BIOS Boot node.  Other ABPs would not have that.
 
 Sabotaging the network
 ----------------------
