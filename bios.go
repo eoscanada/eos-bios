@@ -33,7 +33,7 @@ func NewBIOS(launchData *LaunchData, config *Config, api *eosapi.EOSAPI) *BIOS {
 
 func (b *BIOS) Run() error {
 	// Main program entrypoint, called when setup is done.
-	b.AnnounceAppointedBlockProducers()
+	b.PrintAppointedBlockProducers()
 
 	if b.AmIBootNode() {
 		if err := b.RunBootNodeStage1(); err != nil {
@@ -52,7 +52,7 @@ func (b *BIOS) Run() error {
 	return nil
 }
 
-func (b *BIOS) AnnounceAppointedBlockProducers() {
+func (b *BIOS) PrintAppointedBlockProducers() {
 	if b.AmIBootNode() {
 		log.Println("STAGE 0: I AM THE BOOT NODE! Let's get the ball rolling.")
 
@@ -81,7 +81,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	log.Println("This is your genesis data:", genesisData)
 
-	log.Println("We will trigger the `ConfigReady` hook")
+	log.Println("Triggering `config_ready` hook")
 
 	err = b.DispatchConfigReady(genesisData, pubKey, privKey)
 	if err != nil {
@@ -96,6 +96,18 @@ func (b *BIOS) RunBootNodeStage1() error {
 	fmt.Printf("plugin = eosio::producer_plugin\n")
 	fmt.Printf("\n")
 
+	eosioAcct := eosapi.AccountName("eosio")
+	_, err = b.API.SetCode(eosioAcct, b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	if err != nil {
+		return err
+	}
+
+	for _, prod := range b.ShuffledProducers {
+		_, err = b.API.NewAccount(eosioAcct, prod.EOSIOAccountName, prod.pubKey)
+		if err != nil {
+			return err
+		}
+	}
 	// TODO:   If no such webhook, wait for ENTER keypress after printing the config material.
 	// Call `setcode` and inject system contract
 	// Call `newaccount` for all producers listed in b.LaunchData
@@ -174,7 +186,7 @@ func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error
 }
 
 func (b *BIOS) IsBootNode(account string) bool {
-	return b.ShuffledProducers[0].EOSIOAccountName == account
+	return string(b.ShuffledProducers[0].EOSIOAccountName) == account
 }
 
 func (b *BIOS) AmIBootNode() bool {
@@ -183,7 +195,7 @@ func (b *BIOS) AmIBootNode() bool {
 
 func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		if b.ShuffledProducers[i].EOSIOAccountName == account {
+		if string(b.ShuffledProducers[i].EOSIOAccountName) == account {
 			return true
 		}
 	}

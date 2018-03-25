@@ -15,6 +15,10 @@ var launchData = flag.String("launch-data", "launch.yaml", "Path to a launch.yam
 func main() {
 	flag.Parse()
 
+	if *localConfig == "" || *launchData == "" {
+		log.Fatalln("missing --launch-data or --local-config")
+	}
+
 	config, err := LoadLocalConfig(*localConfig)
 	if err != nil {
 		log.Fatalln("local config load error:", err)
@@ -30,23 +34,26 @@ func main() {
 	//    Implement 3 sources, connect to BTC node, use one of the block explorers, check their APIs.
 	// Seed `rand.Seed`
 
-	//
-	chainID := "0000000000000000000000000000000000000000000000000000000000000000"
+	// chainID will become the HASH of the Constitution? We could
+	// start with a sample constitution and hash it ? waddayouthink ?
+	chainID := make([]byte, 32, 32)
 
-	// chainID will become the HASH of the Constitution, we could start with a sample constitution and hash it ? waddayouthink ?
-	api, err := eosapi.New(config.Producer.APIAddress, chainID)
+	api := eosapi.New(config.Producer.apiAddressURL, chainID)
 	if err != nil {
 		log.Fatalln("producer node error:", err)
 	}
 
-	wallet, err := eosapi.New(config.Producer.WalletAddress, chainID)
+	wallet := eosapi.New(config.Producer.walletAddressURL, chainID)
 	if err != nil {
 		log.Fatalln("wallet api:", err)
 	}
 
+	// FIXME: when ECC signatures work natively in Go, we can use the
+	// `eosapi.KeyBag` signer instead.
 	api.SetSigner(eosapi.NewWalletSigner(wallet))
 
 	// Checking producer node
+
 	info, err := api.GetInfo()
 	if err != nil {
 		log.Fatalf("Producer node not accessible: %s", err)
@@ -59,16 +66,21 @@ func main() {
 	}
 
 	// Checking wallet node
-	info, err = wallet.GetInfo()
+
+	_, err = wallet.WalletPublicKeys()
 	if err != nil {
 		log.Fatalf("Wallet node not accessible: %s", err)
 	}
 
-	// Start the process
+	// oStart BIOS
 	bios := NewBIOS(launch, config, api)
 
-	// FIXME: replcae by the BTC data.
-	bios.ShuffleProducers([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, time.Now().UTC())
+	// FIXME: replace by the BTC data.
+	err = bios.ShuffleProducers([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, time.Now().UTC())
+	if err != nil {
+		log.Fatalln("Failed shuffling:", err)
+	}
+
 	if err := bios.Run(); err != nil {
 		log.Fatalf("error running bios: %s", err)
 	}

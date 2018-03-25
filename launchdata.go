@@ -7,18 +7,24 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/eosioca/eosapi"
+	"github.com/eosioca/eosapi/ecc"
 	yaml "gopkg.in/yaml.v2"
 )
 
 type LaunchData struct {
-	LaunchBitcoinBlockHeight    int            `json:"launch_btc_block_height" yaml:"launch_btc_block_height"`
-	OpeningBalancesSnapshotHash string         `json:"opening_balances_snapshot_hash" yaml:"opening_balances_snapshot_hash"`
-	SystemContractHash          string         `json:"system_contract_hash" yaml:"system_contract_hash"`
-	Producers                   []*ProducerDef `json:"producers" yaml:"producers"`
+	LaunchBitcoinBlockHeight    int    `json:"launch_btc_block_height" yaml:"launch_btc_block_height"`
+	OpeningBalancesSnapshotHash string `json:"opening_balances_snapshot_hash" yaml:"opening_balances_snapshot_hash"`
+	SystemContractHash          string `json:"system_contract_hash" yaml:"system_contract_hash"`
+	MsigContractHash            string `json:"msig_contract_hash" yaml:"msig_contract_hash"`
+	TokensContractHash          string `json:"tokens_contract_hash" yaml:"tokens_contract_hash"`
+
+	Producers []*ProducerDef `json:"producers" yaml:"producers"`
 }
 type ProducerDef struct {
-	EOSIOAccountName string `json:"eosio_account_name" yaml:"eosio_account_name"`
-	EOSIOPublicKey   string `json:"eosio_public_key" yaml:"eosio_public_key"`
+	EOSIOAccountName eosapi.AccountName `json:"eosio_account_name" yaml:"eosio_account_name"`
+	EOSIOPublicKey   string             `json:"eosio_public_key" yaml:"eosio_public_key"`
+	pubKey           ecc.PublicKey
 	KeybaseUser      string `json:"keybase_user" yaml:"keybase_user"`
 	PGPPublicKey     string `json:"pgp_public_key" yaml:"pgp_public_key"`
 	AgentName        string `json:"agent_name" yaml:"agent_name"`
@@ -26,7 +32,7 @@ type ProducerDef struct {
 }
 
 func (p *ProducerDef) String() string {
-	return fmt.Sprintf("Account: % 32s  Keybase: https://keybase.io/%s     Agent: %q          URL: %s\n", p.EOSIOAccountName, p.KeybaseUser, p.AgentName, p.URL)
+	return fmt.Sprintf("Account: % 15s  Keybase: https://keybase.io/%s     Agent: % 30s URL: %s\n", p.EOSIOAccountName, p.KeybaseUser, p.AgentName, p.URL)
 }
 
 // snapshotPath, codePath, abiPath string
@@ -65,6 +71,16 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 
 	if codeHash != out.SystemContractHash {
 		return nil, fmt.Errorf("system contract's code hash don't match")
+	}
+
+	for _, prod := range out.Producers {
+		// This should have been tested already..
+		pubKey, err := ecc.NewPublicKey(prod.EOSIOPublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("loading pubkey for %q: %s", prod.EOSIOAccountName, err)
+		}
+
+		prod.pubKey = pubKey
 	}
 
 	// Verify the `producers` entries's public keys start with `EOS`

@@ -47,34 +47,38 @@ type HookPublishKickstartPublic struct {
 }
 
 func (b *BIOS) DispatchInit() error {
-	return b.dispatch(b.Config.Hooks["init"], &HookInit{})
+	return b.dispatch(b.Config.Hooks["init"], []string{})
 }
 
 func (b *BIOS) DispatchConfigReady(genesisJSON string, publicKey string, privateKey string) error {
-	return b.dispatch(b.Config.Hooks["config_ready"], &HookConfigReady{
-		GenesisJSON: genesisJSON,
-		PublicKey:   publicKey,
-		PrivateKey:  privateKey,
+	return b.dispatch(b.Config.Hooks["config_ready"], []string{
+		"genesis_json", genesisJSON,
+		"public_key", publicKey,
+		"private_key", privateKey,
 	})
 }
 
 func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {
-	return b.dispatch(b.Config.Hooks["publish_kickstart_encrypted"], &HookPublishKickstartEncrypted{
-		Data: kickstartData,
+	return b.dispatch(b.Config.Hooks["publish_kickstart_encrypted"], []string{
+		"data", string(kickstartData),
 	})
 }
 
 func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string) error {
-	return b.dispatch(b.Config.Hooks["connect_to_bios"], &HookConnectToBIOS{
-		P2PAddress:     p2pAddress,
-		PrivateKeyUsed: privateKeyUsed,
+	return b.dispatch(b.Config.Hooks["connect_to_bios"], []string{
+		"p2p_address", p2pAddress,
+		"private_key_used", privateKeyUsed,
 	})
 }
 
 // dispatch to both exec calls, and remote web hooks.
-func (b *BIOS) dispatch(conf *HookConfig, data interface{}) error {
+func (b *BIOS) dispatch(conf *HookConfig, data []string) error {
 	if conf == nil {
 		return nil
+	}
+
+	if len(data)%2 != 0 {
+		return fmt.Errorf("data should be pairs of key and values, cannot have %d elements", len(data))
 	}
 
 	if err := b.execCall(conf, data); err != nil {
@@ -88,21 +92,21 @@ func (b *BIOS) dispatch(conf *HookConfig, data interface{}) error {
 	return nil
 }
 
-func (b *BIOS) execCall(conf *HookConfig, data interface{}) error {
-	if conf.execTemplate == nil {
+func (b *BIOS) execCall(conf *HookConfig, data []string) error {
+	if conf.Exec == "" {
 		return nil
-	}
-
-	var buf bytes.Buffer
-	if err := conf.execTemplate.Execute(&buf, data); err != nil {
-		return err
 	}
 
 	p := shellwords.NewParser()
 	p.ParseEnv = true
-	args, err := p.Parse(buf.String())
+	args, err := p.Parse(conf.Exec)
 	if err != nil {
 		return err
+	}
+
+	for i := 0; i < len(data); i += 2 {
+		v := data[i+1]
+		args = append(args, v)
 	}
 
 	var cmd *exec.Cmd
@@ -118,7 +122,7 @@ func (b *BIOS) execCall(conf *HookConfig, data interface{}) error {
 	return cmd.Start()
 }
 
-func (b *BIOS) webhookCall(conf *HookConfig, data interface{}) error {
+func (b *BIOS) webhookCall(conf *HookConfig, data []string) error {
 	if conf.URL == "" {
 		return nil
 	}

@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-
-	"text/template"
+	"net/url"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -13,32 +12,31 @@ type Config struct {
 	SystemContract struct {
 		CodePath string `json:"code_path" yaml:"code_path"`
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-		Hash     string `json:"hash" yaml:"hash"`
 	} `json:"system_contract" yaml:"system_contract"`
 
 	MsigContract struct {
 		CodePath string `json:"code_path" yaml:"code_path"`
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-		Hash     string `json:"hash" yaml:"hash"`
-	} `json:"system_contract" yaml:"system_contract"`
+	} `json:"msig_contract" yaml:"msig_contract"`
 
 	TokensContract struct {
 		CodePath string `json:"code_path" yaml:"code_path"`
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-		Hash     string `json:"hash" yaml:"hash"`
-	} `json:"system_contract" yaml:"system_contract"`
+	} `json:"tokens_contract" yaml:"tokens_contract"`
 
 	// Producer describes your producing node.
 	Producer struct {
 		// MyAccount is the name of the `account_name` this producer will be using on chain
 		MyAccount string `json:"my_account" yaml:"my_account"`
 		// APIAddress is the target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.
-		APIAddress string `json:"api_address" yaml:"api_address"`
+		APIAddress    string `json:"api_address" yaml:"api_address"`
+		apiAddressURL *url.URL
 		// SecretP2PAddress is the endpoint which will be published at the end of the process. Needs to be externally routable.  It must be kept secret for DDoS protection.
 		SecretP2PAddress string `json:"secret_p2p_address" yaml:"secret_p2p_address"`
 
 		// WalletAddress is the API endpoint where your wallet lives
-		WalletAddress string `json:"wallet_address" yaml:"wallet_address"`
+		WalletAddress    string `json:"wallet_address" yaml:"wallet_address"`
+		walletAddressURL *url.URL
 	} `json:"producer" yaml:"producer"`
 
 	// OpeningBalancesSnapshotPath represents the `snapshot.csv` file,
@@ -66,19 +64,8 @@ type Config struct {
 }
 
 type HookConfig struct {
-	URL          string `json:"url"`
-	Exec         string `json:"exec"`
-	execTemplate *template.Template
-	TweetAPIKey  string `json:"tweet_api_key"` // for example, we could have those things support tweets !
-}
-
-func (c HookConfig) parseTemplate() (*template.Template, error) {
-	if c.Exec == "" {
-		return nil, nil
-	}
-
-	tpl, err := template.New("exec").Parse(c.Exec)
-	return tpl, err
+	URL  string `json:"url"`
+	Exec string `json:"exec"`
 }
 
 func LoadLocalConfig(localConfigPath string) (*Config, error) {
@@ -101,6 +88,7 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 		hconf := h[hook.Key]
 		if hconf == nil {
 			fmt.Printf("Hook %q NOT configured\n", hook.Key)
+			continue
 		}
 
 		if hconf.Exec != "" {
@@ -109,13 +97,16 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 		if hconf.URL != "" {
 			fmt.Printf("Hook %q configured to POST via HTTP\n", hook.Key)
 		}
+	}
 
-		tpl, err := hconf.parseTemplate()
-		if err != nil {
-			return nil, fmt.Errorf(`Hook %q parsing FAILED: invalid "exec" template: %s`, hook.Key, err)
-		}
+	c.Producer.apiAddressURL, err = url.Parse(c.Producer.APIAddress)
+	if err != nil {
+		return c, err
+	}
 
-		hconf.execTemplate = tpl
+	c.Producer.walletAddressURL, err = url.Parse(c.Producer.WalletAddress)
+	if err != nil {
+		return c, err
 	}
 
 	return c, nil
