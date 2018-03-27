@@ -256,12 +256,17 @@ This process would:
          operator does it manually and boots is node, which would
          connect to the Boot node.
 
+      3. Use the `eos-bios` hooks to automate re-config and restart.
+
     * At this point:
 
       * If the BIOS Boot Node is connected through the mesh, the
         network syncs, otherwise, we're just waiting on the BIOS to
         publish it's kickstart data, and we're going back to `LOOP
         HERE`, to connect more nodes.
+
+      * `get account eosio`, and verify that the account has been
+        disabled, which marks the end of the BIOS's Boot Node process.
 
       * The 21 ABPs poll their node (through `--bp-api-address`) until
         they obtain the hash of block 1. They used the
@@ -293,9 +298,9 @@ This process would:
       matching `producers` definition in `launch.yaml`), effectively
       registering the producer on the chain.
 
-    * When all checks are done `eos-bios` will poll the node and try
-      to discover all the other participants, and display them on
-      screen.
+    * TODO: when do we check the hashes for the different `setcode` ?
+
+    * TODO: and add other things.. any checks need to be done here
 
   * At this point, BIOS Boot node is back to normal, as one of the 50+
     persons waiting for which nothing has happened (except perhaps
@@ -303,8 +308,8 @@ This process would:
     on standard input for the next stage.
 
   * We come to a point where anyone feeling comfortable can start
-    publishing addresses for the whole world to connect, or publishing
-    the _Kickstart data_ unencrypted.
+    publishing addresses for the whole world to connect (or publishing
+    the _Kickstart data_ unencrypted).
 
     * This would allow all the 50+ who were still waiting, to join in
       using the same logic, albeit with validation disabled (so they
@@ -383,7 +388,7 @@ Sabotaging the network
 Sabotaging the network means rendering their BP account useless (just
 like the `eosio` account is being rendered useless by replacing the
 permissions with known-to-be-unknown keys, like
-EOS000000000000000000...).
+EOS11111111111111111111111111...).
 
 If all ABPs run the BIOS software, they should all sabotage the
 network together, and if you falsely sabotage the network, you lost
