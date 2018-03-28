@@ -31,7 +31,7 @@ type ProducerDef struct {
 }
 
 func (p *ProducerDef) String() string {
-	return fmt.Sprintf("Account: % 15s  Keybase: https://keybase.io/%s     Agent: % 30s URL: %s\n", p.EOSIOAccountName, p.KeybaseUser, p.AgentName, p.URL)
+	return fmt.Sprintf("Account: % 15s  Keybase: https://keybase.io/%s     Agent: % 30s URL: %s", p.EOSIOAccountName, p.KeybaseUser, p.AgentName, p.URL)
 }
 
 // snapshotPath, codePath, abiPath string
@@ -55,7 +55,7 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 		return nil, err
 	}
 
-	fmt.Printf("Hash of %q: %s", config.OpeningBalances.SnapshotPath, snapshotHash)
+	fmt.Printf("Hash of %q: %s\n", config.OpeningBalances.SnapshotPath, snapshotHash)
 
 	if snapshotHash != out.OpeningBalancesSnapshotHash {
 		return nil, fmt.Errorf("snapshot hash doesn't match launch data")
@@ -66,7 +66,7 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 		return nil, fmt.Errorf("error hashing system contract's code + abi: %s", err)
 	}
 
-	fmt.Printf("Hash of %q and %q: %s", config.SystemContract.CodePath, config.SystemContract.ABIPath, codeHash)
+	fmt.Printf("Hash of %q and %q: %s\n", config.SystemContract.CodePath, config.SystemContract.ABIPath, codeHash)
 
 	if codeHash != out.SystemContractHash {
 		return nil, fmt.Errorf("system contract's code hash don't match")

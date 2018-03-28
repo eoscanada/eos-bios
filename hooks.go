@@ -26,13 +26,13 @@ type HookDef struct {
 }
 
 func (b *BIOS) DispatchInit(genesisJSON string) error {
-	return b.dispatch(b.Config.Hooks["init"], []string{
+	return b.dispatch("init", []string{
 		"genesis_json", genesisJSON,
 	})
 }
 
 func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey string, startProducing bool) error {
-	return b.dispatch(b.Config.Hooks["config_ready"], []string{
+	return b.dispatch("config_ready", []string{
 		"genesis_json", genesisJSON,
 		"public_key", publicKey,
 		"private_key", privateKey,
@@ -42,23 +42,26 @@ func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey 
 }
 
 func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {
-	return b.dispatch(b.Config.Hooks["publish_kickstart_encrypted"], []string{
+	return b.dispatch("publish_kickstart_encrypted", []string{
 		"data", string(kickstartData),
 	})
 }
 
 func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string) error {
-	return b.dispatch(b.Config.Hooks["connect_to_bios"], []string{
+	return b.dispatch("connect_to_bios", []string{
 		"p2p_address", p2pAddress,
 		"private_key_used", privateKeyUsed,
 	})
 }
 
 // dispatch to both exec calls, and remote web hooks.
-func (b *BIOS) dispatch(conf *HookConfig, data []string) error {
+func (b *BIOS) dispatch(hookName string, data []string) error {
+	conf := b.Config.Hooks[hookName]
 	if conf == nil {
 		return nil
 	}
+
+	fmt.Printf("Dispatching hook %q\n", hookName)
 
 	if len(data)%2 != 0 {
 		return fmt.Errorf("data should be pairs of key and values, cannot have %d elements", len(data))
@@ -108,7 +111,7 @@ func (b *BIOS) execCall(conf *HookConfig, data []string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Env = os.Environ()
 
-	fmt.Printf("Executing hook: %q\n", cmd.Args)
+	fmt.Printf("  Executing hook: %q\n", cmd.Args)
 
 	return cmd.Run()
 }

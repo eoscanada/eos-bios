@@ -91,12 +91,19 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return err
 	}
 
+	b.API.Debug = true
+
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
 
-	genesisData := b.GenerateGenesisJSON(pubKey)
+	fmt.Println("Generated ephemeral private keys:", pubKey, privKey)
 
-	fmt.Println("Triggering `config_ready` hook")
+	// Store keys in wallet, to sign `SetCode` and friends..
+	if err := b.API.Signer.ImportPrivateKey(privKey); err != nil {
+		return fmt.Errorf("ImportWIF: %s", err)
+	}
+
+	genesisData := b.GenerateGenesisJSON(pubKey)
 
 	if err = b.DispatchConfigReady(genesisData, "eosio", pubKey, privKey, true); err != nil {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)

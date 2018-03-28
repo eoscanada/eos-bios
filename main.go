@@ -50,7 +50,7 @@ func main() {
 
 	// FIXME: when ECC signatures work natively in Go, we can use the
 	// `eosapi.KeyBag` signer instead.
-	api.SetSigner(eosapi.NewWalletSigner(wallet))
+	api.SetSigner(eosapi.NewWalletSigner(wallet, "default"))
 
 	// Checking wallet node
 
