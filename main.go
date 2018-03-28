@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/eosioca/eosapi"
@@ -52,19 +52,6 @@ func main() {
 	// `eosapi.KeyBag` signer instead.
 	api.SetSigner(eosapi.NewWalletSigner(wallet))
 
-	// Checking producer node
-
-	info, err := api.GetInfo()
-	if err != nil {
-		log.Fatalf("Producer node not accessible: %s", err)
-	}
-
-	log.Println("Server version:", info.ServerVersion)
-	if info.HeadBlockNum > 0 {
-		log.Fatalf("Your node is at block %d, aren't we booting a new network?", info.HeadBlockNum)
-		os.Exit(1)
-	}
-
 	// Checking wallet node
 
 	_, err = wallet.WalletPublicKeys()
@@ -72,8 +59,14 @@ func main() {
 		log.Fatalf("Wallet node not accessible: %s", err)
 	}
 
-	// oStart BIOS
-	bios := NewBIOS(launch, config, api)
+	// Load the snapshot.csv
+	snapshotData, err := NewSnapshot(config.OpeningBalances.SnapshotPath)
+	if err != nil {
+		log.Fatalln("Failed loading snapshot csv:", err)
+	}
+
+	// Start BIOS
+	bios := NewBIOS(launch, config, snapshotData, api)
 
 	// FIXME: replace by the BTC data.
 	err = bios.ShuffleProducers([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, time.Now().UTC())
@@ -82,8 +75,8 @@ func main() {
 	}
 
 	if err := bios.Run(); err != nil {
-		log.Fatalf("error running bios: %s", err)
+		log.Fatalf("ERROR RUNNING BIOS: %s", err)
 	}
 
-	log.Println("Done")
+	fmt.Printf("Done at %s (UTC %s)\n", time.Now(), time.Now().UTC())
 }

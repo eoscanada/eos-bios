@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 
+	"github.com/eosioca/eosapi"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -46,6 +47,8 @@ type Config struct {
 		SnapshotPath string `json:"snapshot_path" yaml:"snapshot_path"`
 	} `json:"opening_balances" yaml:"opening_balances"`
 
+	MyParameters eosapi.EOSIOParameters `json:"my_parameters" yaml:"my_parameteres"`
+
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {
 		// Whether to use Keybase, or simply use in-built PGP crypto.
@@ -66,6 +69,7 @@ type Config struct {
 type HookConfig struct {
 	URL  string `json:"url"`
 	Exec string `json:"exec"`
+	Wait bool   `json:"wait"`
 }
 
 func LoadLocalConfig(localConfigPath string) (*Config, error) {
@@ -111,3 +115,35 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 
 	return c, nil
 }
+
+/*
+
+Default values in code for eosio_parameters:
+
+static const uint32_t bandwidth_average_window_ms   = 24*60*60*1000l;
+static const uint32_t compute_average_window_ms     = 24*60*60*1000l;
+static const uint32_t blocksize_average_window_ms   = 60*1000l;
+
+
+const static uint32_t   default_max_block_size              = 1024 * 1024; /// at 500ms blocks and 200byte trx, this enables 10,000 TPS burst
+const static uint32_t   default_target_block_size           = default_max_block_size / 10; /// we target 1000 TPS burst
+const static uint32_t   default_target_block_acts_per_scope  = 1000;
+const static uint32_t   default_max_block_acts_per_scope     = default_target_block_acts_per_scope*10;
+
+const static uint32_t   default_target_block_acts  = 2000;
+const static uint32_t   default_max_block_acts     = default_target_block_acts*100;
+const static uint32_t   setcode_act_usage          = 100;
+
+const static uint64_t   default_max_storage_size       = 10 * 1024;
+const static uint32_t   default_max_trx_lifetime       = 60*60;
+const static uint16_t   default_max_auth_depth         = 6;
+const static uint32_t   default_max_trx_runtime        = 10*1000;
+const static uint16_t   default_max_inline_depth       = 4;
+const static uint32_t   default_max_inline_action_size = 4 * 1024;
+const static uint32_t   default_max_gen_trx_size       = 64 * 1024; ///
+const static uint32_t   default_max_gen_trx_count      = 16; ///< the number of generated transactions per action
+const static uint32_t   producers_authority_threshold  = 14;
+const static uint32_t   rate_limiting_precision        = 1000*1000;
+
+const static uint16_t   max_recursion_depth = 6;
+*/

@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/eosioca/eosapi"
@@ -15,6 +14,7 @@ type BIOS struct {
 	LaunchData   *LaunchData
 	Config       *Config
 	API          *eosapi.EOSAPI
+	Snapshot     Snapshot
 	ShuffleBlock struct {
 		Time       time.Time
 		MerkleRoot []byte
@@ -22,49 +22,66 @@ type BIOS struct {
 	ShuffledProducers []*ProducerDef
 }
 
-func NewBIOS(launchData *LaunchData, config *Config, api *eosapi.EOSAPI) *BIOS {
+func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eosapi.EOSAPI) *BIOS {
 	b := &BIOS{
 		LaunchData: launchData,
 		Config:     config,
 		API:        api,
+		Snapshot:   snapshotData,
 	}
 	return b
 }
 
 func (b *BIOS) Run() error {
+	fmt.Println("Start BIOS process", time.Now())
+
+	myProducerDef, err := b.MyProducerDef()
+	if err != nil {
+		return err
+	}
+
+	// TODO: We need to make SURE we *DO* have signing keys for the myProducerDef.EOSIOPublicKey,
+	// by checking the linked wallet or som'thn..
+
+	if err := b.DispatchInit(b.GenerateGenesisJSON(myProducerDef.EOSIOPublicKey)); err != nil {
+		return fmt.Errorf("failed init hook: %s", err)
+	}
+
 	// Main program entrypoint, called when setup is done.
 	b.PrintAppointedBlockProducers()
 
 	if b.AmIBootNode() {
 		if err := b.RunBootNodeStage1(); err != nil {
-			return err
+			return fmt.Errorf("boot node stage1: %s", err)
 		}
 	} else if b.AmIAppointedBlockProducer() {
 		if err := b.RunABPStage1(); err != nil {
-			return err
+			return fmt.Errorf("abp stage1: %s", err)
 		}
 	} else {
 		if err := b.WaitStage1End(); err != nil {
-			return err
+			return fmt.Errorf("waiting stage1: %s", err)
 		}
 	}
+
+	fmt.Println("BIOS Run done")
 
 	return nil
 }
 
 func (b *BIOS) PrintAppointedBlockProducers() {
 	if b.AmIBootNode() {
-		log.Println("STAGE 0: I AM THE BOOT NODE! Let's get the ball rolling.")
+		fmt.Println("STAGE 0: I AM THE BOOT NODE! Let's get the ball rolling.")
 
 	} else if b.AmIAppointedBlockProducer() {
-		log.Println("STAGE 0: I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the boot node's media properties.")
+		fmt.Println("STAGE 0: I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the boot node's media properties.")
 	} else {
-		log.Println("STAGE 0: hrm.. I'm not part of the Appointed Block Producers, let's wait and be ready to join")
+		fmt.Println("STAGE 0: hrm.. I'm not part of the Appointed Block Producers, let's wait and be ready to join")
 	}
 
-	log.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].String())
+	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].String())
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		log.Printf("ABP %02d:  %s\n", i, b.ShuffledProducers[i].String())
+		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].String())
 	}
 }
 
@@ -77,41 +94,47 @@ func (b *BIOS) RunBootNodeStage1() error {
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
 
-	genesisData := b.GenerateGenesisJSON(privKey)
+	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	log.Println("This is your genesis data:", genesisData)
+	fmt.Println("Triggering `config_ready` hook")
 
-	log.Println("Triggering `config_ready` hook")
-
-	err = b.DispatchConfigReady(genesisData, pubKey, privKey)
-	if err != nil {
-		return err
+	if err = b.DispatchConfigReady(genesisData, "eosio", pubKey, privKey, true); err != nil {
+		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
-
-	log.Println("If working manually (with no hooks), add these bits to your `config.ini`:")
-	fmt.Printf("\n")
-	fmt.Printf("producer-name = %q\n", b.ShuffledProducers[0].EOSIOAccountName)
-	fmt.Printf("private-key = [%q, %q]\n", pubKey, privKey)
-	fmt.Printf("enable-stale-production = true\n")
-	fmt.Printf("plugin = eosio::producer_plugin\n")
-	fmt.Printf("\n")
 
 	eosioAcct := eosapi.AccountName("eosio")
 	_, err = b.API.SetCode(eosioAcct, b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("setcode: %s", err)
 	}
 
 	for _, prod := range b.ShuffledProducers {
 		_, err = b.API.NewAccount(eosioAcct, prod.EOSIOAccountName, prod.pubKey)
 		if err != nil {
-			return err
+			return fmt.Errorf("newaccount %s: %s", prod.EOSIOAccountName, err)
 		}
 	}
-	// TODO:   If no such webhook, wait for ENTER keypress after printing the config material.
-	// Call `setcode` and inject system contract
-	// Call `newaccount` for all producers listed in b.LaunchData
-	// Call `issue` for everyone in `snapshot.csv`
+
+	eosSymbol := eosapi.Symbol{Precision: 4, Symbol: "EOS"}
+
+	_, err = b.API.Issue("eosio", eosapi.Asset{Amount: 10000000000000, Symbol: eosSymbol})
+	if err != nil {
+		return fmt.Errorf("issue: %s", err)
+	}
+
+	for idx, hodler := range b.Snapshot {
+		// 7108558431253954560 stringifies to `genesis.`
+		destAccount := eosapi.AccountName(eosapi.NameToString(uint64(7108558431253954560) + uint64(idx)))
+		fmt.Println("Transfer", hodler, destAccount)
+
+		qty := eosapi.Asset{Amount: 10000000000000, Symbol: eosSymbol}
+		_, err := b.API.Transfer(eosapi.AccountName("eosio"), destAccount, qty, "Welcome "+hodler.EthereumAddress[len(hodler.EthereumAddress)-6:])
+		if err != nil {
+			return fmt.Errorf("transfer: %s", err)
+		}
+	}
+
+	// Call `transfer` for everyone in `snapshot.csv`
 	// Call `updateauth` and trash the `eosio` account.
 	// Create the `Kickstart data`
 	// Call webhook PublishKickstartEncrypted
@@ -123,7 +146,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 }
 
 func (b *BIOS) RunABPStage1() error {
-	log.Println("Waiting on kickstart data from the BIOS Node. Check their social presence!")
+	fmt.Println("Waiting on kickstart data from the BIOS Node. Check their social presence!")
 
 	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
 	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
@@ -143,7 +166,7 @@ func (b *BIOS) RunABPStage1() error {
 }
 
 func (b *BIOS) WaitStage1End() error {
-	log.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
+	fmt.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
 	// Wait on stdin
 	//   Input should be simply the p2p endpoint of any node that initialized
 	// It'll be an armored GPG-signed (base64) blob containing each producer's `Kickstart Data`, relaying the original `PrivateKeyUsed`, but with their own `p2p_address`
@@ -159,10 +182,10 @@ func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
 	return ecc.NewRandomPrivateKey()
 }
 
-func (b *BIOS) GenerateGenesisJSON(privKey string) string {
+func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	cnt, _ := json.Marshal(&GenesisJSON{
 		InitialTimestamp: b.ShuffleBlock.Time.UTC().Format("2006-01-02T15:04:05"),
-		InitialKey:       privKey,
+		InitialKey:       pubKey,
 		InitialChainID:   hex.EncodeToString(b.API.ChainID),
 	}) // known not to fail
 	return string(cnt)
@@ -204,4 +227,13 @@ func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 
 func (b *BIOS) AmIAppointedBlockProducer() bool {
 	return b.IsAppointedBlockProducer(b.Config.Producer.MyAccount)
+}
+
+func (b *BIOS) MyProducerDef() (*ProducerDef, error) {
+	for _, prod := range b.LaunchData.Producers {
+		if b.Config.Producer.MyAccount == string(prod.EOSIOAccountName) {
+			return prod, nil
+		}
+	}
+	return nil, fmt.Errorf("no config found")
 }

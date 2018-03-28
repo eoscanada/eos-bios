@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -24,37 +25,19 @@ type HookDef struct {
 	Desc string
 }
 
-type HookInit struct{}
-
-type HookConfigReady struct {
-	GenesisJSON string `json:"genesis_json"`
-	PublicKey   string `json:"public_key"`
-	PrivateKey  string `json:"private_key"`
+func (b *BIOS) DispatchInit(genesisJSON string) error {
+	return b.dispatch(b.Config.Hooks["init"], []string{
+		"genesis_json", genesisJSON,
+	})
 }
 
-type HookPublishKickstartEncrypted struct {
-	Data []byte
-}
-
-type HookConnectToBIOS struct {
-	P2PAddress     string `json:"p2p_address"`
-	PrivateKeyUsed string `json:"private_key_used"`
-}
-
-type HookPublishKickstartPublic struct {
-	P2PAddress     string `json:"p2p_address"`
-	PrivateKeyUsed string `json:"private_key_used"`
-}
-
-func (b *BIOS) DispatchInit() error {
-	return b.dispatch(b.Config.Hooks["init"], []string{})
-}
-
-func (b *BIOS) DispatchConfigReady(genesisJSON string, publicKey string, privateKey string) error {
+func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey string, startProducing bool) error {
 	return b.dispatch(b.Config.Hooks["config_ready"], []string{
 		"genesis_json", genesisJSON,
 		"public_key", publicKey,
 		"private_key", privateKey,
+		"should_start_producing", fmt.Sprintf("%v", startProducing),
+		"node_name", nodeName,
 	})
 }
 
@@ -89,6 +72,11 @@ func (b *BIOS) dispatch(conf *HookConfig, data []string) error {
 		return err
 	}
 
+	if conf.Wait {
+		fmt.Printf("Press ENTER to continue... ")
+		_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
+	}
+
 	return nil
 }
 
@@ -117,9 +105,12 @@ func (b *BIOS) execCall(conf *HookConfig, data []string) error {
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	// cmd.Stdin = os.Stdin
+	cmd.Stdin = os.Stdin
 	cmd.Env = os.Environ()
-	return cmd.Start()
+
+	fmt.Printf("Executing hook: %q\n", cmd.Args)
+
+	return cmd.Run()
 }
 
 func (b *BIOS) webhookCall(conf *HookConfig, data []string) error {

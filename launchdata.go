@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"log"
 
 	"github.com/eosioca/eosapi"
 	"github.com/eosioca/eosapi/ecc"
@@ -56,7 +55,7 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 		return nil, err
 	}
 
-	log.Printf("Hash of %q: %s", config.OpeningBalances.SnapshotPath, snapshotHash)
+	fmt.Printf("Hash of %q: %s", config.OpeningBalances.SnapshotPath, snapshotHash)
 
 	if snapshotHash != out.OpeningBalancesSnapshotHash {
 		return nil, fmt.Errorf("snapshot hash doesn't match launch data")
@@ -67,7 +66,7 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 		return nil, fmt.Errorf("error hashing system contract's code + abi: %s", err)
 	}
 
-	log.Printf("Hash of %q and %q: %s", config.SystemContract.CodePath, config.SystemContract.ABIPath, codeHash)
+	fmt.Printf("Hash of %q and %q: %s", config.SystemContract.CodePath, config.SystemContract.ABIPath, codeHash)
 
 	if codeHash != out.SystemContractHash {
 		return nil, fmt.Errorf("system contract's code hash don't match")
