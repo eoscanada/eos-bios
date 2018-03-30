@@ -65,6 +65,8 @@ func main() {
 		log.Fatalln("Failed loading snapshot csv:", err)
 	}
 
+	//os.Exit(0)
+
 	// Start BIOS
 	bios := NewBIOS(launch, config, snapshotData, api)
 

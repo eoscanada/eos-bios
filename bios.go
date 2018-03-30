@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -131,13 +132,21 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	for idx, hodler := range b.Snapshot {
 		// 7108558431253954560 stringifies to `genesis.`
-		destAccount := eosapi.AccountName(eosapi.NameToString(uint64(7108558431253954560) + uint64(idx)))
+		accountBytes := []byte{0x00, 0x00, 0x00, 0x00, 0x3b, 0xac, 0xa6, 0x62}
+		binary.BigEndian.PutUint32(accountBytes[:4], uint32(idx+1))
+		intAcct := binary.LittleEndian.Uint64(accountBytes)
+		destAccount := eosapi.AccountName(eosapi.NameToString(intAcct))
 		fmt.Println("Transfer", hodler, destAccount)
+
+		_, err = b.API.NewAccount(eosioAcct, destAccount, hodler.EOSPublicKey)
+		if err != nil {
+			return fmt.Errorf("hodler: newaccount: %s", err)
+		}
 
 		qty := eosapi.Asset{Amount: 10000000000000, Symbol: eosSymbol}
 		_, err := b.API.Transfer(eosapi.AccountName("eosio"), destAccount, qty, "Welcome "+hodler.EthereumAddress[len(hodler.EthereumAddress)-6:])
 		if err != nil {
-			return fmt.Errorf("transfer: %s", err)
+			return fmt.Errorf("hodler: transfer: %s", err)
 		}
 	}
 
