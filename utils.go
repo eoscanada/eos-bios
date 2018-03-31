@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"os"
+
+	eos "github.com/eosioca/eosapi"
 )
 
 func ScanLinesUntilBlank() (out string, err error) {
@@ -22,3 +24,9 @@ func ScanLinesUntilBlank() (out string, err error) {
 		}
 	}
 }
+
+// AN is a shortcut to create an AccountName
+var AN = eos.AN
+
+// PN is a shortcut to create a PermissionName
+var PN = eos.PN

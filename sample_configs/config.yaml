@@ -1,0 +1,48 @@
+system_contract:
+  code_path: ./eosio.system.wasm
+  abi_path: ./eosio.system.abi
+  hash: abcdefg
+
+producer:
+  my_account: eoscanada
+  api_address: http://localhost:8889
+  secret_p2p_address: localhost:19876
+  public_p2p_endpoint: nodeos://load-balanced-edge-nodes.mybp.example.com:9876
+  wallet_address: http://localhost:6667
+
+opening_balances:
+  snapshot_path: ./snapshot.csv
+
+my_parameters:
+  max_block_size: 1048576   # 1024 * 1024
+  target_block_size: 104858  # 1024 * 1024 / 10
+
+  max_block_acts_per_scope: 10000
+  target_block_acts_per_scope: 1000
+
+  max_block_acts: 20000
+  target_block_acts: 2000
+
+  max_storage_size: 4096  # For future use ?!
+  max_transaction_lifetime: 3600
+  max_transaction_exec_time: 9900 # For future use ?! :)
+  max_authority_depth: 6
+  max_inline_depth: 4
+  max_inline_action_size: 4096
+  max_generated_transaction_size: 65536
+  max_generated_transaction_count: 16
+
+  percent_of_max_inflation_rate: 75
+
+  storage_reserve_ratio: 100
+
+pgp:
+  key_path: ./unencrypted.pgp.key
+
+no_shuffle: true
+
+hooks:
+  init:
+    exec: ./hook_init.sh
+  config_ready:
+    exec: ./hook_config_ready.sh

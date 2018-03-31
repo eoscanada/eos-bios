@@ -14,7 +14,7 @@ type Snapshot []SnapshotLine
 type SnapshotLine struct {
 	EthereumAddress string
 	EOSPublicKey    ecc.PublicKey
-	Balance         eosapi.Asset
+	Balance         eos.Asset
 }
 
 func NewSnapshot(filename string) (out Snapshot, err error) {
@@ -36,7 +36,7 @@ func NewSnapshot(filename string) (out Snapshot, err error) {
 			return nil, fmt.Errorf("should have 3 elements per line")
 		}
 
-		newAsset, err := eosapi.NewEOSAssetFromString(el[2])
+		newAsset, err := eos.NewEOSAssetFromString(el[2])
 		if err != nil {
 			return out, err
 		}

@@ -9,12 +9,13 @@ import (
 
 	"github.com/eosioca/eosapi"
 	"github.com/eosioca/eosapi/ecc"
+	"github.com/eosioca/eosapi/system"
 )
 
 type BIOS struct {
 	LaunchData   *LaunchData
 	Config       *Config
-	API          *eosapi.EOSAPI
+	API          *eos.EOSAPI
 	Snapshot     Snapshot
 	ShuffleBlock struct {
 		Time       time.Time
@@ -23,7 +24,7 @@ type BIOS struct {
 	ShuffledProducers []*ProducerDef
 }
 
-func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eosapi.EOSAPI) *BIOS {
+func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eos.EOSAPI) *BIOS {
 	b := &BIOS{
 		LaunchData: launchData,
 		Config:     config,
@@ -110,7 +111,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
-	eosioAcct := eosapi.AccountName("eosio")
+	eosioAcct := AN("eosio")
 	_, err = b.API.SetCode(eosioAcct, b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
 	if err != nil {
 		return fmt.Errorf("setcode: %s", err)
@@ -123,9 +124,16 @@ func (b *BIOS) RunBootNodeStage1() error {
 		}
 	}
 
-	eosSymbol := eosapi.Symbol{Precision: 4, Symbol: "EOS"}
+	// See tests/chain_tests/bootseq_tests.cpp and friends..
 
-	_, err = b.API.Issue("eosio", eosapi.Asset{Amount: 10000000000000, Symbol: eosSymbol})
+	// TODO: Create the currency in the `eosio.token` contract..
+	//       and review `eosio.token` :P
+
+	eosSymbol := eos.Symbol{Precision: 4, Symbol: "EOS"}
+
+	// TODO: Issue from the `eosio.token` contract.. `transfer` and
+	// `issue` on `eosio.system` is probably going to disappear.
+	_, err = b.API.Issue("eosio", eos.Asset{Amount: 10000000000000, Symbol: eosSymbol})
 	if err != nil {
 		return fmt.Errorf("issue: %s", err)
 	}
@@ -133,25 +141,41 @@ func (b *BIOS) RunBootNodeStage1() error {
 	for idx, hodler := range b.Snapshot {
 		// 7108558431253954560 stringifies to `genesis.`
 		accountBytes := []byte{0x00, 0x00, 0x00, 0x00, 0x3b, 0xac, 0xa6, 0x62}
+		// TODO: find a better way to make genesis.[1-5a-z][1-5a-z], etc..
 		binary.BigEndian.PutUint32(accountBytes[:4], uint32(idx+1))
 		intAcct := binary.LittleEndian.Uint64(accountBytes)
-		destAccount := eosapi.AccountName(eosapi.NameToString(intAcct))
-		fmt.Println("Transfer", hodler, destAccount)
+		destAccount := AN(eos.NameToString(intAcct))
+		fmt.Println("Transfer", hodler, destAccount, accountBytes)
 
 		_, err = b.API.NewAccount(eosioAcct, destAccount, hodler.EOSPublicKey)
 		if err != nil {
 			return fmt.Errorf("hodler: newaccount: %s", err)
 		}
 
-		qty := eosapi.Asset{Amount: 10000000000000, Symbol: eosSymbol}
-		_, err := b.API.Transfer(eosapi.AccountName("eosio"), destAccount, qty, "Welcome "+hodler.EthereumAddress[len(hodler.EthereumAddress)-6:])
+		_, err := b.API.Transfer(
+			AN("eosio"),
+			destAccount,
+			hodler.Balance,
+			"Welcome "+hodler.EthereumAddress[len(hodler.EthereumAddress)-6:],
+		)
 		if err != nil {
 			return fmt.Errorf("hodler: transfer: %s", err)
 		}
+
+		if idx == 5 {
+			fmt.Println("Okay, just trying anyway... jump to suite...")
+			break
+		}
 	}
 
-	// Call `transfer` for everyone in `snapshot.csv`
-	// Call `updateauth` and trash the `eosio` account.
+	_, err = b.API.SignPushAction(
+		system.NewUpdateAuth(AN("eosio"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
+		system.NewUpdateAuth(AN("eosio"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+	)
+	if err != nil {
+		return fmt.Errorf("updateauth: %s", err)
+	}
+
 	// Create the `Kickstart data`
 	// Call webhook PublishKickstartEncrypted
 	//   or display it on screen for it to be manually disseminated

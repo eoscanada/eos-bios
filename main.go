@@ -38,19 +38,19 @@ func main() {
 	// start with a sample constitution and hash it ? waddayouthink ?
 	chainID := make([]byte, 32, 32)
 
-	api := eosapi.New(config.Producer.apiAddressURL, chainID)
+	api := eos.New(config.Producer.apiAddressURL, chainID)
 	if err != nil {
 		log.Fatalln("producer node error:", err)
 	}
 
-	wallet := eosapi.New(config.Producer.walletAddressURL, chainID)
+	wallet := eos.New(config.Producer.walletAddressURL, chainID)
 	if err != nil {
 		log.Fatalln("wallet api:", err)
 	}
 
 	// FIXME: when ECC signatures work natively in Go, we can use the
-	// `eosapi.KeyBag` signer instead.
-	api.SetSigner(eosapi.NewWalletSigner(wallet, "default"))
+	// `eos.KeyBag` signer instead.
+	api.SetSigner(eos.NewWalletSigner(wallet, "default"))
 
 	// Checking wallet node
 

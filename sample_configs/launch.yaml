@@ -1,0 +1,30 @@
+launch_btc_block_height: 525123  # Approx June 3rd 2018 9am EST, 6am PST, 3pm UTC.
+
+opening_balances_snapshot_hash: ec2fe55229c3ef2232b5b7fa57175243bf5cf16cb7bbe4a6f8750274f7a56f9a
+
+system_contract_hash: 0b10deaec92f54c76608d7d7118c8d64c83964a0422489b503eef9e245d73767
+
+producers:
+- eosio_account_name: eoscanada
+  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
+  keybase_user: abourget
+  agent_name: EOS Canada
+  url: https://eos-canada.io
+
+- eosio_account_name: bp1
+  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
+  keybase_user: abourget
+  agent_name: EOS Canada
+  url: https://bp1.eos-canada.io
+
+- eosio_account_name: bp2
+  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
+  keybase_user: abourget
+  agent_name: EOS Canada
+  url: https://bp2.eos-canada.io
+
+- eosio_account_name: bp3
+  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
+  keybase_user: abourget
+  agent_name: EOS Canada
+  url: https://bp3.eos-canada.io

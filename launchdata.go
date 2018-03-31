@@ -21,7 +21,7 @@ type LaunchData struct {
 	Producers []*ProducerDef `json:"producers" yaml:"producers"`
 }
 type ProducerDef struct {
-	EOSIOAccountName eosapi.AccountName `json:"eosio_account_name" yaml:"eosio_account_name"`
+	EOSIOAccountName eos.AccountName `json:"eosio_account_name" yaml:"eosio_account_name"`
 	EOSIOPublicKey   string             `json:"eosio_public_key" yaml:"eosio_public_key"`
 	pubKey           ecc.PublicKey
 	KeybaseUser      string `json:"keybase_user" yaml:"keybase_user"`

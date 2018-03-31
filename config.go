@@ -47,7 +47,7 @@ type Config struct {
 		SnapshotPath string `json:"snapshot_path" yaml:"snapshot_path"`
 	} `json:"opening_balances" yaml:"opening_balances"`
 
-	MyParameters eosapi.EOSIOParameters `json:"my_parameters" yaml:"my_parameteres"`
+	MyParameters eos.EOSIOParameters `json:"my_parameters" yaml:"my_parameteres"`
 
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {
