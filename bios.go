@@ -93,7 +93,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return err
 	}
 
-	b.API.Debug = true
+	//b.API.Debug = true
 
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
@@ -168,7 +168,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 		}
 	}
 
-	_, err = b.API.SignPushAction(
+	_, err = b.API.SignPushActions(
 		system.NewUpdateAuth(AN("eosio"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
 		system.NewUpdateAuth(AN("eosio"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
 	)
