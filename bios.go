@@ -112,16 +112,17 @@ func (b *BIOS) RunBootNodeStage1() error {
 	}
 
 	eosioAcct := AN("eosio")
-	_, err = b.API.SetCode(eosioAcct, b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
-	if err != nil {
-		return fmt.Errorf("setcode: %s", err)
-	}
 
 	for _, prod := range b.ShuffledProducers {
 		_, err = b.API.NewAccount(eosioAcct, prod.EOSIOAccountName, prod.pubKey)
 		if err != nil {
 			return fmt.Errorf("newaccount %s: %s", prod.EOSIOAccountName, err)
 		}
+	}
+
+	_, err = b.API.SetCode(eosioAcct, b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	if err != nil {
+		return fmt.Errorf("setcode: %s", err)
 	}
 
 	// See tests/chain_tests/bootseq_tests.cpp and friends..
