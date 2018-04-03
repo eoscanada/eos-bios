@@ -18,6 +18,7 @@ var configuredHooks = []HookDef{
 	HookDef{"config_ready", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
 	HookDef{"publish_kickstart_encrypted", "Dispatched with the contents of the encrypted Kickstart data, to be published to your social / web properties."},
 	HookDef{"connect_to_bios", "Dispatched by ABPs with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to the BIOS Node's p2p address."},
+	HookDef{"done", "When your process it done"},
 }
 
 type HookDef struct {
@@ -28,7 +29,7 @@ type HookDef struct {
 func (b *BIOS) DispatchInit(genesisJSON string) error {
 	return b.dispatch("init", []string{
 		"genesis_json", genesisJSON,
-	})
+	}, nil)
 }
 
 func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey string, startProducing bool) error {
@@ -38,24 +39,28 @@ func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey 
 		"private_key", privateKey,
 		"should_start_producing", fmt.Sprintf("%v", startProducing),
 		"node_name", nodeName,
-	})
+	}, nil)
+}
+
+func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string, builtin func() error) error {
+	return b.dispatch("connect_to_bios", []string{
+		"p2p_address", p2pAddress,
+		"private_key_used", privateKeyUsed,
+	}, builtin)
 }
 
 func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {
 	return b.dispatch("publish_kickstart_encrypted", []string{
 		"data", string(kickstartData),
-	})
+	}, nil)
 }
 
-func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string) error {
-	return b.dispatch("connect_to_bios", []string{
-		"p2p_address", p2pAddress,
-		"private_key_used", privateKeyUsed,
-	})
+func (b *BIOS) DispatchDone() error {
+	return b.dispatch("done", []string{}, nil)
 }
 
 // dispatch to both exec calls, and remote web hooks.
-func (b *BIOS) dispatch(hookName string, data []string) error {
+func (b *BIOS) dispatch(hookName string, data []string, f func() error) error {
 	conf := b.Config.Hooks[hookName]
 	if conf == nil {
 		return nil
@@ -67,14 +72,23 @@ func (b *BIOS) dispatch(hookName string, data []string) error {
 		return fmt.Errorf("data should be pairs of key and values, cannot have %d elements", len(data))
 	}
 
-	if err := b.execCall(conf, data); err != nil {
-		return err
+	if conf.Exec != "" {
+		if err := b.execCall(conf, data); err != nil {
+			return err
+		}
 	}
-
-	if err := b.webhookCall(conf, data); err != nil {
-		return err
+	if conf.URL != "" {
+		if err := b.webhookCall(conf, data); err != nil {
+			return err
+		}
 	}
-
+	if conf.Builtin {
+		if f != nil {
+			if err := f(); err != nil {
+				return err
+			}
+		}
+	}
 	if conf.Wait {
 		fmt.Printf("Press ENTER to continue... ")
 		_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
@@ -84,10 +98,6 @@ func (b *BIOS) dispatch(hookName string, data []string) error {
 }
 
 func (b *BIOS) execCall(conf *HookConfig, data []string) error {
-	if conf.Exec == "" {
-		return nil
-	}
-
 	p := shellwords.NewParser()
 	p.ParseEnv = true
 	args, err := p.Parse(conf.Exec)
@@ -117,10 +127,6 @@ func (b *BIOS) execCall(conf *HookConfig, data []string) error {
 }
 
 func (b *BIOS) webhookCall(conf *HookConfig, data []string) error {
-	if conf.URL == "" {
-		return nil
-	}
-
 	jsonBody, err := enc(data)
 	if err != nil {
 		return err

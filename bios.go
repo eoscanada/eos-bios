@@ -169,8 +169,6 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// 	return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
 	// }
 
-	//----------
-
 	fmt.Println("Setting eosio.token code for account eosio.token")
 	_, err = b.API.SetCode(AN("eosio.token"), b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
 	if err != nil {
@@ -210,9 +208,20 @@ func (b *BIOS) RunBootNodeStage1() error {
 		}
 
 		if idx == 5 {
-			fmt.Println("Okay, just trying anyway... jump to suite...")
+			fmt.Println("- Skipping Transfers")
 			break
 		}
+	}
+
+	// Call SetProds, to setup the first producers.
+	fmt.Println("Setting the first batch of producers")
+	var prodkeys []system.ProducerKey
+	for _, prod := range b.ShuffledProducers {
+		prodkeys = append(prodkeys, system.ProducerKey{prod.EOSIOAccountName, prod.pubKey})
+	}
+	_, err = b.API.SignPushActions(system.NewSetProds(0, prodkeys))
+	if err != nil {
+		return fmt.Errorf("setprods: %s", err)
 	}
 
 	fmt.Println("Replacing eosio account from eosio.bios contract to eosio.system")
@@ -234,13 +243,15 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("updateauth: %s", err)
 	}
 
+	fmt.Println("PUBLISH THIS IP:", b.Config.Producer.SecretP2PAddress)
+
+	return b.DispatchDone()
 	// Create the `Kickstart data`
 	// Call webhook PublishKickstartEncrypted
 	//   or display it on screen for it to be manually disseminated
 	// Call `regproducer` for myself now
 	// Return and we're done.
 	// Dispatch WebhookBIOSNodeDone
-	return nil
 }
 
 func (b *BIOS) RunABPStage1() error {
@@ -248,27 +259,62 @@ func (b *BIOS) RunABPStage1() error {
 
 	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
 	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
+	// FIXME: this is a quick hack to just pass the p2p address
+	lines, err := ScanLinesUntilBlank()
+	if err != nil {
+		return err
+	}
+	p2paddr := strings.TrimSpace(lines)
+
 	// Decrypt the Kickstart data
 	//   Do extensive validation on the input (tight regexp for address, for private key?)
-	// Call `api.NetConnect()` on the `p2p_address` therein.
-	// Dispatch Webhook ConnectToBIOS
-	//   Display `config.ini` snippets to inject and wait on keypress.
-	// Poll your P2P-Address, until the network syncs..
+
+	err = b.DispatchConnectToBIOS(p2paddr, "", func() error {
+		_, err := b.API.NetConnect(p2paddr)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	for {
+		time.Sleep(1 * time.Second)
+		acct, err := b.API.GetAccount(AN("eosio"))
+		if err != nil {
+			fmt.Printf("e")
+			continue
+		}
+
+		if len(acct.Permissions) != 2 || acct.Permissions[0].RequiredAuth.Threshold != 0 || acct.Permissions[1].RequiredAuth.Threshold != 0 {
+			// FIXME: perhaps check that there are no keys and
+			// accounts.. that the account is *really* disabled.  we
+			// can check elsewhere though.
+			fmt.Printf(".")
+			continue
+		}
+
+		fmt.Printf(" good! BIOS signed off, chain is sync'd!")
+		break
+	}
+
 	// Do all the checks:
 	//  - all Producers are properly setup
 	//  - anything fails, SABOTAGE
 	// We call `regproducer` for ourselves.
 	// Publish a PGP Signed message with your local IP.. push to properties
 	// Dispatch webhook PublishKickstartPublic (with a Kickstart Data object)
-	return nil
+
+	return b.DispatchDone()
 }
 
 func (b *BIOS) WaitStage1End() error {
 	fmt.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
+
 	// Wait on stdin
 	//   Input should be simply the p2p endpoint of any node that initialized
 	// It'll be an armored GPG-signed (base64) blob containing each producer's `Kickstart Data`, relaying the original `PrivateKeyUsed`, but with their own `p2p_address`
 	//   Again, do extensive validation on the input, anything reaching webhooks.
+
 	// Dispatch webhook ConnectToBIOS, relaying the `PrivateKeyUsed` discovered by the ABPs
 	// We can then run the same verifications, without sabotage being enabled or risked.
 	// At this point, our node is sync'd with the network

@@ -72,9 +72,10 @@ type Config struct {
 }
 
 type HookConfig struct {
-	URL  string `json:"url"`
-	Exec string `json:"exec"`
-	Wait bool   `json:"wait"`
+	URL     string `json:"url"`
+	Exec    string `json:"exec"`
+	Builtin bool   `json:"builtin"`
+	Wait    bool   `json:"wait"`
 }
 
 func LoadLocalConfig(localConfigPath string) (*Config, error) {
