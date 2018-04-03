@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/eosioca/eosapi"
@@ -111,18 +111,70 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
-	eosioAcct := AN("eosio")
-
 	for _, prod := range b.ShuffledProducers {
-		_, err = b.API.NewAccount(eosioAcct, prod.EOSIOAccountName, prod.pubKey)
+		fmt.Println("Creating new account for", prod.EOSIOAccountName)
+		_, err = b.API.NewAccount(AN("eosio"), prod.EOSIOAccountName, prod.pubKey)
 		if err != nil {
 			return fmt.Errorf("newaccount %s: %s", prod.EOSIOAccountName, err)
 		}
 	}
 
-	_, err = b.API.SetCode(eosioAcct, b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	fmt.Println("Creating account eosio.msig")
+	_, err = b.API.NewAccount(AN("eosio"), AN("eosio.msig"), ephemeralPrivateKey.PublicKey())
 	if err != nil {
-		return fmt.Errorf("setcode: %s", err)
+		return fmt.Errorf("newaccount eosio.msig: %s", err)
+	}
+
+	fmt.Println("Creating account eosio.token")
+	_, err = b.API.NewAccount(AN("eosio"), AN("eosio.token"), ephemeralPrivateKey.PublicKey())
+	if err != nil {
+		return fmt.Errorf("newaccount eosio.token: %s", err)
+	}
+
+	fmt.Println("Setting eosio.bios code for account eosio")
+	_, err = b.API.SetCode(AN("eosio"), b.Config.BIOSContract.CodePath, b.Config.BIOSContract.ABIPath)
+	if err != nil {
+		return fmt.Errorf("setcode eosio.bios: %s", err)
+	}
+
+	// Setpriv on `eosio` and `eosio.msig`
+	fmt.Println("Setting privileged account for eosio and eosio.msig")
+	_, err = b.API.SignPushActions(
+		system.NewSetPriv(AN("eosio")),
+		system.NewSetPriv(AN("eosio.msig")),
+	)
+	if err != nil {
+		return fmt.Errorf("setpriv eosio: %s", err)
+	}
+
+	fmt.Println("Setting eosio.msig code for account eosio.msig")
+	setCode, err := system.NewSetCodeTx(AN("eosio.msig"), b.Config.MsigContract.CodePath, b.Config.MsigContract.ABIPath)
+	if err != nil {
+		return fmt.Errorf("NewSetCodeTx eosio.msig: %s", err)
+	}
+
+	fmt.Println(" - code")
+	acts := setCode.Actions[:]
+	setCode.Actions = acts[:1]
+	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("signpushtx code eosio.msig: %s", err)
+	}
+
+	// FIXME: the abi isn't ready yet.. it doesn't serialize properly, yields something invalid.
+	// fmt.Println(" - abi")
+	// setCode.Actions = acts[1:]
+	// _, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
+	// if err != nil {
+	// 	return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
+	// }
+
+	//----------
+
+	fmt.Println("Setting eosio.token code for account eosio.token")
+	_, err = b.API.SetCode(AN("eosio.token"), b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	if err != nil {
+		return fmt.Errorf("setcode eosio.token: %s", err)
 	}
 
 	// See tests/chain_tests/bootseq_tests.cpp and friends..
@@ -130,25 +182,19 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// TODO: Create the currency in the `eosio.token` contract..
 	//       and review `eosio.token` :P
 
-	eosSymbol := eos.Symbol{Precision: 4, Symbol: "EOS"}
-
 	// TODO: Issue from the `eosio.token` contract.. `transfer` and
 	// `issue` on `eosio.system` is probably going to disappear.
-	_, err = b.API.Issue("eosio", eos.Asset{Amount: 10000000000000, Symbol: eosSymbol})
+	fmt.Println("Issuing base currency as EOS")
+	_, err = b.API.Issue("eosio", eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol})
 	if err != nil {
 		return fmt.Errorf("issue: %s", err)
 	}
 
 	for idx, hodler := range b.Snapshot {
-		// 7108558431253954560 stringifies to `genesis.`
-		accountBytes := []byte{0x00, 0x00, 0x00, 0x00, 0x3b, 0xac, 0xa6, 0x62}
-		// TODO: find a better way to make genesis.[1-5a-z][1-5a-z], etc..
-		binary.BigEndian.PutUint32(accountBytes[:4], uint32(idx+1))
-		intAcct := binary.LittleEndian.Uint64(accountBytes)
-		destAccount := AN(eos.NameToString(intAcct))
-		fmt.Println("Transfer", hodler, destAccount, accountBytes)
+		destAccount := AN("genesis." + strings.Trim(eos.NameToString(uint64(idx+1)), "."))
+		fmt.Println("Transfer", hodler, destAccount)
 
-		_, err = b.API.NewAccount(eosioAcct, destAccount, hodler.EOSPublicKey)
+		_, err = b.API.NewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey)
 		if err != nil {
 			return fmt.Errorf("hodler: newaccount: %s", err)
 		}
@@ -169,9 +215,20 @@ func (b *BIOS) RunBootNodeStage1() error {
 		}
 	}
 
+	fmt.Println("Replacing eosio account from eosio.bios contract to eosio.system")
+	_, err = b.API.SetCode(AN("eosio"), b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	if err != nil {
+		return fmt.Errorf("setcode: %s", err)
+	}
+
+	fmt.Println("Disabling authorization for accounts eosio, eosio.msig and eosio.token")
 	_, err = b.API.SignPushActions(
 		system.NewUpdateAuth(AN("eosio"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
 		system.NewUpdateAuth(AN("eosio"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+		system.NewUpdateAuth(AN("eosio.msig"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
+		system.NewUpdateAuth(AN("eosio.msig"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+		system.NewUpdateAuth(AN("eosio.token"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
+		system.NewUpdateAuth(AN("eosio.token"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
 	)
 	if err != nil {
 		return fmt.Errorf("updateauth: %s", err)

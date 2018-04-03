@@ -15,6 +15,11 @@ type Config struct {
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`
 	} `json:"system_contract" yaml:"system_contract"`
 
+	BIOSContract struct {
+		CodePath string `json:"code_path" yaml:"code_path"`
+		ABIPath  string `json:"abi_path" yaml:"abi_path"`
+	} `json:"bios_contract" yaml:"bios_contract"`
+
 	MsigContract struct {
 		CodePath string `json:"code_path" yaml:"code_path"`
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`

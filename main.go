@@ -50,7 +50,9 @@ func main() {
 
 	// FIXME: when ECC signatures work natively in Go, we can use the
 	// `eos.KeyBag` signer instead.
-	api.SetSigner(eos.NewWalletSigner(wallet, "default"))
+	// signer := eos.NewKeyBag()
+	signer := eos.NewWalletSigner(wallet, "default")
+	api.SetSigner(signer)
 
 	// Checking wallet node
 
