@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"os"
+	"strings"
 
 	eos "github.com/eosioca/eosapi"
 )
@@ -13,14 +14,15 @@ func ScanLinesUntilBlank() (out string, err error) {
 	for {
 		var text string
 		text, err = reader.ReadString('\n')
+		//fmt.Println("Read line", text)
 		if err != nil {
 			return
 		}
 
 		out += text
 
-		if text == "" {
-			return
+		if text == "\n" {
+			return strings.TrimSpace(out), nil
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/eosioca/eosapi"
 	"github.com/eosioca/eosapi/ecc"
 	"github.com/eosioca/eosapi/system"
+	"github.com/eosioca/eosapi/token"
 )
 
 type BIOS struct {
@@ -22,6 +24,7 @@ type BIOS struct {
 		MerkleRoot []byte
 	}
 	ShuffledProducers []*ProducerDef
+	MyProducer        *ProducerDef
 }
 
 func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eos.EOSAPI) *BIOS {
@@ -39,13 +42,11 @@ func (b *BIOS) Run() error {
 
 	myProducerDef, err := b.MyProducerDef()
 	if err != nil {
-		return err
+		return fmt.Errorf("find my producer definition: %s", err)
 	}
+	b.MyProducer = myProducerDef
 
-	// TODO: We need to make SURE we *DO* have signing keys for the myProducerDef.EOSIOPublicKey,
-	// by checking the linked wallet or som'thn..
-
-	if err := b.DispatchInit(b.GenerateGenesisJSON(myProducerDef.EOSIOPublicKey)); err != nil {
+	if err := b.DispatchInit(); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
@@ -113,31 +114,45 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	for _, prod := range b.ShuffledProducers {
 		fmt.Println("Creating new account for", prod.EOSIOAccountName)
-		_, err = b.API.NewAccount(AN("eosio"), prod.EOSIOAccountName, prod.pubKey)
+		_, err = b.API.SignPushActions(
+			system.NewNewAccount(AN("eosio"), prod.EOSIOAccountName, prod.pubKey),
+		)
 		if err != nil {
 			return fmt.Errorf("newaccount %s: %s", prod.EOSIOAccountName, err)
 		}
 	}
 
 	fmt.Println("Creating account eosio.msig")
-	_, err = b.API.NewAccount(AN("eosio"), AN("eosio.msig"), ephemeralPrivateKey.PublicKey())
+	_, err = b.API.SignPushActions(
+		system.NewNewAccount(AN("eosio"), AN("eosio.msig"), ephemeralPrivateKey.PublicKey()),
+	)
 	if err != nil {
 		return fmt.Errorf("newaccount eosio.msig: %s", err)
 	}
 
 	fmt.Println("Creating account eosio.token")
-	_, err = b.API.NewAccount(AN("eosio"), AN("eosio.token"), ephemeralPrivateKey.PublicKey())
+	_, err = b.API.SignPushActions(
+		system.NewNewAccount(AN("eosio"), AN("eosio.token"), ephemeralPrivateKey.PublicKey()),
+	)
 	if err != nil {
 		return fmt.Errorf("newaccount eosio.token: %s", err)
 	}
 
+	// Inject bios
+
 	fmt.Println("Setting eosio.bios code for account eosio")
-	_, err = b.API.SetCode(AN("eosio"), b.Config.BIOSContract.CodePath, b.Config.BIOSContract.ABIPath)
+	setCode, err := system.NewSetCodeTx(AN("eosio"), b.Config.BIOSContract.CodePath, b.Config.BIOSContract.ABIPath)
 	if err != nil {
-		return fmt.Errorf("setcode eosio.bios: %s", err)
+		return fmt.Errorf("NewSetCodeTx eosio.bios: %s", err)
+	}
+
+	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("signpushtx code eosio.bios: %s", err)
 	}
 
 	// Setpriv on `eosio` and `eosio.msig`
+
 	fmt.Println("Setting privileged account for eosio and eosio.msig")
 	_, err = b.API.SignPushActions(
 		system.NewSetPriv(AN("eosio")),
@@ -147,8 +162,10 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("setpriv eosio: %s", err)
 	}
 
+	// Inject msig code
+
 	fmt.Println("Setting eosio.msig code for account eosio.msig")
-	setCode, err := system.NewSetCodeTx(AN("eosio.msig"), b.Config.MsigContract.CodePath, b.Config.MsigContract.ABIPath)
+	setCode, err = system.NewSetCodeTx(AN("eosio.msig"), b.Config.MsigContract.CodePath, b.Config.MsigContract.ABIPath)
 	if err != nil {
 		return fmt.Errorf("NewSetCodeTx eosio.msig: %s", err)
 	}
@@ -160,7 +177,6 @@ func (b *BIOS) RunBootNodeStage1() error {
 	if err != nil {
 		return fmt.Errorf("signpushtx code eosio.msig: %s", err)
 	}
-
 	// FIXME: the abi isn't ready yet.. it doesn't serialize properly, yields something invalid.
 	// fmt.Println(" - abi")
 	// setCode.Actions = acts[1:]
@@ -169,21 +185,35 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// 	return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
 	// }
 
+	// Inject eosio.token code
+
 	fmt.Println("Setting eosio.token code for account eosio.token")
-	_, err = b.API.SetCode(AN("eosio.token"), b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	setCode, err = system.NewSetCodeTx(AN("eosio.token"), b.Config.TokenContract.CodePath, b.Config.TokenContract.ABIPath)
 	if err != nil {
-		return fmt.Errorf("setcode eosio.token: %s", err)
+		return fmt.Errorf("NewSetCodeTx eosio.token: %s", err)
+	}
+
+	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("signpushtx code eosio.token: %s", err)
 	}
 
 	// See tests/chain_tests/bootseq_tests.cpp and friends..
 
-	// TODO: Create the currency in the `eosio.token` contract..
-	//       and review `eosio.token` :P
+	fmt.Println("Creating the `EOS` currency symbol")
+	_, err = b.API.SignPushActions(
+		token.NewCreate(AN("eosio"), eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol}, false, false, false),
+	)
+	if err != nil {
+		return fmt.Errorf("create token: %s", err)
+	}
 
 	// TODO: Issue from the `eosio.token` contract.. `transfer` and
 	// `issue` on `eosio.system` is probably going to disappear.
 	fmt.Println("Issuing base currency as EOS")
-	_, err = b.API.Issue("eosio", eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol})
+	_, err = b.API.SignPushActions(
+		token.NewIssue(AN("eosio"), eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol}, "Initial issuance"),
+	)
 	if err != nil {
 		return fmt.Errorf("issue: %s", err)
 	}
@@ -192,16 +222,16 @@ func (b *BIOS) RunBootNodeStage1() error {
 		destAccount := AN("genesis." + strings.Trim(eos.NameToString(uint64(idx+1)), "."))
 		fmt.Println("Transfer", hodler, destAccount)
 
-		_, err = b.API.NewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey)
+		_, err = b.API.SignPushActions(
+			system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey),
+		)
 		if err != nil {
 			return fmt.Errorf("hodler: newaccount: %s", err)
 		}
 
-		_, err := b.API.Transfer(
-			AN("eosio"),
-			destAccount,
-			hodler.Balance,
-			"Welcome "+hodler.EthereumAddress[len(hodler.EthereumAddress)-6:],
+		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
+		_, err := b.API.SignPushActions(
+			token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo),
 		)
 		if err != nil {
 			return fmt.Errorf("hodler: transfer: %s", err)
@@ -243,7 +273,16 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("updateauth: %s", err)
 	}
 
-	fmt.Println("PUBLISH THIS IP:", b.Config.Producer.SecretP2PAddress)
+	kickstartData := &KickstartData{
+		BIOSP2PAddress: b.Config.Producer.SecretP2PAddress,
+		PublicKeyUsed:  pubKey,
+		PrivateKeyUsed: privKey,
+		GenesisJSON:    genesisData,
+	}
+	kd, _ := json.Marshal(kickstartData)
+	ksdata := base64.RawStdEncoding.EncodeToString(kd)
+
+	fmt.Println("PUBLISH THIS KICKSTART DATA:", string(ksdata))
 
 	return b.DispatchDone()
 	// Create the `Kickstart data`
@@ -264,13 +303,23 @@ func (b *BIOS) RunABPStage1() error {
 	if err != nil {
 		return err
 	}
-	p2paddr := strings.TrimSpace(lines)
+
+	rawKickstartData, err := base64.RawStdEncoding.DecodeString(strings.Replace(strings.TrimSpace(lines), "\n", "", -1))
+	if err != nil {
+		return fmt.Errorf("kickstrat base64 decode: %s", err)
+	}
+
+	var kickstart KickstartData
+	err = json.Unmarshal(rawKickstartData, &kickstart)
+	if err != nil {
+		return fmt.Errorf("unmarshal kickstart data: %s", err)
+	}
 
 	// Decrypt the Kickstart data
 	//   Do extensive validation on the input (tight regexp for address, for private key?)
 
-	err = b.DispatchConnectToBIOS(p2paddr, "", func() error {
-		_, err := b.API.NetConnect(p2paddr)
+	err = b.DispatchConnectToBIOS(kickstart, func() error {
+		_, err := b.API.NetConnect(kickstart.BIOSP2PAddress)
 		return err
 	})
 	if err != nil {
@@ -295,6 +344,11 @@ func (b *BIOS) RunABPStage1() error {
 
 		fmt.Printf(" good! BIOS signed off, chain is sync'd!")
 		break
+	}
+
+	_, err = b.API.SignPushActions(system.NewRegProducer(b.MyProducer.EOSIOAccountName, b.MyProducer.pubKey, b.Config.MyParameters))
+	if err != nil {
+		return fmt.Errorf("setprods: %s", err)
 	}
 
 	// Do all the checks:

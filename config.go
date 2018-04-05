@@ -25,10 +25,10 @@ type Config struct {
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`
 	} `json:"msig_contract" yaml:"msig_contract"`
 
-	TokensContract struct {
+	TokenContract struct {
 		CodePath string `json:"code_path" yaml:"code_path"`
 		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-	} `json:"tokens_contract" yaml:"tokens_contract"`
+	} `json:"token_contract" yaml:"token_contract"`
 
 	// Producer describes your producing node.
 	Producer struct {
@@ -52,7 +52,7 @@ type Config struct {
 		SnapshotPath string `json:"snapshot_path" yaml:"snapshot_path"`
 	} `json:"opening_balances" yaml:"opening_balances"`
 
-	MyParameters eos.EOSIOParameters `json:"my_parameters" yaml:"my_parameteres"`
+	MyParameters eos.EOSIOParameters `json:"my_parameters" yaml:"my_parameters"`
 
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {

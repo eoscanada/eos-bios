@@ -26,10 +26,8 @@ type HookDef struct {
 	Desc string
 }
 
-func (b *BIOS) DispatchInit(genesisJSON string) error {
-	return b.dispatch("init", []string{
-		"genesis_json", genesisJSON,
-	}, nil)
+func (b *BIOS) DispatchInit() error {
+	return b.dispatch("init", []string{}, nil)
 }
 
 func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey string, startProducing bool) error {
@@ -42,10 +40,12 @@ func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey 
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectToBIOS(p2pAddress, privateKeyUsed string, builtin func() error) error {
+func (b *BIOS) DispatchConnectToBIOS(kickstart KickstartData, builtin func() error) error {
 	return b.dispatch("connect_to_bios", []string{
-		"p2p_address", p2pAddress,
-		"private_key_used", privateKeyUsed,
+		"p2p_address", kickstart.BIOSP2PAddress,
+		"public_key_used", kickstart.PublicKeyUsed,
+		"private_key_used", kickstart.PrivateKeyUsed,
+		"genesis_json", kickstart.GenesisJSON,
 	}, builtin)
 }
 
