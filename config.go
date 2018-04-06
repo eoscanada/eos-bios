@@ -52,13 +52,23 @@ type Config struct {
 		KeyPath string `json:"key_path"`
 	} `json:"pgp"`
 
-	NoShuffle bool `json:"disable_shuffling"`
-
 	// Hooks are called at different stages in the process, for
 	// remote systems to be notified and act.  They are simply `http`
 	// endpoints to which a POST will be sent with pre-defined structs
 	// as JSON.  See `hooks.go`
 	Hooks map[string]*HookConfig `json:"hooks"`
+
+	// This must all be empty for production.
+	Debug struct {
+		// EnrichProducer will distribute coins to all producers in LaunchData.
+		EnrichProducers bool `json:"enrich_producers"`
+		// KeepSystemAccount prevents the destrution of the `eosio` account and removal of its keys.
+		KeepSystemAccount bool `json:"keep_system_account"`
+		// NoShuffle prevents shuffling of the Producers in your
+		// LaunchData. Helps tests different roles (BIOS Boot Node,
+		// ABP, watcher...)
+		NoShuffle bool `json:"no_shuffle"`
+	}
 }
 
 type ContractLocation struct {

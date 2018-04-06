@@ -16,7 +16,7 @@ import (
 var configuredHooks = []HookDef{
 	HookDef{"init", "Dispatch when we start the program."},
 	HookDef{"config_ready", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
-	HookDef{"publish_kickstart_encrypted", "Dispatched with the contents of the encrypted Kickstart data, to be published to your social / web properties."},
+	HookDef{"publish_kickstart_data", "Dispatched with the contents of the (usually encrypted) Kickstart data, to be published to your social / web properties."},
 	HookDef{"connect_to_bios", "Dispatched by ABPs with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to the BIOS Node's p2p address."},
 	HookDef{"done", "When your process it done"},
 }
@@ -49,9 +49,9 @@ func (b *BIOS) DispatchConnectToBIOS(kickstart KickstartData, builtin func() err
 	}, builtin)
 }
 
-func (b *BIOS) DispatchPublishKickstartEncrypted(kickstartData []byte) error {
-	return b.dispatch("publish_kickstart_encrypted", []string{
-		"data", string(kickstartData),
+func (b *BIOS) DispatchPublishKickstartData(kickstartData string) error {
+	return b.dispatch("publish_kickstart_data", []string{
+		"data", kickstartData,
 	}, nil)
 }
 

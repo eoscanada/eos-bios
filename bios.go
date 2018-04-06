@@ -136,24 +136,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("signpushtx code eosio.bios: %s", err)
 	}
 
-	// Inject producers, create their accounts.
-
-	for _, prod := range b.ShuffledProducers {
-		newAccount := system.NewNewAccount(AN("eosio"), prod.AccountName, nil)
-		newAccount.Data = system.NewAccount{
-			Creator: AN("eosio"),
-			Name:    prod.AccountName,
-			Owner:   prod.Authority.Owner,
-			Active:  prod.Authority.Active,
-		}
-		fmt.Println("Creating new account for", prod.AccountName)
-		_, err = b.API.SignPushActions(newAccount)
-		if err != nil {
-			return fmt.Errorf("newaccount %s: %s", prod.AccountName, err)
-		}
-	}
-
 	fmt.Println("Creating account eosio.msig")
+
 	_, err = b.API.SignPushActions(
 		system.NewNewAccount(AN("eosio"), AN("eosio.msig"), ephemeralPrivateKey.PublicKey()),
 	)
@@ -162,6 +146,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	}
 
 	fmt.Println("Creating account eosio.token")
+
 	_, err = b.API.SignPushActions(
 		system.NewNewAccount(AN("eosio"), AN("eosio.token"), ephemeralPrivateKey.PublicKey()),
 	)
@@ -169,9 +154,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("newaccount eosio.token: %s", err)
 	}
 
-	// Setpriv on `eosio` and `eosio.msig`
-
 	fmt.Println("Setting privileged account for eosio and eosio.msig")
+
 	_, err = b.API.SignPushActions(
 		system.NewSetPriv(AN("eosio")),
 		system.NewSetPriv(AN("eosio.msig")),
@@ -180,9 +164,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("setpriv eosio: %s", err)
 	}
 
-	// Inject msig code
-
 	fmt.Println("Setting eosio.msig code for account eosio.msig")
+
 	setCode, err = system.NewSetCodeTx(AN("eosio.msig"), b.Config.Contracts.Msig.CodePath, b.Config.Contracts.Msig.ABIPath)
 	if err != nil {
 		return fmt.Errorf("NewSetCodeTx eosio.msig: %s", err)
@@ -203,9 +186,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// 	return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
 	// }
 
-	// Inject eosio.token code
-
 	fmt.Println("Setting eosio.token code for account eosio.token")
+
 	setCode, err = system.NewSetCodeTx(AN("eosio.token"), b.Config.Contracts.Token.CodePath, b.Config.Contracts.Token.ABIPath)
 	if err != nil {
 		return fmt.Errorf("NewSetCodeTx eosio.token: %s", err)
@@ -219,6 +201,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// See tests/chain_tests/bootseq_tests.cpp and friends..
 
 	fmt.Println("Creating the `EOS` currency symbol")
+
 	_, err = b.API.SignPushActions(
 		token.NewCreate(AN("eosio"), eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol}, false, false, false),
 	)
@@ -226,15 +209,41 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("create token: %s", err)
 	}
 
-	// TODO: Issue from the `eosio.token` contract.. `transfer` and
-	// `issue` on `eosio.system` is probably going to disappear.
 	fmt.Println("Issuing base currency as EOS")
+
 	_, err = b.API.SignPushActions(
 		token.NewIssue(AN("eosio"), eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol}, "Initial issuance"),
 	)
 	if err != nil {
 		return fmt.Errorf("issue: %s", err)
 	}
+
+	fmt.Println("Injecting launch producers")
+
+	for _, prod := range b.ShuffledProducers {
+		newAccount := system.NewNewAccount(AN("eosio"), prod.AccountName, nil)
+		newAccount.Data = system.NewAccount{
+			Creator: AN("eosio"),
+			Name:    prod.AccountName,
+			Owner:   prod.Authority.Owner,
+			Active:  prod.Authority.Active,
+		}
+		fmt.Printf("- Creating new account %q\n", prod.AccountName)
+		_, err = b.API.SignPushActions(newAccount)
+		if err != nil {
+			return fmt.Errorf("newaccount %s: %s", prod.AccountName, err)
+		}
+
+		if b.Config.Debug.EnrichProducers {
+			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName)
+			_, err = b.API.SignPushActions(token.NewTransfer(AN("eosio"), prod.AccountName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
+			if err != nil {
+				return fmt.Errorf("enrich_producers: transfer: %s", err)
+			}
+		}
+	}
+
+	fmt.Println("Injecting Snapshot balances")
 
 	for idx, hodler := range b.Snapshot {
 		destAccount := AN("genesis." + strings.Trim(eos.NameToString(uint64(idx+1)), "."))
@@ -259,11 +268,17 @@ func (b *BIOS) RunBootNodeStage1() error {
 			fmt.Println("- Skipping Transfers")
 			break
 		}
+
+		// TODO: stake 50% bandwidth, 50% cpu for all new accounts
+		// b.API.SignPushActions(system.Stake(AN("eosio"), destAccount, 999, 888, ""))
 	}
 
-	// Call SetProds, to setup the first producers.
-	fmt.Println("Setting the first batch of producers")
-	var prodkeys []system.ProducerKey
+	fmt.Println("Setting the initial Appointed Block Producer schedule")
+
+	prodkeys := []system.ProducerKey{system.ProducerKey{
+		ProducerName:    AN("eosio"),
+		BlockSigningKey: ephemeralPrivateKey.PublicKey(),
+	}} // FIXME: should that include eosio ?!?
 	for _, prod := range b.ShuffledProducers {
 		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
 	}
@@ -273,23 +288,31 @@ func (b *BIOS) RunBootNodeStage1() error {
 	}
 
 	fmt.Println("Replacing eosio account from eosio.bios contract to eosio.system")
+
 	_, err = b.API.SetCode(AN("eosio"), b.Config.Contracts.System.CodePath, b.Config.Contracts.System.ABIPath)
 	if err != nil {
 		return fmt.Errorf("setcode: %s", err)
 	}
 
-	fmt.Println("Disabling authorization for accounts eosio, eosio.msig and eosio.token")
-	_, err = b.API.SignPushActions(
-		system.NewUpdateAuth(AN("eosio"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-		system.NewUpdateAuth(AN("eosio"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
-		system.NewUpdateAuth(AN("eosio.msig"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-		system.NewUpdateAuth(AN("eosio.msig"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
-		system.NewUpdateAuth(AN("eosio.token"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-		system.NewUpdateAuth(AN("eosio.token"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
-	)
-	if err != nil {
-		return fmt.Errorf("updateauth: %s", err)
+	if b.Config.Debug.KeepSystemAccount {
+		fmt.Println("DEBUG: Keeping system account around, for testing purposes.")
+	} else {
+		fmt.Println("Disabling authorization for accounts eosio, eosio.msig and eosio.token")
+
+		_, err = b.API.SignPushActions(
+			system.NewUpdateAuth(AN("eosio"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
+			system.NewUpdateAuth(AN("eosio"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+			system.NewUpdateAuth(AN("eosio.msig"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
+			system.NewUpdateAuth(AN("eosio.msig"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+			system.NewUpdateAuth(AN("eosio.token"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
+			system.NewUpdateAuth(AN("eosio.token"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+		)
+		if err != nil {
+			return fmt.Errorf("updateauth: %s", err)
+		}
 	}
+
+	fmt.Println("Preparing kickstart data")
 
 	kickstartData := &KickstartData{
 		BIOSP2PAddress: b.Config.Producer.SecretP2PAddress,
@@ -300,10 +323,18 @@ func (b *BIOS) RunBootNodeStage1() error {
 	kd, _ := json.Marshal(kickstartData)
 	ksdata := base64.RawStdEncoding.EncodeToString(kd)
 
-	fmt.Println("PUBLISH THIS KICKSTART DATA:", string(ksdata))
+	// TODO: encrypt it for those who need it
+
+	fmt.Println("PUBLISH THIS KICKSTART DATA:")
+	fmt.Println("")
+	fmt.Println(ksdata)
+	fmt.Println("")
+
+	if err = b.DispatchPublishKickstartData(ksdata); err != nil {
+		return fmt.Errorf("dispatch publish_kickstart_data: %s", err)
+	}
 
 	return b.DispatchDone()
-	// Create the `Kickstart data`
 	// Call webhook PublishKickstartEncrypted
 	//   or display it on screen for it to be manually disseminated
 	// Call `regproducer` for myself now
@@ -364,7 +395,7 @@ func (b *BIOS) RunABPStage1() error {
 			continue
 		}
 
-		fmt.Printf(" OKAY")
+		fmt.Println(" OKAY")
 		break
 	}
 
