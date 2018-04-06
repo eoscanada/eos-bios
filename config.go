@@ -6,69 +6,64 @@ import (
 	"net/url"
 
 	"github.com/eosioca/eosapi"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/eosioca/eosapi/ecc"
 )
 
 type Config struct {
-	SystemContract struct {
-		CodePath string `json:"code_path" yaml:"code_path"`
-		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-	} `json:"system_contract" yaml:"system_contract"`
-
-	BIOSContract struct {
-		CodePath string `json:"code_path" yaml:"code_path"`
-		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-	} `json:"bios_contract" yaml:"bios_contract"`
-
-	MsigContract struct {
-		CodePath string `json:"code_path" yaml:"code_path"`
-		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-	} `json:"msig_contract" yaml:"msig_contract"`
-
-	TokenContract struct {
-		CodePath string `json:"code_path" yaml:"code_path"`
-		ABIPath  string `json:"abi_path" yaml:"abi_path"`
-	} `json:"token_contract" yaml:"token_contract"`
-
-	// Producer describes your producing node.
-	Producer struct {
-		// MyAccount is the name of the `account_name` this producer will be using on chain
-		MyAccount string `json:"my_account" yaml:"my_account"`
-		// APIAddress is the target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.
-		APIAddress    string `json:"api_address" yaml:"api_address"`
-		apiAddressURL *url.URL
-		// SecretP2PAddress is the endpoint which will be published at the end of the process. Needs to be externally routable.  It must be kept secret for DDoS protection.
-		SecretP2PAddress string `json:"secret_p2p_address" yaml:"secret_p2p_address"`
-
-		// WalletAddress is the API endpoint where your wallet lives
-		WalletAddress    string `json:"wallet_address" yaml:"wallet_address"`
-		walletAddressURL *url.URL
-	} `json:"producer" yaml:"producer"`
+	Contracts struct {
+		BIOS   ContractLocation `json:"bios"`
+		System ContractLocation `json:"system"`
+		Msig   ContractLocation `json:"msig"`
+		Token  ContractLocation `json:"token"`
+	}
 
 	// OpeningBalancesSnapshotPath represents the `snapshot.csv` file,
 	// which holds the opening balances for all ERC-20 token holders.
 	OpeningBalances struct {
 		// SnapshotPath is the path to the `csv` file, extracted using the `genesis` tool.
-		SnapshotPath string `json:"snapshot_path" yaml:"snapshot_path"`
-	} `json:"opening_balances" yaml:"opening_balances"`
+		SnapshotPath string `json:"snapshot_path"`
+	} `json:"opening_balances"`
 
-	MyParameters eos.EOSIOParameters `json:"my_parameters" yaml:"my_parameters"`
+	// Producer describes your producing node.
+	Producer struct {
+		// MyAccount is the name of the `account_name` this producer will be using on chain
+		MyAccount string `json:"my_account"`
+		// APIAddress is the target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.
+		APIAddress    string `json:"api_address"`
+		apiAddressURL *url.URL
+		// SecretP2PAddress is the endpoint which will be published at the end of the process. Needs to be externally routable.  It must be kept secret for DDoS protection.
+		SecretP2PAddress string `json:"secret_p2p_address"`
+
+		// WalletAddress is the API endpoint where your wallet lives
+		WalletAddress    string `json:"wallet_address"`
+		walletAddressURL *url.URL
+
+		// Key you want to register to sign blocks.
+		BlockSigningPublicKey ecc.PublicKey `json:"block_signing_public_key"`
+	} `json:"producer"`
+
+	MyParameters eos.EOSIOParameters `json:"my_parameters"`
 
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {
 		// Whether to use Keybase, or simply use in-built PGP crypto.
-		UseKeybase bool `json:"use_keybase" yaml:"use_keybase"`
+		UseKeybase bool `json:"use_keybase"`
 		// If `UseKeybase` is false, provide your secret `KeyPath` here.
-		KeyPath string `json:"key_path" yaml:"key_path"`
-	} `json:"pgp" yaml:"pgp"`
+		KeyPath string `json:"key_path"`
+	} `json:"pgp"`
 
-	NoShuffle bool `json:"disable_shuffling" yaml:"disable_shuffling"`
+	NoShuffle bool `json:"disable_shuffling"`
 
 	// Hooks are called at different stages in the process, for
 	// remote systems to be notified and act.  They are simply `http`
 	// endpoints to which a POST will be sent with pre-defined structs
 	// as JSON.  See `hooks.go`
-	Hooks map[string]*HookConfig `json:"connect_to_bios"`
+	Hooks map[string]*HookConfig `json:"hooks"`
+}
+
+type ContractLocation struct {
+	CodePath string `json:"code_path"`
+	ABIPath  string `json:"abi_path"`
 }
 
 type HookConfig struct {
@@ -85,7 +80,7 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 	}
 
 	var c *Config
-	if err = yaml.Unmarshal(cnt, &c); err != nil {
+	if err = yamlUnmarshal(cnt, &c); err != nil {
 		return nil, err
 	}
 

@@ -1,10 +1,22 @@
 system_contract:
   code_path: ./eosio.system.wasm
   abi_path: ./eosio.system.abi
-  hash: abcdefg
+
+bios_contract:
+  code_path: ./eosio.bios.wasm
+  abi_path: ./eosio.bios.abi
+
+msig_contract:
+  code_path: ./eosio.msig.wasm
+  abi_path: ./eosio.msig.abi
+
+token_contract:
+  code_path: ./eosio.token.wasm
+  abi_path: ./eosio.token.abi
 
 producer:
-  my_account: eoscanada
+  # Second node's account name, so it becomes an Appointed Block Producer
+  my_account: eosarctic
   api_address: http://localhost:8889
   secret_p2p_address: localhost:19876
   public_p2p_endpoint: nodeos://load-balanced-edge-nodes.mybp.example.com:9876
@@ -51,3 +63,7 @@ hooks:
     exec: ./hook_init.sh
   config_ready:
     exec: ./hook_config_ready.sh
+  connect_to_bios:
+    exec: ./hook_connect_bios.sh
+  done:
+    exec: ./hook_done.sh

@@ -73,19 +73,30 @@ func (b *BIOS) Run() error {
 }
 
 func (b *BIOS) PrintAppointedBlockProducers() {
+	fmt.Println("###############################################################################################")
+	fmt.Println("########################################  BOOTING  ############################################")
+	fmt.Println("")
 	if b.AmIBootNode() {
-		fmt.Println("STAGE 0: I AM THE BOOT NODE! Let's get the ball rolling.")
+		fmt.Println("I AM THE BOOT NODE! Let's get the ball rolling.")
 
 	} else if b.AmIAppointedBlockProducer() {
-		fmt.Println("STAGE 0: I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the boot node's media properties.")
+		fmt.Println("I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the boot node's media properties.")
 	} else {
-		fmt.Println("STAGE 0: hrm.. I'm not part of the Appointed Block Producers, let's wait and be ready to join")
+		fmt.Println("Okay... I'm not part of the Appointed Block Producers, we'll wait and be ready to join")
 	}
+
+	fmt.Println("")
+	fmt.Println("###################################  SHUFFLING RESULTS  #######################################")
+	fmt.Println("")
 
 	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].String())
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
 		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].String())
 	}
+	fmt.Println("")
+	fmt.Println("###############################################################################################")
+	fmt.Println("###############################################################################################")
+	fmt.Println("")
 }
 
 func (b *BIOS) RunBootNodeStage1() error {
@@ -112,13 +123,33 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
+	// Inject bios
+
+	fmt.Println("Setting eosio.bios code for account eosio")
+	setCode, err := system.NewSetCodeTx(AN("eosio"), b.Config.Contracts.BIOS.CodePath, b.Config.Contracts.BIOS.ABIPath)
+	if err != nil {
+		return fmt.Errorf("NewSetCodeTx eosio.bios: %s", err)
+	}
+
+	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("signpushtx code eosio.bios: %s", err)
+	}
+
+	// Inject producers, create their accounts.
+
 	for _, prod := range b.ShuffledProducers {
-		fmt.Println("Creating new account for", prod.EOSIOAccountName)
-		_, err = b.API.SignPushActions(
-			system.NewNewAccount(AN("eosio"), prod.EOSIOAccountName, prod.pubKey),
-		)
+		newAccount := system.NewNewAccount(AN("eosio"), prod.AccountName, nil)
+		newAccount.Data = system.NewAccount{
+			Creator: AN("eosio"),
+			Name:    prod.AccountName,
+			Owner:   prod.Authority.Owner,
+			Active:  prod.Authority.Active,
+		}
+		fmt.Println("Creating new account for", prod.AccountName)
+		_, err = b.API.SignPushActions(newAccount)
 		if err != nil {
-			return fmt.Errorf("newaccount %s: %s", prod.EOSIOAccountName, err)
+			return fmt.Errorf("newaccount %s: %s", prod.AccountName, err)
 		}
 	}
 
@@ -138,19 +169,6 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("newaccount eosio.token: %s", err)
 	}
 
-	// Inject bios
-
-	fmt.Println("Setting eosio.bios code for account eosio")
-	setCode, err := system.NewSetCodeTx(AN("eosio"), b.Config.BIOSContract.CodePath, b.Config.BIOSContract.ABIPath)
-	if err != nil {
-		return fmt.Errorf("NewSetCodeTx eosio.bios: %s", err)
-	}
-
-	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("signpushtx code eosio.bios: %s", err)
-	}
-
 	// Setpriv on `eosio` and `eosio.msig`
 
 	fmt.Println("Setting privileged account for eosio and eosio.msig")
@@ -165,7 +183,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// Inject msig code
 
 	fmt.Println("Setting eosio.msig code for account eosio.msig")
-	setCode, err = system.NewSetCodeTx(AN("eosio.msig"), b.Config.MsigContract.CodePath, b.Config.MsigContract.ABIPath)
+	setCode, err = system.NewSetCodeTx(AN("eosio.msig"), b.Config.Contracts.Msig.CodePath, b.Config.Contracts.Msig.ABIPath)
 	if err != nil {
 		return fmt.Errorf("NewSetCodeTx eosio.msig: %s", err)
 	}
@@ -188,7 +206,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	// Inject eosio.token code
 
 	fmt.Println("Setting eosio.token code for account eosio.token")
-	setCode, err = system.NewSetCodeTx(AN("eosio.token"), b.Config.TokenContract.CodePath, b.Config.TokenContract.ABIPath)
+	setCode, err = system.NewSetCodeTx(AN("eosio.token"), b.Config.Contracts.Token.CodePath, b.Config.Contracts.Token.ABIPath)
 	if err != nil {
 		return fmt.Errorf("NewSetCodeTx eosio.token: %s", err)
 	}
@@ -247,7 +265,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	fmt.Println("Setting the first batch of producers")
 	var prodkeys []system.ProducerKey
 	for _, prod := range b.ShuffledProducers {
-		prodkeys = append(prodkeys, system.ProducerKey{prod.EOSIOAccountName, prod.pubKey})
+		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
 	}
 	_, err = b.API.SignPushActions(system.NewSetProds(0, prodkeys))
 	if err != nil {
@@ -255,7 +273,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	}
 
 	fmt.Println("Replacing eosio account from eosio.bios contract to eosio.system")
-	_, err = b.API.SetCode(AN("eosio"), b.Config.SystemContract.CodePath, b.Config.SystemContract.ABIPath)
+	_, err = b.API.SetCode(AN("eosio"), b.Config.Contracts.System.CodePath, b.Config.Contracts.System.ABIPath)
 	if err != nil {
 		return fmt.Errorf("setcode: %s", err)
 	}
@@ -326,6 +344,10 @@ func (b *BIOS) RunABPStage1() error {
 		return err
 	}
 
+	fmt.Println("###############################################################################################")
+	fmt.Println("As an Appointer Block Producer, we're now launching battery of verifications...")
+
+	fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
 	for {
 		time.Sleep(1 * time.Second)
 		acct, err := b.API.GetAccount(AN("eosio"))
@@ -342,11 +364,15 @@ func (b *BIOS) RunABPStage1() error {
 			continue
 		}
 
-		fmt.Printf(" good! BIOS signed off, chain is sync'd!")
+		fmt.Printf(" OKAY")
 		break
 	}
 
-	_, err = b.API.SignPushActions(system.NewRegProducer(b.MyProducer.EOSIOAccountName, b.MyProducer.pubKey, b.Config.MyParameters))
+	fmt.Println("Chain sync'd!")
+
+	fmt.Println("Registering my producer account")
+	// TODO: make the NewRegProducer
+	_, err = b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
 	if err != nil {
 		return fmt.Errorf("setprods: %s", err)
 	}
@@ -407,7 +433,7 @@ func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error
 }
 
 func (b *BIOS) IsBootNode(account string) bool {
-	return string(b.ShuffledProducers[0].EOSIOAccountName) == account
+	return string(b.ShuffledProducers[0].AccountName) == account
 }
 
 func (b *BIOS) AmIBootNode() bool {
@@ -416,7 +442,7 @@ func (b *BIOS) AmIBootNode() bool {
 
 func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		if string(b.ShuffledProducers[i].EOSIOAccountName) == account {
+		if string(b.ShuffledProducers[i].AccountName) == account {
 			return true
 		}
 	}
@@ -429,7 +455,7 @@ func (b *BIOS) AmIAppointedBlockProducer() bool {
 
 func (b *BIOS) MyProducerDef() (*ProducerDef, error) {
 	for _, prod := range b.LaunchData.Producers {
-		if b.Config.Producer.MyAccount == string(prod.EOSIOAccountName) {
+		if b.Config.Producer.MyAccount == string(prod.AccountName) {
 			return prod, nil
 		}
 	}

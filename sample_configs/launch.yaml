@@ -2,29 +2,44 @@ launch_btc_block_height: 525123  # Approx June 3rd 2018 9am EST, 6am PST, 3pm UT
 
 opening_balances_snapshot_hash: ec2fe55229c3ef2232b5b7fa57175243bf5cf16cb7bbe4a6f8750274f7a56f9a
 
-system_contract_hash: 0b10deaec92f54c76608d7d7118c8d64c83964a0422489b503eef9e245d73767
+system_contract_hash: 21ebeb718e516e727cae6851cb87b0dd040e3cdc1a57dca8d90f88cd8fc1d315
 
 producers:
-- eosio_account_name: eoscanada
-  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
+- account_name: eoscanada
+  authority:
+    owner:
+      threshold: 1
+      keys:
+      - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+        weight: 1
+    active:
+      threshold: 1
+      keys:
+      - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+        weight: 1
+  initial_block_signing_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
   keybase_user: abourget
-  agent_name: EOS Canada
-  url: https://eos-canada.io
+  organization_name: EOS Canada
+  urls:
+  - https://eoscanada.com
 
-- eosio_account_name: bp1
-  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
+- account_name: eosarctic
+  authority:
+    owner:
+      threshold: 1
+      keys:
+      - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+        weight: 1
+    active:
+      threshold: 1
+      keys:
+      - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+        weight: 1
+  initial_block_signing_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
   keybase_user: abourget
-  agent_name: EOS Canada
-  url: https://bp1.eos-canada.io
+  organization_name: EOS Arctic
+  urls:
+  - https://bp1.eosarctic.example.com
 
-- eosio_account_name: bp2
-  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
-  keybase_user: abourget
-  agent_name: EOS Canada
-  url: https://bp2.eos-canada.io
-
-- eosio_account_name: bp3
-  eosio_public_key: EOS5LtSmcQ4Aiso1ZPwySCjfzxSdizf9K2Nr4WripcFYCSUQEz6BX
-  keybase_user: abourget
-  agent_name: EOS Canada
-  url: https://bp3.eos-canada.io
+# ...
+# Add your stanza below, order doesn't matter.
