@@ -4,22 +4,40 @@ This repository follows up on [Thomas Cox's post](https://medium.com/eosio/bios-
 An EOS BIOS proposal
 --------------------
 
-The https://github.com/eosioca/eos-bios-launch-data contains a simple
+The https://github.com/eoscanada/eos-bios-launch-data contains a simple
 file with something like this:
 
 ```
 launch_btc_block_height: 525123  # Approx June 3rd 2018 9am EST, 6am PST, 3pm UTC.
 
-opening_balances_snapshot_hash: abcdef123123123
+opening_balances_snapshot_hash: ec2fe55229c3ef2232b5b7fa57175243bf5cf16cb7bbe4a6f8750274f7a56f9a
 
-system_contract_hash: 123123abcdef
+contract_hashes:
+  bios: de6b010347d6ed6f56a5caf406332fbe61a1a485990c5a43484323269ba6b5dd
+  system: 21ebeb718e516e727cae6851cb87b0dd040e3cdc1a57dca8d90f88cd8fc1d315
+  msig: 8608b380ab76eaa8f8dbe9ebedb4e09f3d4c496d366711d3f09d8865fc0efcb4
+  token: c470675ba4809eb1899739394c7913f2582582860ff137854eada1151d1e180c
 
 producers:
-- eosio_account_name: acctname
-  eosio_public_key: EOSexample
-  keybase_user: example
-  agent_name: Example EOS.IO BP
-  url: https://example.com
+- account_name: example
+  authority:
+    owner:
+      threshold: 1
+      keys:
+      - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+        weight: 1
+    active:
+      threshold: 1
+      keys:
+      - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+        weight: 1
+  initial_block_signing_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+  keybase_user: abourget
+  organization_name: Example Org
+  urls:
+  - https://example.com
+  - https://twitter.com/example
+  - https://github.com/example
 ```
 
 The current repository drafts a tentative BIOS program, that strives
@@ -28,7 +46,7 @@ network.
 
 It can be installed by downloading Go from https://golang.org/dl and running:
 
-    go get github.com/eosioca/eos-bios
+    go get github.com/eoscanada/eos-bios
 
 It will build and install a binary in `~/go/bin/eos-bios`.
 
@@ -417,7 +435,7 @@ To be fleshed out
 -----------------
 
 * Figure our where `genesis.json` fits in.. perhaps in
-  https://github.com/eosioca/eos-bios-launch-data agreed upon by the
+  https://github.com/eoscanada/eos-bios-launch-data agreed upon by the
   community.
 
   * We could add a check by all ABPs

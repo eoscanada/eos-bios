@@ -8,26 +8,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eosioca/eosapi"
-	"github.com/eosioca/eosapi/ecc"
-	"github.com/eosioca/eosapi/system"
-	"github.com/eosioca/eosapi/token"
+	"github.com/eoscanada/eos-go"
+	"github.com/eoscanada/eos-go/ecc"
+	"github.com/eoscanada/eos-go/system"
+	"github.com/eoscanada/eos-go/token"
 )
 
 type BIOS struct {
 	LaunchData   *LaunchData
 	Config       *Config
-	API          *eos.EOSAPI
+	API          *eos.API
 	Snapshot     Snapshot
 	ShuffleBlock struct {
 		Time       time.Time
 		MerkleRoot []byte
 	}
 	ShuffledProducers []*ProducerDef
-	MyProducer        *ProducerDef
 }
 
-func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eos.EOSAPI) *BIOS {
+func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eos.API) *BIOS {
 	b := &BIOS{
 		LaunchData: launchData,
 		Config:     config,
@@ -39,12 +38,6 @@ func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api 
 
 func (b *BIOS) Run() error {
 	fmt.Println("Start BIOS process", time.Now())
-
-	myProducerDef, err := b.MyProducerDef()
-	if err != nil {
-		return fmt.Errorf("find my producer definition: %s", err)
-	}
-	b.MyProducer = myProducerDef
 
 	if err := b.DispatchInit(); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
@@ -105,7 +98,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return err
 	}
 
-	//b.API.Debug = true
+	b.API.Debug = true
 
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
@@ -179,12 +172,12 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("signpushtx code eosio.msig: %s", err)
 	}
 	// FIXME: the abi isn't ready yet.. it doesn't serialize properly, yields something invalid.
-	// fmt.Println(" - abi")
-	// setCode.Actions = acts[1:]
-	// _, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
-	// if err != nil {
-	// 	return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
-	// }
+	fmt.Println(" - abi")
+	setCode.Actions = acts[1:]
+	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
+	}
 
 	fmt.Println("Setting eosio.token code for account eosio.token")
 
@@ -222,12 +215,12 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	for _, prod := range b.ShuffledProducers {
 		newAccount := system.NewNewAccount(AN("eosio"), prod.AccountName, nil)
-		newAccount.Data = system.NewAccount{
+		newAccount.Data = eos.NewActionData(system.NewAccount{
 			Creator: AN("eosio"),
 			Name:    prod.AccountName,
 			Owner:   prod.Authority.Owner,
 			Active:  prod.Authority.Active,
-		}
+		})
 		fmt.Printf("- Creating new account %q\n", prod.AccountName)
 		_, err = b.API.SignPushActions(newAccount)
 		if err != nil {
@@ -402,7 +395,7 @@ func (b *BIOS) RunABPStage1() error {
 	fmt.Println("Chain sync'd!")
 
 	fmt.Println("Registering my producer account")
-	// TODO: make the NewRegProducer
+
 	_, err = b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
 	if err != nil {
 		return fmt.Errorf("setprods: %s", err)
@@ -426,7 +419,7 @@ func (b *BIOS) WaitStage1End() error {
 	// It'll be an armored GPG-signed (base64) blob containing each producer's `Kickstart Data`, relaying the original `PrivateKeyUsed`, but with their own `p2p_address`
 	//   Again, do extensive validation on the input, anything reaching webhooks.
 
-	// Dispatch webhook ConnectToBIOS, relaying the `PrivateKeyUsed` discovered by the ABPs
+	// Dispatch webhook ConnectToBIOS, kickstart using the Genesis JSON received..
 	// We can then run the same verifications, without sabotage being enabled or risked.
 	// At this point, our node is sync'd with the network
 	// We call `regproducer` for ourselves, since we want to register don't we ?
@@ -438,24 +431,25 @@ func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
 }
 
 func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
+	// known not to fail
 	cnt, _ := json.Marshal(&GenesisJSON{
 		InitialTimestamp: b.ShuffleBlock.Time.UTC().Format("2006-01-02T15:04:05"),
 		InitialKey:       pubKey,
 		InitialChainID:   hex.EncodeToString(b.API.ChainID),
-	}) // known not to fail
+	})
 	return string(cnt)
 }
 
-/// Setup
-
 func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error {
 	// we'll shuffle later :)
-	if b.Config.NoShuffle {
+	if b.Config.Debug.NoShuffle {
+		fmt.Println("DEBUG: Skipping shuffle, using order in launch.yaml")
 		b.ShuffledProducers = b.LaunchData.Producers
 		b.ShuffleBlock.Time = time.Now().UTC()
 		b.ShuffleBlock.MerkleRoot = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	} else {
-		// FIXME: put an algorithm here..
+		fmt.Println("Shuffling producers listed in the launch file [NOT IMPLEMENTED]")
+		// TODO: write the algorithm...
 		b.ShuffledProducers = b.LaunchData.Producers
 		b.ShuffleBlock.Time = blockTime
 		b.ShuffleBlock.MerkleRoot = btcMerkleRoot

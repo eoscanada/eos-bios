@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"net/url"
 
-	"github.com/eosioca/eosapi"
-	"github.com/eosioca/eosapi/ecc"
+	"github.com/eoscanada/eos-go/ecc"
+	"github.com/eoscanada/eos-go/system"
 )
 
 type Config struct {
@@ -42,7 +42,7 @@ type Config struct {
 		BlockSigningPublicKey ecc.PublicKey `json:"block_signing_public_key"`
 	} `json:"producer"`
 
-	MyParameters eos.EOSIOParameters `json:"my_parameters"`
+	MyParameters system.EOSIOParameters `json:"my_parameters"`
 
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {

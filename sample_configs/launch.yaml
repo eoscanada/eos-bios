@@ -2,7 +2,11 @@ launch_btc_block_height: 525123  # Approx June 3rd 2018 9am EST, 6am PST, 3pm UT
 
 opening_balances_snapshot_hash: ec2fe55229c3ef2232b5b7fa57175243bf5cf16cb7bbe4a6f8750274f7a56f9a
 
-system_contract_hash: 21ebeb718e516e727cae6851cb87b0dd040e3cdc1a57dca8d90f88cd8fc1d315
+contract_hashes:
+  bios: de6b010347d6ed6f56a5caf406332fbe61a1a485990c5a43484323269ba6b5dd
+  system: 21ebeb718e516e727cae6851cb87b0dd040e3cdc1a57dca8d90f88cd8fc1d315
+  msig: 8608b380ab76eaa8f8dbe9ebedb4e09f3d4c496d366711d3f09d8865fc0efcb4
+  token: c470675ba4809eb1899739394c7913f2582582860ff137854eada1151d1e180c
 
 producers:
 - account_name: eoscanada

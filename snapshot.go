@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/eosioca/eosapi"
-	"github.com/eosioca/eosapi/ecc"
+	"github.com/eoscanada/eos-go"
+	"github.com/eoscanada/eos-go/ecc"
 )
 
 type Snapshot []SnapshotLine

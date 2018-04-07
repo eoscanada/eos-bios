@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	eos "github.com/eosioca/eosapi"
+	eos "github.com/eoscanada/eos-go"
 )
 
 func ScanLinesUntilBlank() (out string, err error) {

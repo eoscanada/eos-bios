@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/eosioca/eosapi"
+	"github.com/eoscanada/eos-go"
 )
 
 var localConfig = flag.String("local-config", "", "Local .yaml configuration file.")
