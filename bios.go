@@ -268,11 +268,15 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	fmt.Println("Setting the initial Appointed Block Producer schedule")
 
+	// FIXME: shouldn't include eosio
 	prodkeys := []system.ProducerKey{system.ProducerKey{
 		ProducerName:    AN("eosio"),
 		BlockSigningKey: ephemeralPrivateKey.PublicKey(),
-	}} // FIXME: should that include eosio ?!?
-	for _, prod := range b.ShuffledProducers {
+	}}
+	for idx, prod := range b.ShuffledProducers {
+		if idx >= 20 { // FIXME: should be tweaked to make it a max of 21
+			break
+		}
 		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
 	}
 	_, err = b.API.SignPushActions(system.NewSetProds(0, prodkeys))
