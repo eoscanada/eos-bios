@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/eoscanada/eos-go"
@@ -11,9 +12,16 @@ import (
 
 var localConfig = flag.String("local-config", "", "Local .yaml configuration file.")
 var launchData = flag.String("launch-data", "launch.yaml", "Path to a launch.yaml file, your community-agreed ignition configuration.")
+var versionFlag = flag.Bool("version", false, "Show the version and quit. Hint hint, it's: "+version)
+var version string
 
 func main() {
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println("eos-bios version:", version)
+		os.Exit(0)
+	}
 
 	if *localConfig == "" || *launchData == "" {
 		log.Fatalln("missing --launch-data or --local-config")

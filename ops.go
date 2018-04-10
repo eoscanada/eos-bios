@@ -194,7 +194,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
 
-		if idx == 5 {
+		if idx == 100 {
 			fmt.Println("- Skipping Transfers")
 			break
 		}
