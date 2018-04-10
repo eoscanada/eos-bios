@@ -1,14 +1,14 @@
 project_name: eos-bios
 release:
   github:
-    owner: eosioca
+    owner: eoscanada
     name: eos-bios
   name_template: '{{.Tag}}'
 brew:
   name: eos-bios
   commit_author:
     name: Alexandre Bourget
-    email: info@eos-canada.io
+    email: alex@diagram.ca
   install: bin.install "eos-bios"
 scoop:
   commit_author:
@@ -22,8 +22,6 @@ builds:
   goarch:
   - amd64
   - "386"
-  goarm:
-  - "6"
   targets:
   - linux_amd64
   - linux_386
@@ -43,9 +41,9 @@ archive:
   replacements:
     "386": i386
     amd64: x86_64
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
+    darwin: macOS
+    linux: linux
+    windows: windows
   format: tar.gz
   files:
   - licence*
