@@ -298,6 +298,33 @@ func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error
 		b.ShuffleBlock.Time = blockTime
 		b.ShuffleBlock.MerkleRoot = btcMerkleRoot
 	}
+
+	// We'll multiply the other producers as to have a full schedule
+	if numProds := len(b.ShuffledProducers); numProds < 22 {
+		cloneCount := numProds - 1
+		count := 0
+		for {
+			if len(b.ShuffledProducers) == 22 {
+				break
+			}
+
+			fromProd := b.ShuffledProducers[1+count%cloneCount]
+			count++
+
+			clonedProd := &ProducerDef{
+				AccountName:                  accountVariation(fromProd.AccountName, count),
+				Authority:                    fromProd.Authority,
+				InitialBlockSigningPublicKey: fromProd.InitialBlockSigningPublicKey,
+				KeybaseUser:                  fromProd.KeybaseUser,
+				PGPPublicKey:                 fromProd.PGPPublicKey,
+				OrganizationName:             fromProd.OrganizationName + fmt.Sprintf(" - clone %d", count),
+				Timezone:                     fromProd.Timezone,
+				URLs:                         fromProd.URLs,
+			}
+			b.ShuffledProducers = append(b.ShuffledProducers, clonedProd)
+		}
+	}
+
 	return nil
 }
 
@@ -344,4 +371,11 @@ func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action)
 		out = append(out, currentChunk)
 	}
 	return
+}
+
+func accountVariation(name eos.AccountName, variation int) eos.AccountName {
+	if len(name) > 10 {
+		name = AN(string(name)[:10])
+	}
+	return AN(string(name) + "." + string([]byte{'a' + byte(variation-1)}))
 }

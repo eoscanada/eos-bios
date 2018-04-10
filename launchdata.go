@@ -58,7 +58,7 @@ type ProducerDef struct {
 }
 
 func (p *ProducerDef) String() string {
-	return fmt.Sprintf("Account: % 15s  Keybase: https://keybase.io/%s     Org: % 30s URL: %s", p.AccountName, p.KeybaseUser, p.OrganizationName, strings.Join(p.URLs, ", "))
+	return fmt.Sprintf("Account: % 15s   Keybase: % 32s   Org: % 30s   URLs: %s", p.AccountName, fmt.Sprintf("https://keybase.io/%s", p.KeybaseUser), p.OrganizationName, strings.Join(p.URLs, ", "))
 }
 
 // snapshotPath, codePath, abiPath string
