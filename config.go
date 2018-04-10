@@ -63,6 +63,8 @@ type Config struct {
 		// LaunchData. Helps tests different roles (BIOS Boot Node,
 		// ABP, watcher...)
 		NoShuffle bool `json:"no_shuffle"`
+		// Truncate snapshot
+		TruncateSnapshot int `json:"truncate_snapshot"`
 	}
 }
 

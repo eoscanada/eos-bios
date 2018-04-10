@@ -194,11 +194,11 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
 
-		// 400 transfers per Tx before hitting some limits..
-		// FIXME: this should be in the wrapping Tx mapper..
-		if idx == 5000 {
-			fmt.Println("- skipping remaining snapshot transfers")
-			break
+		if trunc := b.Config.Debug.TruncateSnapshot; trunc != 0 {
+			if idx == trunc {
+				fmt.Printf("- DEBUG: truncated snapshot at %d rows\n", trunc)
+				break
+			}
 		}
 
 		// TODO: stake 50% bandwidth, 50% cpu for all new accounts
