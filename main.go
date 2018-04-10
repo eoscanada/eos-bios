@@ -86,9 +86,13 @@ func main() {
 		log.Fatalln("Failed shuffling:", err)
 	}
 
+	if err = bios.setMyProducerDefs(); err != nil {
+		log.Fatalln("Failed to get my producer definition:", err)
+	}
+
 	if err := bios.Run(); err != nil {
 		log.Fatalf("ERROR RUNNING BIOS: %s", err)
 	}
 
-	fmt.Printf("Done at %s (UTC %s)\n", time.Now(), time.Now().UTC())
+	fmt.Printf("Done at UTC %s\n", time.Now().UTC())
 }

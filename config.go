@@ -76,7 +76,6 @@ type ContractLocation struct {
 type HookConfig struct {
 	URL     string `json:"url"`
 	Exec    string `json:"exec"`
-	Builtin bool   `json:"builtin"`
 	Wait    bool   `json:"wait"`
 }
 

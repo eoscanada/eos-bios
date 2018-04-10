@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	shellwords "github.com/mattn/go-shellwords"
 )
@@ -39,22 +40,29 @@ func (b *BIOS) DispatchStartBIOSBoot(genesisJSON, publicKey, privateKey string) 
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, builtin func() error) error {
+func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, producerDefs []*ProducerDef) error {
+	var names []string
+	for _, prod := range producerDefs {
+		names = append(names, string(prod.AccountName))
+	}
+
 	return b.dispatch("connect_as_abp", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
 		"public_key_used", kickstart.PublicKeyUsed,
 		"private_key_used", kickstart.PrivateKeyUsed,
 		"genesis_json", kickstart.GenesisJSON,
-	}, builtin)
+		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
+		"producer_names", strings.Join(names, ","),
+	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData, builtin func() error) error {
+func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData) error {
 	return b.dispatch("connect_as_participant", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
 		"public_key_used", kickstart.PublicKeyUsed,
 		"private_key_used", kickstart.PrivateKeyUsed,
 		"genesis_json", kickstart.GenesisJSON,
-	}, builtin)
+	}, nil)
 }
 
 func (b *BIOS) DispatchPublishKickstartData(kickstartData string) error {
@@ -88,13 +96,6 @@ func (b *BIOS) dispatch(hookName string, data []string, f func() error) error {
 	if conf.URL != "" {
 		if err := b.webhookCall(conf, data); err != nil {
 			return err
-		}
-	}
-	if conf.Builtin {
-		if f != nil {
-			if err := f(); err != nil {
-				return err
-			}
 		}
 	}
 	if conf.Wait {

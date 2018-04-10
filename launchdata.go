@@ -40,7 +40,7 @@ type ProducerDef struct {
 	//
 	// When the ABP jumps in, it will `regproducer` with the same or a
 	// different key (see Config's BlockSigningPublicKey).
-	InitialBlockSigningPublicKey ecc.PublicKey `json:"initial_block_signing_public_key"`
+	InitialBlockSigningPublicKey ecc.PublicKey `json:"initial_block_signing_key"`
 
 	// KeybaseUser and PGPPublicKey are used to encrypt the Kickstart
 	// Data payload, for the ABPs and followers.
@@ -55,6 +55,8 @@ type ProducerDef struct {
 
 	// Candidate producers are better off specifying a few URLs and social media properties, to avoid a single point of failure if they need to communicate with the world.
 	URLs []string `json:"urls"`
+
+	clonedFrom eos.AccountName
 }
 
 func (p *ProducerDef) String() string {

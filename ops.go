@@ -213,16 +213,16 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 type OpSetProds struct{}
 
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
-	// FIXME: shouldn't include eosio
 	prodkeys := []system.ProducerKey{system.ProducerKey{
 		ProducerName:    AN("eosio"),
 		BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
 	}}
-	for idx, prod := range b.ShuffledProducers {
-		if idx >= 20 { // FIXME: should be tweaked to make it a max of 21
+	// prodkeys := []system.ProducerKey{}
+	for _, prod := range b.ShuffledProducers {
+		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
+		if len(prodkeys) >= 21 {
 			break
 		}
-		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
 	}
 	out = append(out, system.NewSetProds(0, prodkeys))
 

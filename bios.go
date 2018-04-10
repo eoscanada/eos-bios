@@ -22,7 +22,9 @@ type BIOS struct {
 		Time       time.Time
 		MerkleRoot []byte
 	}
-	ShuffledProducers   []*ProducerDef
+	ShuffledProducers []*ProducerDef
+	MyProducerDefs    []*ProducerDef
+
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
@@ -66,12 +68,21 @@ func (b *BIOS) Run() error {
 		return fmt.Errorf("regproducer: %s", err)
 	}
 
-	fmt.Println("BIOS Sequence Terminate")
+	fmt.Println("BIOS Sequence Terminated")
 
 	return b.DispatchDone()
 }
 
 func (b *BIOS) PrintAppointedBlockProducers() {
+	fmt.Println("###############################################################################################")
+	fmt.Println("###################################  SHUFFLING RESULTS  #######################################")
+	fmt.Println("")
+
+	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].String())
+	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
+		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].String())
+	}
+	fmt.Println("")
 	fmt.Println("###############################################################################################")
 	fmt.Println("########################################  BOOTING  ############################################")
 	fmt.Println("")
@@ -83,17 +94,8 @@ func (b *BIOS) PrintAppointedBlockProducers() {
 	} else {
 		fmt.Println("Okay... I'm not part of the Appointed Block Producers, we'll wait and be ready to join")
 	}
-
-	fmt.Println("")
-	fmt.Println("###################################  SHUFFLING RESULTS  #######################################")
 	fmt.Println("")
 
-	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].String())
-	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].String())
-	}
-	fmt.Println("")
-	fmt.Println("###############################################################################################")
 	fmt.Println("###############################################################################################")
 	fmt.Println("")
 }
@@ -184,7 +186,7 @@ func (b *BIOS) RunABPStage1() error {
 	// TODO: Decrypt the Kickstart data
 	//   Do extensive validation on the input (tight regexp for address, for private key?)
 
-	if err = b.DispatchConnectAsABP(kickstart, nil); err != nil {
+	if err = b.DispatchConnectAsABP(kickstart, b.MyProducerDefs); err != nil {
 		return err
 	}
 
@@ -232,7 +234,7 @@ func (b *BIOS) WaitStage1End() error {
 		return err
 	}
 
-	if err = b.DispatchConnectAsParticipant(kickstart, nil); err != nil {
+	if err = b.DispatchConnectAsParticipant(kickstart); err != nil {
 		return err
 	}
 
@@ -320,6 +322,7 @@ func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error
 				OrganizationName:             fromProd.OrganizationName + fmt.Sprintf(" - clone %d", count),
 				Timezone:                     fromProd.Timezone,
 				URLs:                         fromProd.URLs,
+				clonedFrom:                   fromProd.AccountName,
 			}
 			b.ShuffledProducers = append(b.ShuffledProducers, clonedProd)
 		}
@@ -355,7 +358,31 @@ func (b *BIOS) MyProducerDef() (*ProducerDef, error) {
 			return prod, nil
 		}
 	}
-	return nil, fmt.Errorf("no config found")
+	return nil, fmt.Errorf("no local producer config found (make sure producer.my_account in your config matches an entry in the launch file)")
+}
+
+// MyProducerDefs will provide more than one producer def ONLY when
+// your launch files contains LESS than 21 potential appointed block
+// producers.  This way, you can have your nodes respond to many
+// account names and have the network function. Your producer will
+// simply produce more blocks, under different names.
+func (b *BIOS) setMyProducerDefs() error {
+	myProd, err := b.MyProducerDef()
+	if err != nil {
+		return err
+	}
+
+	out := []*ProducerDef{myProd}
+
+	for _, prod := range b.ShuffledProducers {
+		if prod.clonedFrom == myProd.AccountName {
+			out = append(out, prod)
+		}
+	}
+
+	b.MyProducerDefs = out
+
+	return nil
 }
 
 func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action) {
