@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	eos "github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
@@ -185,7 +184,8 @@ type OpInjectSnapshot struct{}
 
 func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for idx, hodler := range b.Snapshot {
-		destAccount := AN("genesis." + strings.Trim(eos.NameToString(uint64(idx+1)), "."))
+		flipped := flipEndianness(uint64(idx + 1))
+		destAccount := AN("genesis." + eos.NameToString(flipped))
 		fmt.Println("Transfer", hodler, destAccount)
 
 		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
@@ -194,8 +194,10 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
 
-		if idx == 100 {
-			fmt.Println("- Skipping Transfers")
+		// 400 transfers per Tx before hitting some limits..
+		// FIXME: this should be in the wrapping Tx mapper..
+		if idx == 5000 {
+			fmt.Println("- skipping remaining snapshot transfers")
 			break
 		}
 

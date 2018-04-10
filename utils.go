@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"os"
 	"strings"
 
@@ -32,3 +33,9 @@ var AN = eos.AN
 
 // PN is a shortcut to create a PermissionName
 var PN = eos.PN
+
+func flipEndianness(in uint64) (out uint64) {
+	buf := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint64(buf, in)
+	return binary.BigEndian.Uint64(buf)
+}

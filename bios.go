@@ -137,9 +137,11 @@ func (b *BIOS) RunBootNodeStage1() error {
 		}
 
 		if len(acts) != 0 {
-			_, err = b.API.SignPushActions(acts...)
-			if err != nil {
-				return fmt.Errorf("SignPushActions for step %q: %s", step.Op, err)
+			for idx, chunk := range chunkifyActions(acts, 400) { // transfers max out resources higher than ~400
+				_, err = b.API.SignPushActions(chunk...)
+				if err != nil {
+					return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+				}
 			}
 		}
 	}
@@ -327,4 +329,19 @@ func (b *BIOS) MyProducerDef() (*ProducerDef, error) {
 		}
 	}
 	return nil, fmt.Errorf("no config found")
+}
+
+func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action) {
+	currentChunk := []*eos.Action{}
+	for _, act := range actions {
+		if len(currentChunk) > chunkSize {
+			out = append(out, currentChunk)
+			currentChunk = []*eos.Action{}
+		}
+		currentChunk = append(currentChunk, act)
+	}
+	if len(currentChunk) > 0 {
+		out = append(out, currentChunk)
+	}
+	return
 }
