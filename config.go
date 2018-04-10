@@ -10,12 +10,7 @@ import (
 )
 
 type Config struct {
-	Contracts struct {
-		BIOS   ContractLocation `json:"bios"`
-		System ContractLocation `json:"system"`
-		Msig   ContractLocation `json:"msig"`
-		Token  ContractLocation `json:"token"`
-	}
+	Contracts map[string]ContractLocation `json:"contracts"`
 
 	// OpeningBalancesSnapshotPath represents the `snapshot.csv` file,
 	// which holds the opening balances for all ERC-20 token holders.
@@ -46,10 +41,10 @@ type Config struct {
 
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {
-		// Whether to use Keybase, or simply use in-built PGP crypto.
-		UseKeybase bool `json:"use_keybase"`
-		// If `UseKeybase` is false, provide your secret `KeyPath` here.
-		KeyPath string `json:"key_path"`
+		// Program represents the type of program to use (gpg, keybase ?)
+		Program string `json:"program"`
+		// Path to binary executable.. unless we use in-process cryptography..
+		Path string `json:"path"`
 	} `json:"pgp"`
 
 	// Hooks are called at different stages in the process, for

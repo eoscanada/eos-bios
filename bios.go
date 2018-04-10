@@ -11,7 +11,6 @@ import (
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 	"github.com/eoscanada/eos-go/system"
-	"github.com/eoscanada/eos-go/token"
 )
 
 type BIOS struct {
@@ -23,7 +22,8 @@ type BIOS struct {
 		Time       time.Time
 		MerkleRoot []byte
 	}
-	ShuffledProducers []*ProducerDef
+	ShuffledProducers   []*ProducerDef
+	EphemeralPrivateKey *ecc.PrivateKey
 }
 
 func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eos.API) *BIOS {
@@ -43,7 +43,6 @@ func (b *BIOS) Run() error {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
-	// Main program entrypoint, called when setup is done.
 	b.PrintAppointedBlockProducers()
 
 	if b.AmIBootNode() {
@@ -60,9 +59,16 @@ func (b *BIOS) Run() error {
 		}
 	}
 
-	fmt.Println("BIOS Run done")
+	fmt.Println("Registering my producer account")
 
-	return nil
+	_, err := b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
+	if err != nil {
+		return fmt.Errorf("regproducer: %s", err)
+	}
+
+	fmt.Println("BIOS Sequence Terminate")
+
+	return b.DispatchDone()
 }
 
 func (b *BIOS) PrintAppointedBlockProducers() {
@@ -98,7 +104,9 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return err
 	}
 
-	b.API.Debug = true
+	b.EphemeralPrivateKey = ephemeralPrivateKey
+
+	// b.API.Debug = true
 
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
@@ -112,200 +120,27 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	if err = b.DispatchConfigReady(genesisData, "eosio", pubKey, privKey, true); err != nil {
+	if err = b.DispatchStartBIOSBoot(genesisData, pubKey, privKey); err != nil {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
-	// Inject bios
+	// Run boot sequence
 
-	fmt.Println("Setting eosio.bios code for account eosio")
-	setCode, err := system.NewSetCodeTx(AN("eosio"), b.Config.Contracts.BIOS.CodePath, b.Config.Contracts.BIOS.ABIPath)
-	if err != nil {
-		return fmt.Errorf("NewSetCodeTx eosio.bios: %s", err)
-	}
+	// TODO: add an action at the end, with `nonce` and a message to indicate the end of the Boot process ?
+	// This way, nodes that sync can assume all boot actions are done once that nonce action goes through.
+	for _, step := range b.LaunchData.BootSequence {
+		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
-	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("signpushtx code eosio.bios: %s", err)
-	}
-
-	fmt.Println("Creating account eosio.msig")
-
-	_, err = b.API.SignPushActions(
-		system.NewNewAccount(AN("eosio"), AN("eosio.msig"), ephemeralPrivateKey.PublicKey()),
-	)
-	if err != nil {
-		return fmt.Errorf("newaccount eosio.msig: %s", err)
-	}
-
-	fmt.Println("Creating account eosio.token")
-
-	_, err = b.API.SignPushActions(
-		system.NewNewAccount(AN("eosio"), AN("eosio.token"), ephemeralPrivateKey.PublicKey()),
-	)
-	if err != nil {
-		return fmt.Errorf("newaccount eosio.token: %s", err)
-	}
-
-	fmt.Println("Setting privileged account for eosio and eosio.msig")
-
-	_, err = b.API.SignPushActions(
-		system.NewSetPriv(AN("eosio")),
-		system.NewSetPriv(AN("eosio.msig")),
-	)
-	if err != nil {
-		return fmt.Errorf("setpriv eosio: %s", err)
-	}
-
-	fmt.Println("Setting eosio.msig code for account eosio.msig")
-
-	setCode, err = system.NewSetCodeTx(AN("eosio.msig"), b.Config.Contracts.Msig.CodePath, b.Config.Contracts.Msig.ABIPath)
-	if err != nil {
-		return fmt.Errorf("NewSetCodeTx eosio.msig: %s", err)
-	}
-
-	fmt.Println(" - code")
-	acts := setCode.Actions[:]
-	setCode.Actions = acts[:1]
-	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("signpushtx code eosio.msig: %s", err)
-	}
-	// FIXME: the abi isn't ready yet.. it doesn't serialize properly, yields something invalid.
-	fmt.Println(" - abi")
-	setCode.Actions = acts[1:]
-	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("signpushtx abi eosio.msig: %s", err)
-	}
-
-	fmt.Println("Setting eosio.token code for account eosio.token")
-
-	setCode, err = system.NewSetCodeTx(AN("eosio.token"), b.Config.Contracts.Token.CodePath, b.Config.Contracts.Token.ABIPath)
-	if err != nil {
-		return fmt.Errorf("NewSetCodeTx eosio.token: %s", err)
-	}
-
-	_, err = b.API.SignPushTransaction(setCode, eos.TxOptions{})
-	if err != nil {
-		return fmt.Errorf("signpushtx code eosio.token: %s", err)
-	}
-
-	// See tests/chain_tests/bootseq_tests.cpp and friends..
-
-	fmt.Println("Creating the `EOS` currency symbol")
-
-	_, err = b.API.SignPushActions(
-		token.NewCreate(AN("eosio"), eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol}, false, false, false),
-	)
-	if err != nil {
-		return fmt.Errorf("create token: %s", err)
-	}
-
-	fmt.Println("Issuing base currency as EOS")
-
-	_, err = b.API.SignPushActions(
-		token.NewIssue(AN("eosio"), eos.Asset{Amount: 10000000000000, Symbol: eos.EOSSymbol}, "Initial issuance"),
-	)
-	if err != nil {
-		return fmt.Errorf("issue: %s", err)
-	}
-
-	fmt.Println("Injecting launch producers")
-
-	for _, prod := range b.ShuffledProducers {
-		newAccount := system.NewNewAccount(AN("eosio"), prod.AccountName, nil)
-		newAccount.Data = eos.NewActionData(system.NewAccount{
-			Creator: AN("eosio"),
-			Name:    prod.AccountName,
-			Owner:   prod.Authority.Owner,
-			Active:  prod.Authority.Active,
-		})
-		fmt.Printf("- Creating new account %q\n", prod.AccountName)
-		_, err = b.API.SignPushActions(newAccount)
+		acts, err := step.Data.Actions(b)
 		if err != nil {
-			return fmt.Errorf("newaccount %s: %s", prod.AccountName, err)
+			return fmt.Errorf("getting actions for step %q: %s", step.Op, err)
 		}
 
-		if b.Config.Debug.EnrichProducers {
-			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName)
-			_, err = b.API.SignPushActions(token.NewTransfer(AN("eosio"), prod.AccountName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
+		if len(acts) != 0 {
+			_, err = b.API.SignPushActions(acts...)
 			if err != nil {
-				return fmt.Errorf("enrich_producers: transfer: %s", err)
+				return fmt.Errorf("SignPushActions for step %q: %s", step.Op, err)
 			}
-		}
-	}
-
-	fmt.Println("Injecting Snapshot balances")
-
-	for idx, hodler := range b.Snapshot {
-		destAccount := AN("genesis." + strings.Trim(eos.NameToString(uint64(idx+1)), "."))
-		fmt.Println("Transfer", hodler, destAccount)
-
-		_, err = b.API.SignPushActions(
-			system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey),
-		)
-		if err != nil {
-			return fmt.Errorf("hodler: newaccount: %s", err)
-		}
-
-		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-		_, err := b.API.SignPushActions(
-			token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo),
-		)
-		if err != nil {
-			return fmt.Errorf("hodler: transfer: %s", err)
-		}
-
-		if idx == 5 {
-			fmt.Println("- Skipping Transfers")
-			break
-		}
-
-		// TODO: stake 50% bandwidth, 50% cpu for all new accounts
-		// b.API.SignPushActions(system.Stake(AN("eosio"), destAccount, 999, 888, ""))
-	}
-
-	fmt.Println("Setting the initial Appointed Block Producer schedule")
-
-	// FIXME: shouldn't include eosio
-	prodkeys := []system.ProducerKey{system.ProducerKey{
-		ProducerName:    AN("eosio"),
-		BlockSigningKey: ephemeralPrivateKey.PublicKey(),
-	}}
-	for idx, prod := range b.ShuffledProducers {
-		if idx >= 20 { // FIXME: should be tweaked to make it a max of 21
-			break
-		}
-		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
-	}
-	_, err = b.API.SignPushActions(system.NewSetProds(0, prodkeys))
-	if err != nil {
-		return fmt.Errorf("setprods: %s", err)
-	}
-
-	fmt.Println("Replacing eosio account from eosio.bios contract to eosio.system")
-
-	_, err = b.API.SetCode(AN("eosio"), b.Config.Contracts.System.CodePath, b.Config.Contracts.System.ABIPath)
-	if err != nil {
-		return fmt.Errorf("setcode: %s", err)
-	}
-
-	if b.Config.Debug.KeepSystemAccount {
-		fmt.Println("DEBUG: Keeping system account around, for testing purposes.")
-	} else {
-		fmt.Println("Disabling authorization for accounts eosio, eosio.msig and eosio.token")
-
-		_, err = b.API.SignPushActions(
-			system.NewUpdateAuth(AN("eosio"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-			system.NewUpdateAuth(AN("eosio"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
-			system.NewUpdateAuth(AN("eosio.msig"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-			system.NewUpdateAuth(AN("eosio.msig"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
-			system.NewUpdateAuth(AN("eosio.token"), PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-			system.NewUpdateAuth(AN("eosio.token"), PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
-		)
-		if err != nil {
-			return fmt.Errorf("updateauth: %s", err)
 		}
 	}
 
@@ -331,44 +166,23 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("dispatch publish_kickstart_data: %s", err)
 	}
 
-	return b.DispatchDone()
-	// Call webhook PublishKickstartEncrypted
-	//   or display it on screen for it to be manually disseminated
 	// Call `regproducer` for myself now
-	// Return and we're done.
-	// Dispatch WebhookBIOSNodeDone
+
+	return nil
 }
 
 func (b *BIOS) RunABPStage1() error {
 	fmt.Println("Waiting on kickstart data from the BIOS Node. Check their social presence!")
 
-	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
-	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
-	// FIXME: this is a quick hack to just pass the p2p address
-	lines, err := ScanLinesUntilBlank()
+	kickstart, err := b.waitOnKickstartData()
 	if err != nil {
 		return err
 	}
 
-	rawKickstartData, err := base64.RawStdEncoding.DecodeString(strings.Replace(strings.TrimSpace(lines), "\n", "", -1))
-	if err != nil {
-		return fmt.Errorf("kickstrat base64 decode: %s", err)
-	}
-
-	var kickstart KickstartData
-	err = json.Unmarshal(rawKickstartData, &kickstart)
-	if err != nil {
-		return fmt.Errorf("unmarshal kickstart data: %s", err)
-	}
-
-	// Decrypt the Kickstart data
+	// TODO: Decrypt the Kickstart data
 	//   Do extensive validation on the input (tight regexp for address, for private key?)
 
-	err = b.DispatchConnectToBIOS(kickstart, func() error {
-		_, err := b.API.NetConnect(kickstart.BIOSP2PAddress)
-		return err
-	})
-	if err != nil {
+	if err = b.DispatchConnectAsABP(kickstart, nil); err != nil {
 		return err
 	}
 
@@ -398,36 +212,60 @@ func (b *BIOS) RunABPStage1() error {
 
 	fmt.Println("Chain sync'd!")
 
-	fmt.Println("Registering my producer account")
-
-	_, err = b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
-	if err != nil {
-		return fmt.Errorf("setprods: %s", err)
-	}
-
+	// TODO: loop operations, check all actions against blocks that you can fetch from here.
 	// Do all the checks:
 	//  - all Producers are properly setup
 	//  - anything fails, SABOTAGE
-	// We call `regproducer` for ourselves.
 	// Publish a PGP Signed message with your local IP.. push to properties
 	// Dispatch webhook PublishKickstartPublic (with a Kickstart Data object)
 
-	return b.DispatchDone()
+	return nil
 }
 
 func (b *BIOS) WaitStage1End() error {
 	fmt.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
 
-	// Wait on stdin
-	//   Input should be simply the p2p endpoint of any node that initialized
-	// It'll be an armored GPG-signed (base64) blob containing each producer's `Kickstart Data`, relaying the original `PrivateKeyUsed`, but with their own `p2p_address`
-	//   Again, do extensive validation on the input, anything reaching webhooks.
+	kickstart, err := b.waitOnKickstartData()
+	if err != nil {
+		return err
+	}
 
-	// Dispatch webhook ConnectToBIOS, kickstart using the Genesis JSON received..
-	// We can then run the same verifications, without sabotage being enabled or risked.
-	// At this point, our node is sync'd with the network
-	// We call `regproducer` for ourselves, since we want to register don't we ?
+	if err = b.DispatchConnectAsParticipant(kickstart, nil); err != nil {
+		return err
+	}
+
+	fmt.Println("Not doing any validation, the ABPs have done it")
+
 	return nil
+}
+
+func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
+	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
+	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
+	// FIXME: this is a quick hack to just pass the p2p address
+	lines, err := ScanLinesUntilBlank()
+	if err != nil {
+		return
+	}
+
+	rawKickstartData, err := base64.RawStdEncoding.DecodeString(strings.Replace(strings.TrimSpace(lines), "\n", "", -1))
+	if err != nil {
+		return kickstart, fmt.Errorf("kickstart base64 decode: %s", err)
+	}
+
+	err = json.Unmarshal(rawKickstartData, &kickstart)
+	if err != nil {
+		return kickstart, fmt.Errorf("unmarshal kickstart data: %s", err)
+	}
+
+	privKey, err := ecc.NewPrivateKey(kickstart.PrivateKeyUsed)
+	if err != nil {
+		return kickstart, fmt.Errorf("unable to load private key %q: %s", kickstart.PrivateKeyUsed, err)
+	}
+
+	b.EphemeralPrivateKey = privKey
+
+	return
 }
 
 func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {

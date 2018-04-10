@@ -12,17 +12,15 @@ import (
 )
 
 type LaunchData struct {
-	LaunchBitcoinBlockHeight    int    `json:"launch_btc_block_height"`
-	OpeningBalancesSnapshotHash string `json:"opening_balances_snapshot_hash"`
-	ContractHashes              struct {
-		BIOS   string `json:"bios"`
-		System string `json:"system"`
-		Msig   string `json:"msig"`
-		Token  string `json:"token"`
-	} `json:"contract_hashes"`
+	LaunchBitcoinBlockHeight    int               `json:"launch_btc_block_height"`
+	OpeningBalancesSnapshotHash string            `json:"opening_balances_snapshot_hash"`
+	ContractHashes              map[string]string `json:"contract_hashes"`
+
+	BootSequence []*OperationType `json:"boot_sequence"`
 
 	Producers []*ProducerDef `json:"producers"`
 }
+
 type ProducerDef struct {
 	// AccountName is the account we want to have created on the blockchain by the BIOS Boot node.
 	AccountName eos.AccountName `json:"account_name"`
@@ -52,6 +50,9 @@ type ProducerDef struct {
 	// OrganizationName is the block producer's name in plain text.
 	OrganizationName string `json:"organization_name"`
 
+	// Timezone, from https://en.wikipedia.org/wiki/List_of_tz_database_time_zones (column TZ)
+	Timezone string `json:"timezone"`
+
 	// Candidate producers are better off specifying a few URLs and social media properties, to avoid a single point of failure if they need to communicate with the world.
 	URLs []string `json:"urls"`
 }
@@ -75,7 +76,6 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 		return nil, fmt.Errorf("launch_btc_block_height unspecified (or 0)")
 	}
 
-	// Hash the `--opening-balance-snapshot` file, compare to `launch.
 	snapshotHash, err := hashFile(config.OpeningBalances.SnapshotPath)
 	if err != nil {
 		return nil, err
@@ -87,29 +87,25 @@ func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error
 		return nil, fmt.Errorf("snapshot hash doesn't match launch data")
 	}
 
-	for name, cmp := range map[string]contractCompare{
-		"bios":   newCC(config.Contracts.BIOS, out.ContractHashes.BIOS),
-		"system": newCC(config.Contracts.System, out.ContractHashes.System),
-		"msig":   newCC(config.Contracts.Msig, out.ContractHashes.Msig),
-		"token":  newCC(config.Contracts.Token, out.ContractHashes.Token),
-	} {
-		// TODO: check all contracts and align on its content
-		codeHash, err := hashCodeFiles(cmp.location.CodePath, cmp.location.ABIPath)
+	for name, loc := range config.Contracts {
+		hash := out.ContractHashes[name]
+
+		codeHash, err := hashCodeFiles(loc.CodePath, loc.ABIPath)
 		if err != nil {
 			return nil, fmt.Errorf("error hashing %q contract's code + abi: %s", name, err)
 		}
 
-		fmt.Printf("Hash of %q and %q: %s\n", cmp.location.CodePath, cmp.location.ABIPath, codeHash)
+		fmt.Printf("Hash of %q and %q: %s\n", loc.CodePath, loc.ABIPath, codeHash)
 
-		if codeHash != cmp.hash {
+		if codeHash != hash {
 			return nil, fmt.Errorf("%q contract's code hash don't match", name)
 		}
 	}
 
 	// Check duplicate entries in `launch.yaml`, fail immediately.
 	//    Check the `account_name`
-	// Hash the eosio-system-code and eosio-system-abi files, concatenated.
-	//    If check fails, print the hash.. always print the hash.
+
+	// TODO: VALIDATE Timezone
 
 	return out, nil
 }

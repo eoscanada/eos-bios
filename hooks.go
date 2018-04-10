@@ -15,9 +15,10 @@ import (
 
 var configuredHooks = []HookDef{
 	HookDef{"init", "Dispatch when we start the program."},
-	HookDef{"config_ready", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
+	HookDef{"start_bios_boot", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
 	HookDef{"publish_kickstart_data", "Dispatched with the contents of the (usually encrypted) Kickstart data, to be published to your social / web properties."},
-	HookDef{"connect_to_bios", "Dispatched by ABPs with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to the BIOS Node's p2p address."},
+	HookDef{"connect_as_abp", "Dispatched by ABPs with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to the BIOS Node's p2p address."},
+	HookDef{"connect_as_participant", "Dispatched by all remaining participants (not BIOS Boot nor ABP) with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to any of the Appointed Block Producers once they validated everything."},
 	HookDef{"done", "When your process it done"},
 }
 
@@ -30,18 +31,25 @@ func (b *BIOS) DispatchInit() error {
 	return b.dispatch("init", []string{}, nil)
 }
 
-func (b *BIOS) DispatchConfigReady(genesisJSON, nodeName, publicKey, privateKey string, startProducing bool) error {
-	return b.dispatch("config_ready", []string{
+func (b *BIOS) DispatchStartBIOSBoot(genesisJSON, publicKey, privateKey string) error {
+	return b.dispatch("start_bios_boot", []string{
 		"genesis_json", genesisJSON,
 		"public_key", publicKey,
 		"private_key", privateKey,
-		"should_start_producing", fmt.Sprintf("%v", startProducing),
-		"node_name", nodeName,
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectToBIOS(kickstart KickstartData, builtin func() error) error {
-	return b.dispatch("connect_to_bios", []string{
+func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, builtin func() error) error {
+	return b.dispatch("connect_as_abp", []string{
+		"p2p_address", kickstart.BIOSP2PAddress,
+		"public_key_used", kickstart.PublicKeyUsed,
+		"private_key_used", kickstart.PrivateKeyUsed,
+		"genesis_json", kickstart.GenesisJSON,
+	}, builtin)
+}
+
+func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData, builtin func() error) error {
+	return b.dispatch("connect_as_participant", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
 		"public_key_used", kickstart.PublicKeyUsed,
 		"private_key_used", kickstart.PrivateKeyUsed,

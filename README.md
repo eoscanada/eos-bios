@@ -469,3 +469,21 @@ rogue BP writes an exploit to the `Kickstart data`, it could execute
 things on your infrastructure if you haven't checked your things.
 `eos-bios` will validate as much as possible its inputs, but be
 mindful on your end.
+
+
+
+From WAST to WASM
+-----------------
+
+The specs for WASM are moving and some syntax for WAST changed during
+the development of Dawn 3.
+
+The change occurred in
+https://github.com/WebAssembly/wabt/commit/500b617b1c8ea88a2cf46f60205071da9c7569bc
+.. changing the syntax for `call_indirect`.
+
+Building with
+https://github.com/eoscanada/wabt/tree/prior-to-call_indirect-syntax-change
+will produce a `wabt` binary that can read the older format and
+produce a valid `.wasm` file. This is simply a fork of `wabt` with a
+tag, to facilitate building.
