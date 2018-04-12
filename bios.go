@@ -90,7 +90,7 @@ func (b *BIOS) PrintAppointedBlockProducers() {
 		fmt.Println("I AM THE BOOT NODE! Let's get the ball rolling.")
 
 	} else if b.AmIAppointedBlockProducer() {
-		fmt.Println("I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the boot node's media properties.")
+		fmt.Println("I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the Boot node's media properties.")
 	} else {
 		fmt.Println("Okay... I'm not part of the Appointed Block Producers, we'll wait and be ready to join")
 	}
@@ -176,7 +176,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 }
 
 func (b *BIOS) RunABPStage1() error {
-	fmt.Println("Waiting on kickstart data from the BIOS Node. Check their social properties!")
+	fmt.Println("Waiting on kickstart data from the BIOS Node.")
 	fmt.Println("Paste it in here. Finish with a blank line (ENTER)")
 
 	kickstart, err := b.waitOnKickstartData()
