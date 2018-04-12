@@ -176,7 +176,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 }
 
 func (b *BIOS) RunABPStage1() error {
-	fmt.Println("Waiting on kickstart data from the BIOS Node. Check their social presence!")
+	fmt.Println("Waiting on kickstart data from the BIOS Node. Check their social properties!")
+	fmt.Println("Paste it in here. Finish with a blank line (ENTER)")
 
 	kickstart, err := b.waitOnKickstartData()
 	if err != nil {
