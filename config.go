@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"strings"
 
 	"github.com/eoscanada/eos-go/ecc"
 	"github.com/eoscanada/eos-go/system"
@@ -35,6 +36,12 @@ type Config struct {
 
 		// Key you want to register to sign blocks.
 		BlockSigningPublicKey ecc.PublicKey `json:"block_signing_public_key"`
+
+		// Private key used to setup your config.ini as an ABP (or as someone joining the network)
+		BlockSigningPrivateKeyPath string `json:"block_signing_private_key_path"`
+
+		// Available once loaded successfuly from the previous field's path.
+		blockSigningPrivateKey *ecc.PrivateKey
 	} `json:"producer"`
 
 	MyParameters system.EOSIOParameters `json:"my_parameters"`
@@ -74,9 +81,9 @@ type ContractLocation struct {
 }
 
 type HookConfig struct {
-	URL     string `json:"url"`
-	Exec    string `json:"exec"`
-	Wait    bool   `json:"wait"`
+	URL  string `json:"url"`
+	Exec string `json:"exec"`
+	Wait bool   `json:"wait"`
 }
 
 func LoadLocalConfig(localConfigPath string) (*Config, error) {
@@ -119,6 +126,18 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 	if err != nil {
 		return c, err
 	}
+
+	privKey, err := ioutil.ReadFile(c.Producer.BlockSigningPrivateKeyPath)
+	if err != nil {
+		return c, err
+	}
+
+	wif, err := ecc.NewPrivateKey(strings.TrimSpace(string(privKey)))
+	if err != nil {
+		return c, err
+	}
+
+	c.Producer.blockSigningPrivateKey = wif
 
 	return c, nil
 }

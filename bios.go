@@ -230,12 +230,14 @@ func (b *BIOS) RunABPStage1() error {
 func (b *BIOS) WaitStage1End() error {
 	fmt.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
 
+	// TODO: check if kickstartData invalid, then either ignore it or destroy the network
+	// TODO: rather, loop for kickstar tdatas, until something valid is dropped in..
 	kickstart, err := b.waitOnKickstartData()
 	if err != nil {
 		return err
 	}
 
-	if err = b.DispatchConnectAsParticipant(kickstart); err != nil {
+	if err = b.DispatchConnectAsParticipant(kickstart, b.MyProducerDefs[0]); err != nil {
 		return err
 	}
 
@@ -269,6 +271,9 @@ func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
 	}
 
 	b.EphemeralPrivateKey = privKey
+
+	// TODO: check if the privKey corresponds to the public key sent, if not, we should
+	// drop that kickstart data.. and listen to another one..
 
 	return
 }

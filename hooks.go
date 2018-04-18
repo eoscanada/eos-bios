@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	eos "github.com/eoscanada/eos-go"
 	shellwords "github.com/mattn/go-shellwords"
 )
 
@@ -48,20 +49,21 @@ func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, producerDefs []*Pro
 
 	return b.dispatch("connect_as_abp", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
-		"public_key_used", kickstart.PublicKeyUsed,
-		"private_key_used", kickstart.PrivateKeyUsed,
+		"public_key_used", b.Config.Producer.BlockSigningPublicKey.String(),
+		"private_key_used", b.Config.Producer.blockSigningPrivateKey.String(),
 		"genesis_json", kickstart.GenesisJSON,
 		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
 		"producer_names", strings.Join(names, ","),
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData) error {
+func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData, myProducer *ProducerDef) error {
 	return b.dispatch("connect_as_participant", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
-		"public_key_used", kickstart.PublicKeyUsed,
-		"private_key_used", kickstart.PrivateKeyUsed,
+		"public_key_used", b.Config.Producer.BlockSigningPublicKey.String(),
+		"private_key_used", b.Config.Producer.blockSigningPrivateKey.String(),
 		"genesis_json", kickstart.GenesisJSON,
+		"producer_name", string(myProducer.AccountName),
 	}, nil)
 }
 
