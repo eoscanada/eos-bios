@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"strings"
 
-	eos "github.com/eoscanada/eos-go"
 	shellwords "github.com/mattn/go-shellwords"
 )
 
