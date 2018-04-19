@@ -120,6 +120,11 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
+	keys, _ := b.API.Signer.(*eos.KeyBag).AvailableKeys()
+	for _, key := range keys {
+		fmt.Println("Available key in the KeyBag:", key)
+	}
+
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
 	if err = b.DispatchStartBIOSBoot(genesisData, pubKey, privKey); err != nil {
