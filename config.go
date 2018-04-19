@@ -30,10 +30,6 @@ type Config struct {
 		// SecretP2PAddress is the endpoint which will be published at the end of the process. Needs to be externally routable.  It must be kept secret for DDoS protection.
 		SecretP2PAddress string `json:"secret_p2p_address"`
 
-		// WalletAddress is the API endpoint where your wallet lives
-		WalletAddress    string `json:"wallet_address"`
-		walletAddressURL *url.URL
-
 		// Key you want to register to sign blocks.
 		BlockSigningPublicKey ecc.PublicKey `json:"block_signing_public_key"`
 
@@ -118,11 +114,6 @@ func LoadLocalConfig(localConfigPath string) (*Config, error) {
 	}
 
 	c.Producer.apiAddressURL, err = url.Parse(c.Producer.APIAddress)
-	if err != nil {
-		return c, err
-	}
-
-	c.Producer.walletAddressURL, err = url.Parse(c.Producer.WalletAddress)
 	if err != nil {
 		return c, err
 	}

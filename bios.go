@@ -126,6 +126,8 @@ func (b *BIOS) RunBootNodeStage1() error {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
+	fmt.Println(b.API.Signer.AvailableKeys())
+
 	// Run boot sequence
 
 	// TODO: add an action at the end, with `nonce` and a message to indicate the end of the Boot process ?

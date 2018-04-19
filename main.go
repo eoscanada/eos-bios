@@ -51,23 +51,7 @@ func main() {
 		log.Fatalln("producer node error:", err)
 	}
 
-	wallet := eos.New(config.Producer.walletAddressURL, chainID)
-	if err != nil {
-		log.Fatalln("wallet api:", err)
-	}
-
-	// FIXME: when ECC signatures work natively in Go, we can use the
-	// `eos.KeyBag` signer instead.
-	// signer := eos.NewKeyBag()
-	signer := eos.NewWalletSigner(wallet, "default")
-	api.SetSigner(signer)
-
-	// Checking wallet node
-
-	_, err = wallet.WalletPublicKeys()
-	if err != nil {
-		log.Fatalf("Wallet node not accessible: %s", err)
-	}
+	api.SetSigner(eos.NewKeyBag())
 
 	// Load the snapshot.csv
 	snapshotData, err := NewSnapshot(config.OpeningBalances.SnapshotPath)
