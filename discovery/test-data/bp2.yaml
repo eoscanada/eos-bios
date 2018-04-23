@@ -1,0 +1,23 @@
+testnet: true
+eosio_account_name: bp2
+launch_data:
+  wingmen:
+  - discovery_url: bp3.yaml
+    weight: 1.0
+
+  boot_sequence:
+    hash: 5d84134ee8da8400e5e2e33f0bb17cb175ca2706640d0720b92454059761b02b
+    url: bootseq.yaml
+
+  snapshot:
+    hash: 116bead9e1b8c8e387b70585ae0bb598fb4d231a150cbed9d129ed7697c5eaf4
+    url: snapshot.csv
+
+  contracts:
+    eosio.bios:
+      abi:
+        hash: 1ca34f7ff6ab35ac2696a0f9a436eb783e0906afcbe7e3c99c111517afc27dfa
+        url: eosio.bios.abi
+      code:
+        hash: 336154bf67f765f8f75d16a0accee61b5ee5f6a75b2a2905703df913bd550f3e
+        url: eosio.bios.wasm

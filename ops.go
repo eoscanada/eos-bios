@@ -155,7 +155,10 @@ func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpCreateProducers struct{}
+type OpCreateProducers struct {
+	// TestnetEnrichProducers will provide each producer account with some EOS, only on testnets.
+	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
+}
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
@@ -170,7 +173,7 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		fmt.Printf("- Creating new account %q\n", prod.AccountName)
 		out = append(out, newAccount)
 
-		if b.Config.Debug.EnrichProducers {
+		if op.TestnetEnrichProducers {
 			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName)
 			out = append(out, token.NewTransfer(AN("eosio"), prod.AccountName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
 		}
@@ -180,7 +183,9 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpInjectSnapshot struct{}
+type OpInjectSnapshot struct {
+	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
+}
 
 func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for idx, hodler := range b.Snapshot {
@@ -194,7 +199,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
 
-		if trunc := b.Config.Debug.TruncateSnapshot; trunc != 0 {
+		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
 				fmt.Printf("- DEBUG: truncated snapshot at %d rows\n", trunc)
 				break
