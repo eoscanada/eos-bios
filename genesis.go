@@ -1,4 +1,4 @@
-package main
+package bios
 
 type GenesisJSON struct {
 	InitialTimestamp string `json:"initial_timestamp"`

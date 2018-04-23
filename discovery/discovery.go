@@ -1,5 +1,10 @@
 package discovery
 
+import (
+	eos "github.com/eoscanada/eos-go"
+	"github.com/eoscanada/eos-go/ecc"
+)
+
 type Discovery struct {
 	// Testnet is true if this discovery file represents a testing
 	// network.
@@ -9,7 +14,16 @@ type Discovery struct {
 	// `true`, and are mutually exclusive.
 	Mainnet bool `json:"mainnet"`
 
-	EOSIOAccountName   string     `json:"eosio_account_name"`
-	EOSIOABPSigningKey string     `json:"eosio_appointed_block_producer_signing_key"`
-	LaunchData         LaunchData `json:"launch_data"`
+	EOSIOAccountName      string        `json:"eosio_account_name"`
+	EOSIOABPSigningKey    ecc.PublicKey `json:"eosio_appointed_block_producer_signing_key"`
+	EOSIOInitialAuthority struct {
+		Owner  eos.Authority `json:"owner"`
+		Active eos.Authority `json:"active"`
+	} `json:"eosio_initial_authority"`
+
+	Organizationname string `json:"organization_name"`
+
+	LaunchData LaunchData `json:"launch_data"`
+
+	ClonedFrom string `json:"-"`
 }

@@ -1,4 +1,4 @@
-package main
+package bios
 
 import (
 	"bufio"
@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/eoscanada/eos-bios/discovery"
 	shellwords "github.com/mattn/go-shellwords"
 )
 
@@ -40,10 +41,10 @@ func (b *BIOS) DispatchStartBIOSBoot(genesisJSON, publicKey, privateKey string) 
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, producerDefs []*ProducerDef) error {
+func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, peerDefs []*discovery.Peer) error {
 	var names []string
-	for _, prod := range producerDefs {
-		names = append(names, string(prod.AccountName))
+	for _, peer := range peerDefs {
+		names = append(names, peer.AccountName())
 	}
 
 	return b.dispatch("connect_as_abp", []string{
@@ -56,13 +57,13 @@ func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, producerDefs []*Pro
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData, myProducer *ProducerDef) error {
+func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData, myPeer *discovery.Peer) error {
 	return b.dispatch("connect_as_participant", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
 		"public_key_used", b.Config.Producer.BlockSigningPublicKey.String(),
 		"private_key_used", b.Config.Producer.blockSigningPrivateKey.String(),
 		"genesis_json", kickstart.GenesisJSON,
-		"producer_name", string(myProducer.AccountName),
+		"producer_name", myPeer.AccountName(),
 	}, nil)
 }
 

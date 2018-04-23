@@ -1,41 +1,93 @@
-package main
+package bios
 
 import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
+	"github.com/eoscanada/eos-bios/discovery"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
-	"github.com/eoscanada/eos-go/system"
 )
 
 type BIOS struct {
-	LaunchData   *LaunchData
+	Network *discovery.Network
+
+	LaunchData   *discovery.LaunchData
 	Config       *Config
 	API          *eos.API
 	Snapshot     Snapshot
-	ShuffleBlock struct {
-		Time       time.Time
-		MerkleRoot []byte
-	}
-	ShuffledProducers []*ProducerDef
-	MyProducerDefs    []*ProducerDef
+	BootSequence []*OperationType
+
+	// ShuffledProducers is an ordered list of producers according to
+	// the shuffled peers.
+	ShuffledProducers []*discovery.Peer
+
+	// MyPeers represent the peers my local node will handle. It is
+	// plural because when launching a 3-node network, your peer will
+	// be cloned a few time to have a full schedule of 21 producers.
+	MyPeers []*discovery.Peer
 
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
-func NewBIOS(launchData *LaunchData, config *Config, snapshotData Snapshot, api *eos.API) *BIOS {
+func NewBIOS(network *discovery.Network, config *Config, api *eos.API) *BIOS {
 	b := &BIOS{
-		LaunchData: launchData,
-		Config:     config,
-		API:        api,
-		Snapshot:   snapshotData,
+		Network: network,
+		Config:  config,
+		API:     api,
 	}
 	return b
+}
+
+func (b *BIOS) Init() error {
+	// Load launch data
+	launchData, err := b.Network.ConsensusLaunchData()
+	if err != nil {
+		log.Fatalln("couldn'get consensus launch data:", err)
+	}
+
+	b.LaunchData = launchData
+
+	// Load the boot sequence
+	rawBootSeq, err := b.Network.ReadFromCache(launchData.BootSequence.Hash)
+	if err != nil {
+		return fmt.Errorf("reading boot_sequence file: %s", err)
+	}
+
+	var bootSeq []*OperationType
+	if err := yamlUnmarshal(rawBootSeq, &bootSeq); err != nil {
+		return fmt.Errorf("loading boot sequence: %s", err)
+	}
+
+	b.BootSequence = bootSeq
+
+	// Load snapshot data
+	if launchData.Snapshot.Hash != "" {
+		rawSnapshot, err := b.Network.ReadFromCache(launchData.Snapshot.Hash)
+		if err != nil {
+			return fmt.Errorf("reading snapshot file: %s", err)
+		}
+		snapshotData, err := NewSnapshot(rawSnapshot)
+		if err != nil {
+			return fmt.Errorf("loading snapshot csv: %s", err)
+		}
+		b.Snapshot = snapshotData
+	}
+
+	if err := b.shuffleProducers(); err != nil {
+		return err
+	}
+
+	if err = b.setMyPeers(); err != nil {
+		return fmt.Errorf("error setting my producer definitions: %s", err)
+	}
+
+	return nil
 }
 
 func (b *BIOS) Run() error {
@@ -45,7 +97,7 @@ func (b *BIOS) Run() error {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
-	b.PrintAppointedBlockProducers()
+	b.Network.PrintOrderedPeers()
 
 	if b.AmIBootNode() {
 		if err := b.RunBootNodeStage1(); err != nil {
@@ -61,26 +113,26 @@ func (b *BIOS) Run() error {
 		}
 	}
 
-	fmt.Println("Registering my producer account")
+	// fmt.Println("Registering my producer account")
 
-	_, err := b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
-	if err != nil {
-		return fmt.Errorf("regproducer: %s", err)
-	}
+	// _, err := b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
+	// if err != nil {
+	// 	return fmt.Errorf("regproducer: %s", err)
+	// }
 
 	fmt.Println("BIOS Sequence Terminated")
 
 	return b.DispatchDone()
 }
 
-func (b *BIOS) PrintAppointedBlockProducers() {
+func (b *BIOS) PrintOrderedPeers() {
 	fmt.Println("###############################################################################################")
 	fmt.Println("###################################  SHUFFLING RESULTS  #######################################")
 	fmt.Println("")
 
-	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].String())
+	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].AccountName())
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].String())
+		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].AccountName())
 	}
 	fmt.Println("")
 	fmt.Println("###############################################################################################")
@@ -137,7 +189,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 
 	// TODO: add an action at the end, with `nonce` and a message to indicate the end of the Boot process ?
 	// This way, nodes that sync can assume all boot actions are done once that nonce action goes through.
-	for _, step := range b.LaunchData.BootSequence {
+	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
 		acts, err := step.Data.Actions(b)
@@ -194,7 +246,7 @@ func (b *BIOS) RunABPStage1() error {
 	// TODO: Decrypt the Kickstart data
 	//   Do extensive validation on the input (tight regexp for address, for private key?)
 
-	if err = b.DispatchConnectAsABP(kickstart, b.MyProducerDefs); err != nil {
+	if err = b.DispatchConnectAsABP(kickstart, b.MyPeers); err != nil {
 		return err
 	}
 
@@ -244,7 +296,7 @@ func (b *BIOS) WaitStage1End() error {
 		return err
 	}
 
-	if err = b.DispatchConnectAsParticipant(kickstart, b.MyProducerDefs[0]); err != nil {
+	if err = b.DispatchConnectAsParticipant(kickstart, b.MyPeers[0]); err != nil {
 		return err
 	}
 
@@ -292,27 +344,17 @@ func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
 func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	// known not to fail
 	cnt, _ := json.Marshal(&GenesisJSON{
-		InitialTimestamp: b.ShuffleBlock.Time.UTC().Format("2006-01-02T15:04:05"),
+		InitialTimestamp: time.Now().UTC().Format("2006-01-02T15:04:05"), // TODO: becomes the bitcoin block if we use that as a seed for randomization? just the current time/date ?
 		InitialKey:       pubKey,
 		InitialChainID:   hex.EncodeToString(b.API.ChainID),
 	})
 	return string(cnt)
 }
 
-func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error {
-	// we'll shuffle later :)
-	if b.Config.Debug.NoShuffle {
-		fmt.Println("DEBUG: Skipping shuffle, using order in launch.yaml")
-		b.ShuffledProducers = b.LaunchData.Producers
-		b.ShuffleBlock.Time = time.Now().UTC()
-		b.ShuffleBlock.MerkleRoot = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	} else {
-		fmt.Println("Shuffling producers listed in the launch file [NOT IMPLEMENTED]")
-		// TODO: write the algorithm...
-		b.ShuffledProducers = b.LaunchData.Producers
-		b.ShuffleBlock.Time = blockTime
-		b.ShuffleBlock.MerkleRoot = btcMerkleRoot
-	}
+func (b *BIOS) shuffleProducers() error {
+	fmt.Println("Shuffling producers listed in the launch file [NOT IMPLEMENTED]")
+
+	b.ShuffledProducers = b.Network.OrderedPeers()
 
 	// We'll multiply the other producers as to have a full schedule
 	if numProds := len(b.ShuffledProducers); numProds < 22 {
@@ -323,19 +365,12 @@ func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error
 				break
 			}
 
-			fromProd := b.ShuffledProducers[1+count%cloneCount]
+			fromPeer := b.ShuffledProducers[1+count%cloneCount]
 			count++
 
-			clonedProd := &ProducerDef{
-				AccountName:                  accountVariation(fromProd.AccountName, count),
-				Authority:                    fromProd.Authority,
-				InitialBlockSigningPublicKey: fromProd.InitialBlockSigningPublicKey,
-				KeybaseUser:                  fromProd.KeybaseUser,
-				PGPPublicKey:                 fromProd.PGPPublicKey,
-				OrganizationName:             fromProd.OrganizationName + fmt.Sprintf(" - clone %d", count),
-				Timezone:                     fromProd.Timezone,
-				URLs:                         fromProd.URLs,
-				clonedFrom:                   fromProd.AccountName,
+			clonedProd := &discovery.Peer{
+				ClonedAccountName: accountVariation(fromPeer.AccountName(), count),
+				Discovery:         fromPeer.Discovery,
 			}
 			b.ShuffledProducers = append(b.ShuffledProducers, clonedProd)
 		}
@@ -345,7 +380,7 @@ func (b *BIOS) ShuffleProducers(btcMerkleRoot []byte, blockTime time.Time) error
 }
 
 func (b *BIOS) IsBootNode(account string) bool {
-	return string(b.ShuffledProducers[0].AccountName) == account
+	return string(b.ShuffledProducers[0].AccountName()) == account
 }
 
 func (b *BIOS) AmIBootNode() bool {
@@ -354,7 +389,7 @@ func (b *BIOS) AmIBootNode() bool {
 
 func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		if string(b.ShuffledProducers[i].AccountName) == account {
+		if b.ShuffledProducers[i].Discovery.EOSIOAccountName == account {
 			return true
 		}
 	}
@@ -365,13 +400,13 @@ func (b *BIOS) AmIAppointedBlockProducer() bool {
 	return b.IsAppointedBlockProducer(b.Config.Producer.MyAccount)
 }
 
-func (b *BIOS) MyProducerDef() (*ProducerDef, error) {
-	for _, prod := range b.LaunchData.Producers {
-		if b.Config.Producer.MyAccount == string(prod.AccountName) {
-			return prod, nil
+func (b *BIOS) MyPeer() (*discovery.Peer, error) {
+	for _, peer := range b.Network.OrderedPeers() {
+		if b.Config.Producer.MyAccount == peer.Discovery.EOSIOAccountName {
+			return peer, nil
 		}
 	}
-	return nil, fmt.Errorf("no local producer config found (make sure producer.my_account in your config matches an entry in the launch file)")
+	return nil, fmt.Errorf("no peer config found (make sure producer.my_account in your config matches an `eosio_account_name` peer in the network)")
 }
 
 // MyProducerDefs will provide more than one producer def ONLY when
@@ -379,21 +414,21 @@ func (b *BIOS) MyProducerDef() (*ProducerDef, error) {
 // producers.  This way, you can have your nodes respond to many
 // account names and have the network function. Your producer will
 // simply produce more blocks, under different names.
-func (b *BIOS) setMyProducerDefs() error {
-	myProd, err := b.MyProducerDef()
+func (b *BIOS) setMyPeers() error {
+	myPeer, err := b.MyPeer()
 	if err != nil {
 		return err
 	}
 
-	out := []*ProducerDef{myProd}
+	out := []*discovery.Peer{myPeer}
 
-	for _, prod := range b.ShuffledProducers {
-		if prod.clonedFrom == myProd.AccountName {
-			out = append(out, prod)
+	for _, peer := range b.ShuffledProducers {
+		if peer.Discovery.EOSIOAccountName == myPeer.Discovery.EOSIOAccountName {
+			out = append(out, peer)
 		}
 	}
 
-	b.MyProducerDefs = out
+	b.MyPeers = out
 
 	return nil
 }
@@ -413,9 +448,9 @@ func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action)
 	return
 }
 
-func accountVariation(name eos.AccountName, variation int) eos.AccountName {
+func accountVariation(name string, variation int) string {
 	if len(name) > 10 {
-		name = AN(string(name)[:10])
+		name = name[:10]
 	}
-	return AN(string(name) + "." + string([]byte{'a' + byte(variation-1)}))
+	return name + "." + string([]byte{'a' + byte(variation-1)})
 }

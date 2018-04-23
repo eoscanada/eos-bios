@@ -1,8 +1,7 @@
-package main
+package bios
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,9 +9,9 @@ import (
 )
 
 func TestOpsUnmarshal(t *testing.T) {
-	in := `{"op":"system.setcode","label":"Test","data":{}}`
+	in := `{"op":"system.setcode","label":"Test","data":{"contract_name_ref": "mama"}}`
 	var opType OperationType
 	require.NoError(t, json.Unmarshal([]byte(in), &opType))
-	assert.Equal(t, opType.Data, "mama")
-	fmt.Printf("woah: %T %#v\n", opType.Data, opType.Data)
+	assert.Equal(t, "mama", opType.Data.(*OpSetCode).ContractNameRef)
+	// fmt.Printf("woah: %T %#v\n", opType.Data, opType.Data)
 }

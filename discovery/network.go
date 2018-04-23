@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 type Network struct {
@@ -18,6 +19,7 @@ type Network struct {
 	seedDiscoveryURL string
 	visitedURLs      map[string]bool
 	discoveredPeers  map[string]*Peer
+	orderedPeers     []*Peer
 }
 
 func NewNetwork(cachePath string, seedDiscoveryURL string) *Network {
@@ -44,6 +46,14 @@ func (c *Network) FetchAll() error {
 	return nil
 }
 
+func (c *Network) ValidateLocalFile(filename string) error {
+	// simulate DownloadDiscoveryURL with a local file, and run all
+	// the validation we have from `if disco.Testnet && disco.Mainnet`,
+	// etc..
+
+	return nil
+}
+
 func (c *Network) FetchOne(discoveryURL string) error {
 	if c.visitedURLs[discoveryURL] {
 		return nil
@@ -51,7 +61,7 @@ func (c *Network) FetchOne(discoveryURL string) error {
 
 	c.visitedURLs[discoveryURL] = true
 
-	disco, err := c.DownloadDiscoveryURL(discoveryURL)
+	disco, rawDisco, err := c.DownloadDiscoveryURL(discoveryURL)
 	if err != nil {
 		return fmt.Errorf("couldn't download discovery URL: %s", err)
 	}
@@ -91,6 +101,11 @@ func (c *Network) FetchOne(discoveryURL string) error {
 	}
 
 	// Save the content of the disco file in here
+	fsFile := replaceAllWeirdities(discoveryURL)
+	err = c.writeToCache(fsFile, rawDisco)
+	if err != nil {
+		return fmt.Errorf("writing discovery data to %q: %s", fsFile, err)
+	}
 
 	for _, wingman := range launchData.Wingmen {
 		if wingman.Weight > 1.0 || wingman.Weight < 0.0 {
@@ -164,7 +179,19 @@ func (c *Network) isInCache(file string) bool {
 	return false
 }
 
-func (c *Network) LoadFromCache(initialDiscoveryURL string) error {
+func (c *Network) ReadFromCache(fileName string) ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(c.cachePath, fileName))
+}
+
+func (c *Network) ReaderFromCache(fileName string) (io.ReadCloser, error) {
+	return os.Open(filepath.Join(c.cachePath, fileName))
+}
+
+func (c *Network) FileNameFromCache(fileName string) string {
+	return filepath.Join(c.cachePath, fileName)
+}
+
+func (c *Network) LoadCache(initialDiscoveryURL string) error {
 	// TODO: start with initialDiscoveryURL
 	// read from disk all the BPs, verify the hash data, etc.. ?
 	return nil
@@ -172,6 +199,7 @@ func (c *Network) LoadFromCache(initialDiscoveryURL string) error {
 
 func (c *Network) CalculateWeights() error {
 	// build a second map with discoveryURLs alongside account_names...
+	var allPeers []*Peer
 	for _, peer := range c.discoveredPeers {
 		for _, wingman := range peer.Discovery.LaunchData.Wingmen {
 			absDiscoURL, err := absoluteURL(peer.DiscoveryURL, wingman.DiscoveryURL)
@@ -190,8 +218,25 @@ func (c *Network) CalculateWeights() error {
 			}
 			wingmanDisco.TotalWeight += addWeight
 		}
+
+		allPeers = append(allPeers, peer)
 	}
+
+	// Sort the `orderedPeers`
+	sort.Slice(allPeers, func(i, j int) bool {
+		if allPeers[i].TotalWeight == allPeers[j].TotalWeight {
+			return allPeers[i].DiscoveryURL < allPeers[j].DiscoveryURL
+		}
+		return allPeers[i].TotalWeight > allPeers[j].TotalWeight
+	})
+
+	c.orderedPeers = allPeers
+
 	return nil
+}
+
+func (c *Network) OrderedPeers() []*Peer {
+	return c.orderedPeers
 }
 
 func (c *Network) VerifyGraph() error {
@@ -205,7 +250,7 @@ func (c *Network) VerifyGraph() error {
 	return nil
 }
 
-func (c *Network) DownloadDiscoveryURL(discoURL string) (out *Discovery, err error) {
+func (c *Network) DownloadDiscoveryURL(discoURL string) (out *Discovery, rawDiscovery []byte, err error) {
 	resp, err := http.Get(discoURL)
 	if err != nil {
 		return
@@ -218,13 +263,9 @@ func (c *Network) DownloadDiscoveryURL(discoURL string) (out *Discovery, err err
 		return
 	}
 
-	fsFile := replaceAllWeirdities(discoURL)
-	err = c.writeToCache(fsFile, buf.Bytes())
-	if err != nil {
-		return
-	}
+	rawDiscovery = buf.Bytes()
 
-	err = yamlUnmarshal(buf.Bytes(), &out)
+	err = yamlUnmarshal(rawDiscovery, &out)
 	return
 }
 
@@ -232,4 +273,41 @@ func sha2(input []byte) string {
 	hash := sha256.New()
 	_, _ = hash.Write(input) // can't fail
 	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func (c *Network) PrintOrderedPeers() {
+	fmt.Println("###############################################################################################")
+	fmt.Println("####################################    PEER NETWORK    #######################################")
+	fmt.Println("")
+
+	fmt.Printf("BIOS NODE: %s\n", c.orderedPeers[0].AccountName())
+	for i := 1; i < 22 && len(c.orderedPeers) > i; i++ {
+		fmt.Printf("ABP %02d:    %s\n", i, c.orderedPeers[i].AccountName())
+	}
+	for i := 22; len(c.orderedPeers) > i; i++ {
+		fmt.Printf("Part. %02d:  %s\n", i, c.orderedPeers[i].AccountName())
+	}
+	fmt.Println("")
+	fmt.Println("###############################################################################################")
+	fmt.Println("")
+}
+
+// ReachedConsensus reads all the hashes of the top-level peers and
+// returns true if we have reached an agreement on the content to
+// inject in the chain.
+func (c *Network) ReachedConsensus() bool {
+	// TODO: Implement the logic that determines the consensus.. right
+	// now it's just the weights in order.. and the top-most wins: we use
+	// its configuration.
+	return true
+}
+
+func (c *Network) ConsensusLaunchData() (*LaunchData, error) {
+	// TODO: implement the algo to create a Discovery file based on
+	// the most vouched for hashes for all the components.
+	//
+	// Will that work ? Will that make sense ?
+	//
+	// Cycle through the top peers, take the most vetted
+	return &(c.orderedPeers[0].Discovery.LaunchData), nil
 }

@@ -1,4 +1,4 @@
-package main
+package bios
 
 import (
 	"fmt"
@@ -11,15 +11,6 @@ import (
 )
 
 type Config struct {
-	Contracts map[string]ContractLocation `json:"contracts"`
-
-	// OpeningBalancesSnapshotPath represents the `snapshot.csv` file,
-	// which holds the opening balances for all ERC-20 token holders.
-	OpeningBalances struct {
-		// SnapshotPath is the path to the `csv` file, extracted using the `genesis` tool.
-		SnapshotPath string `json:"snapshot_path"`
-	} `json:"opening_balances"`
-
 	// Producer describes your producing node.
 	Producer struct {
 		// MyAccount is the name of the `account_name` this producer will be using on chain
@@ -40,6 +31,12 @@ type Config struct {
 		blockSigningPrivateKey *ecc.PrivateKey
 	} `json:"producer"`
 
+	// Hooks are called at different stages in the process, for
+	// remote systems to be notified and act.  They are simply `http`
+	// endpoints to which a POST will be sent with pre-defined structs
+	// as JSON.  See `hooks.go`
+	Hooks map[string]*HookConfig `json:"hooks"`
+
 	MyParameters system.EOSIOParameters `json:"my_parameters"`
 
 	// PGP manages the PGP keys, used for the communications channel.
@@ -49,26 +46,6 @@ type Config struct {
 		// Path to binary executable.. unless we use in-process cryptography..
 		Path string `json:"path"`
 	} `json:"pgp"`
-
-	// Hooks are called at different stages in the process, for
-	// remote systems to be notified and act.  They are simply `http`
-	// endpoints to which a POST will be sent with pre-defined structs
-	// as JSON.  See `hooks.go`
-	Hooks map[string]*HookConfig `json:"hooks"`
-
-	// This must all be empty for production.
-	Debug struct {
-		// EnrichProducer will distribute coins to all producers in LaunchData.
-		EnrichProducers bool `json:"enrich_producers"`
-		// KeepSystemAccount prevents the destrution of the `eosio` account and removal of its keys.
-		KeepSystemAccount bool `json:"keep_system_account"`
-		// NoShuffle prevents shuffling of the Producers in your
-		// LaunchData. Helps tests different roles (BIOS Boot Node,
-		// ABP, watcher...)
-		NoShuffle bool `json:"no_shuffle"`
-		// Truncate snapshot
-		TruncateSnapshot int `json:"truncate_snapshot"`
-	}
 }
 
 type ContractLocation struct {

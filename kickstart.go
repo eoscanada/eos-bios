@@ -1,4 +1,4 @@
-package main
+package bios
 
 type KickstartData struct {
 	BIOSP2PAddress string `json:"bios_p2p_address"`

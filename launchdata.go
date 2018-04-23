@@ -1,10 +1,7 @@
-package main
+package bios
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/eoscanada/eos-go"
@@ -61,97 +58,4 @@ type ProducerDef struct {
 
 func (p *ProducerDef) String() string {
 	return fmt.Sprintf("Account: % 15s   Keybase: % 32s   Org: % 30s   URLs: %s", p.AccountName, fmt.Sprintf("https://keybase.io/%s", p.KeybaseUser), p.OrganizationName, strings.Join(p.URLs, ", "))
-}
-
-// snapshotPath, codePath, abiPath string
-func loadLaunchFile(filename string, config *Config) (out *LaunchData, err error) {
-	cnt, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := yamlUnmarshal(cnt, &out); err != nil {
-		return nil, err
-	}
-
-	if out.LaunchBitcoinBlockHeight == 0 {
-		return nil, fmt.Errorf("launch_btc_block_height unspecified (or 0)")
-	}
-
-	snapshotHash, err := hashFile(config.OpeningBalances.SnapshotPath)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("Hash of %q: %s\n", config.OpeningBalances.SnapshotPath, snapshotHash)
-
-	if snapshotHash != out.OpeningBalancesSnapshotHash {
-		return nil, fmt.Errorf("snapshot hash doesn't match launch data")
-	}
-
-	for name, loc := range config.Contracts {
-		hash := out.ContractHashes[name]
-
-		codeHash, err := hashCodeFiles(loc.CodePath, loc.ABIPath)
-		if err != nil {
-			return nil, fmt.Errorf("error hashing %q contract's code + abi: %s", name, err)
-		}
-
-		fmt.Printf("Hash of %q and %q: %s\n", loc.CodePath, loc.ABIPath, codeHash)
-
-		if codeHash != hash {
-			return nil, fmt.Errorf("%q contract's code hash don't match", name)
-		}
-	}
-
-	// Check duplicate entries in `launch.yaml`, fail immediately.
-	//    Check the `account_name`
-
-	// TODO: VALIDATE Timezone
-
-	return out, nil
-}
-
-func newCC(loc ContractLocation, hash string) contractCompare {
-	return contractCompare{loc, hash}
-}
-
-type contractCompare struct {
-	location ContractLocation
-	hash     string
-}
-
-func hashFile(filename string) (string, error) {
-	h := sha256.New()
-
-	cnt, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return "", err
-	}
-
-	h.Write(cnt)
-
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-func hashCodeFiles(code, abi string) (string, error) {
-	h := sha256.New()
-
-	cnt, err := ioutil.ReadFile(code)
-	if err != nil {
-		return "", err
-	}
-
-	h.Write(cnt)
-
-	h.Write([]byte(":"))
-
-	cnt, err = ioutil.ReadFile(abi)
-	if err != nil {
-		return "", err
-	}
-
-	h.Write(cnt)
-
-	return hex.EncodeToString(h.Sum(nil)), nil
 }

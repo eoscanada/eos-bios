@@ -1,9 +1,9 @@
-package main
+package bios
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
-	"os"
 
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
@@ -17,19 +17,12 @@ type SnapshotLine struct {
 	Balance         eos.Asset
 }
 
-func NewSnapshot(filename string) (out Snapshot, err error) {
-	fl, err := os.Open(filename)
-	if err != nil {
-		return
-	}
-
-	reader := csv.NewReader(fl)
+func NewSnapshot(content []byte) (out Snapshot, err error) {
+	reader := csv.NewReader(bytes.NewBuffer(content))
 	allRecords, err := reader.ReadAll()
 	if err != nil {
 		return
 	}
-
-	//fmt.Println("ALL records", allRecords)
 
 	for _, el := range allRecords {
 		if len(el) != 3 {

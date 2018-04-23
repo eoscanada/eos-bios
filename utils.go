@@ -1,4 +1,4 @@
-package main
+package bios
 
 import (
 	"bufio"

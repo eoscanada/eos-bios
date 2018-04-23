@@ -1,4 +1,4 @@
-package main
+package bios
 
 import (
 	"encoding/json"
@@ -60,6 +60,7 @@ func (o *OperationType) UnmarshalJSON(data []byte) error {
 
 type Operation interface {
 	Actions(b *BIOS) ([]*eos.Action, error)
+	ResetTestnetOptions()
 }
 
 var operationsRegistry = map[string]Operation{
@@ -81,11 +82,12 @@ type OpSetCode struct {
 	ContractNameRef string `json:"contract_name_ref"`
 }
 
-func (op OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
+func (op *OpSetCode) ResetTestnetOptions() { return }
+func (op *OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
 	setCode, err := system.NewSetCodeTx(
 		op.Account,
-		b.Config.Contracts[op.ContractNameRef].CodePath,
-		b.Config.Contracts[op.ContractNameRef].ABIPath,
+		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].Code.Hash),
+		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].ABI.Hash),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("NewSetCodeTx %s: %s", op.ContractNameRef, err)
@@ -102,7 +104,8 @@ type OpNewAccount struct {
 	Pubkey     string
 }
 
-func (op OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
+func (op *OpNewAccount) ResetTestnetOptions() { return }
+func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
 	pubkey := b.EphemeralPrivateKey.PublicKey()
 	if op.Pubkey != "ephemeral" {
 		pubkey, err = ecc.NewPublicKey(op.Pubkey)
@@ -121,6 +124,7 @@ type OpSetPriv struct {
 	IsPriv  bool `json:"is_priv"` // unused
 }
 
+func (op *OpSetPriv) ResetTestnetOptions() { return }
 func (op *OpSetPriv) Actions(b *BIOS) (out []*eos.Action, err error) {
 	return append(out, system.NewSetPriv(op.Account)), nil
 }
@@ -135,6 +139,7 @@ type OpCreateToken struct {
 	CanRecall    bool `json:"can_recall"`
 }
 
+func (op *OpCreateToken) ResetTestnetOptions() {}
 func (op *OpCreateToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 	act := token.NewCreate(op.Account, op.Amount, op.CanFreeze, op.CanRecall, op.CanWhitelist)
 	return append(out, act), nil
@@ -148,6 +153,7 @@ type OpIssueToken struct {
 	Memo    string
 }
 
+func (op *OpIssueToken) ResetTestnetOptions() {}
 func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 	act := token.NewIssue(op.Account, op.Amount, op.Memo)
 	return append(out, act), nil
@@ -160,22 +166,26 @@ type OpCreateProducers struct {
 	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
 }
 
+func (op *OpCreateProducers) ResetTestnetOptions() {
+	op.TestnetEnrichProducers = false
+}
+
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
-		newAccount := system.NewNewAccount(AN("eosio"), prod.AccountName, nil)
+		newAccount := system.NewNewAccount(AN("eosio"), AN(prod.AccountName()), nil)
 		newAccount.Data = eos.NewActionData(system.NewAccount{
 			Creator: AN("eosio"),
-			Name:    prod.AccountName,
-			Owner:   prod.Authority.Owner,
-			Active:  prod.Authority.Active,
+			Name:    AN(prod.AccountName()),
+			Owner:   prod.Discovery.EOSIOInitialAuthority.Owner,
+			Active:  prod.Discovery.EOSIOInitialAuthority.Active,
 		})
 
-		fmt.Printf("- Creating new account %q\n", prod.AccountName)
+		fmt.Printf("- Creating new account %q\n", prod.AccountName())
 		out = append(out, newAccount)
 
 		if op.TestnetEnrichProducers {
-			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName)
-			out = append(out, token.NewTransfer(AN("eosio"), prod.AccountName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
+			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName())
+			out = append(out, token.NewTransfer(AN("eosio"), AN(prod.AccountName()), eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
 		}
 	}
 	return
@@ -187,7 +197,15 @@ type OpInjectSnapshot struct {
 	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
 }
 
+func (op *OpInjectSnapshot) ResetTestnetOptions() {
+	op.TestnetTruncateSnapshot = 0
+}
+
 func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if len(b.Snapshot) == 0 {
+		return nil, fmt.Errorf("snapshot is empty or not loaded")
+	}
+
 	for idx, hodler := range b.Snapshot {
 		flipped := flipEndianness(uint64(idx + 1))
 		destAccount := AN("genesis." + eos.NameToString(flipped))
@@ -217,6 +235,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 type OpSetProds struct{}
 
+func (op *OpSetProds) ResetTestnetOptions() {}
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	prodkeys := []system.ProducerKey{system.ProducerKey{
 		ProducerName:    AN("eosio"),
@@ -224,7 +243,7 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	}}
 	// prodkeys := []system.ProducerKey{}
 	for _, prod := range b.ShuffledProducers {
-		prodkeys = append(prodkeys, system.ProducerKey{prod.AccountName, prod.InitialBlockSigningPublicKey})
+		prodkeys = append(prodkeys, system.ProducerKey{AN(prod.AccountName()), prod.Discovery.EOSIOABPSigningKey})
 		if len(prodkeys) >= 21 {
 			break
 		}
@@ -237,11 +256,16 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 //
 
 type OpDestroyAccounts struct {
-	Accounts []eos.AccountName
+	Accounts            []eos.AccountName
+	TestnetKeepAccounts bool `json:"TESTNET_KEEP_ACCOUNTS"`
+}
+
+func (op *OpDestroyAccounts) ResetTestnetOptions() {
+	op.TestnetKeepAccounts = false
 }
 
 func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if b.Config.Debug.KeepSystemAccount {
+	if op.TestnetKeepAccounts {
 		fmt.Println("DEBUG: Keeping system account around, for testing purposes.")
 		return
 	}
