@@ -9,35 +9,31 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
-	"regexp"
-	"strings"
 )
 
-type Cache struct {
-	Path             string
+type Network struct {
+	cachePath        string
 	seedDiscoveryURL string
 	visitedURLs      map[string]bool
 	discoveredPeers  map[string]*Peer
 }
 
-func NewCache(path string, seedDiscoveryURL string) *Cache {
-	return &Cache{
-		Path:             path,
+func NewNetwork(cachePath string, seedDiscoveryURL string) *Network {
+	return &Network{
+		cachePath:        cachePath,
 		visitedURLs:      map[string]bool{},
 		discoveredPeers:  map[string]*Peer{},
 		seedDiscoveryURL: seedDiscoveryURL,
 	}
 }
 
-func (c *Cache) EnsureExists() error {
-	return os.MkdirAll(c.Path, 0777)
+func (c *Network) EnsureExists() error {
+	return os.MkdirAll(c.cachePath, 0777)
 }
 
-func (c *Cache) FetchAll() error {
+func (c *Network) FetchAll() error {
 	c.visitedURLs = map[string]bool{}
 	c.discoveredPeers = map[string]*Peer{}
 
@@ -48,7 +44,7 @@ func (c *Cache) FetchAll() error {
 	return nil
 }
 
-func (c *Cache) FetchOne(discoveryURL string) error {
+func (c *Network) FetchOne(discoveryURL string) error {
 	if c.visitedURLs[discoveryURL] {
 		return nil
 	}
@@ -112,7 +108,7 @@ func (c *Cache) FetchOne(discoveryURL string) error {
 	return nil
 }
 
-func (c *Cache) DownloadHashURL(discoveryURL string, hu HashURL) error {
+func (c *Network) DownloadHashURL(discoveryURL string, hu HashURL) error {
 	if hu.Hash == "" {
 		return errors.New("no hash provided")
 	}
@@ -155,12 +151,12 @@ func (c *Cache) DownloadHashURL(discoveryURL string, hu HashURL) error {
 	return nil
 }
 
-func (c *Cache) writeToCache(fileName string, content []byte) error {
-	return ioutil.WriteFile(filepath.Join(c.Path, fileName), content, 0666)
+func (c *Network) writeToCache(fileName string, content []byte) error {
+	return ioutil.WriteFile(filepath.Join(c.cachePath, fileName), content, 0666)
 }
 
-func (c *Cache) isInCache(file string) bool {
-	fileName := filepath.Join(c.Path, file)
+func (c *Network) isInCache(file string) bool {
+	fileName := filepath.Join(c.cachePath, file)
 
 	if _, err := os.Stat(fileName); err == nil {
 		return true
@@ -168,13 +164,13 @@ func (c *Cache) isInCache(file string) bool {
 	return false
 }
 
-func (c *Cache) LoadFromCache(initialDiscoveryURL string) error {
+func (c *Network) LoadFromCache(initialDiscoveryURL string) error {
 	// TODO: start with initialDiscoveryURL
 	// read from disk all the BPs, verify the hash data, etc.. ?
 	return nil
 }
 
-func (c *Cache) CalculateWeights() error {
+func (c *Network) CalculateWeights() error {
 	// build a second map with discoveryURLs alongside account_names...
 	for _, peer := range c.discoveredPeers {
 		for _, wingman := range peer.Discovery.LaunchData.Wingmen {
@@ -198,7 +194,7 @@ func (c *Cache) CalculateWeights() error {
 	return nil
 }
 
-func (c *Cache) VerifyGraph() error {
+func (c *Network) VerifyGraph() error {
 	// Make sure we don't have 2 entities named the same on chain.. EOSIOACcountName being equal.
 	seen := map[string]string{}
 	for _, peer := range c.discoveredPeers {
@@ -209,7 +205,7 @@ func (c *Cache) VerifyGraph() error {
 	return nil
 }
 
-func (c *Cache) DownloadDiscoveryURL(discoURL string) (out *Discovery, err error) {
+func (c *Network) DownloadDiscoveryURL(discoURL string) (out *Discovery, err error) {
 	resp, err := http.Get(discoURL)
 	if err != nil {
 		return
@@ -236,26 +232,4 @@ func sha2(input []byte) string {
 	hash := sha256.New()
 	_, _ = hash.Write(input) // can't fail
 	return hex.EncodeToString(hash.Sum(nil))
-}
-func absoluteURL(base, relURL string) (string, error) {
-	if strings.HasPrefix(relURL, "https:") || strings.HasPrefix(relURL, "http:") {
-		return relURL, nil
-	}
-
-	baseURL, err := url.Parse(base)
-	if err != nil {
-		return "", err
-	}
-
-	newPath := path.Clean(path.Join(path.Dir(baseURL.Path), relURL))
-
-	baseURL.Path = newPath
-
-	return baseURL.String(), nil
-}
-
-var weirdities = regexp.MustCompile("[^a-zA-Z0-9]")
-
-func replaceAllWeirdities(input string) string {
-	return weirdities.ReplaceAllString(input, "_")
 }
