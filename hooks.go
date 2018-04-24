@@ -17,10 +17,9 @@ import (
 
 var ConfiguredHooks = []HookDef{
 	HookDef{"init", "Dispatch when we start the program."},
-	HookDef{"start_bios_boot", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
+	HookDef{"boot_network", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
 	HookDef{"publish_kickstart_data", "Dispatched with the contents of the (usually encrypted) Kickstart data, to be published to your social / web properties."},
-	HookDef{"connect_as_abp", "Dispatched by ABPs with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to the BIOS Node's p2p address."},
-	HookDef{"connect_as_participant", "Dispatched by all remaining participants (not BIOS Boot nor ABP) with the decrypted contents of the Kickstart data.  Use this to initiate a connect from your BP node to any of the Appointed Block Producers once they validated everything."},
+	HookDef{"join_network", "Dispatched anyone joining the network. Could be as an Appointed Block Producer, or simply someone wanting to join the network after boot. It provides at least one p2p_address to connect to."},
 	HookDef{"done", "When your process it done"},
 }
 
@@ -33,7 +32,7 @@ func (b *BIOS) DispatchInit() error {
 	return b.dispatch("init", []string{}, nil)
 }
 
-func (b *BIOS) DispatchStartBIOSBoot(genesisJSON, publicKey, privateKey string) error {
+func (b *BIOS) DispatchBootNetwork(genesisJSON, publicKey, privateKey string) error {
 	return b.dispatch("start_bios_boot", []string{
 		"genesis_json", genesisJSON,
 		"public_key", publicKey,
@@ -41,7 +40,7 @@ func (b *BIOS) DispatchStartBIOSBoot(genesisJSON, publicKey, privateKey string) 
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, peerDefs []*discovery.Peer) error {
+func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*discovery.Peer) error {
 	var names []string
 	for _, peer := range peerDefs {
 		names = append(names, peer.AccountName())
@@ -59,21 +58,6 @@ func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, peerDefs []*discove
 		"genesis_json", kickstart.GenesisJSON,
 		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
 		"producer_names", strings.Join(names, ","),
-	}, nil)
-}
-
-func (b *BIOS) DispatchConnectAsParticipant(kickstart *KickstartData, myPeer *discovery.Peer) error {
-	privKey := ""
-	if b.Config.Peer.BlockSigningPrivateKey != nil {
-		privKey = b.Config.Peer.BlockSigningPrivateKey.String()
-	}
-
-	return b.dispatch("connect_as_participant", []string{
-		"p2p_address", kickstart.BIOSP2PAddress,
-		"public_key", myPeer.Discovery.EOSIOABPSigningKey.String(),
-		"private_key", privKey,
-		"genesis_json", kickstart.GenesisJSON,
-		"producer_name", myPeer.AccountName(),
 	}, nil)
 }
 

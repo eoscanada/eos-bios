@@ -189,7 +189,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	if err = b.DispatchStartBIOSBoot(genesisData, pubKey, privKey); err != nil {
+	if err = b.DispatchBootNetwork(genesisData, pubKey, privKey); err != nil {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
@@ -254,7 +254,7 @@ func (b *BIOS) RunABPStage1() error {
 	// TODO: Decrypt the Kickstart data
 	//   Do extensive validation on the input (tight regexp for address, for private key?)
 
-	if err = b.DispatchConnectAsABP(kickstart, b.MyPeers); err != nil {
+	if err = b.DispatchJoinNetwork(&kickstart, b.MyPeers); err != nil {
 		return err
 	}
 
@@ -308,7 +308,7 @@ func (b *BIOS) RunParticipant() error {
 		b.KickstartData = &kickstart
 	}
 
-	if err := b.DispatchConnectAsParticipant(b.KickstartData, b.MyPeers[0]); err != nil {
+	if err := b.DispatchJoinNetwork(b.KickstartData, b.MyPeers); err != nil {
 		return err
 	}
 
