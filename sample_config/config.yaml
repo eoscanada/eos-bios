@@ -10,13 +10,12 @@ network:
 
 hooks:
   init:
-    exec: ./hooks/init.sh
+    exec: ./hook_init.sh
   boot_network:
-    exec: ./hooks/boot_network.sh
+    exec: ./hook_boot_network.sh
   join_network:
-    exec: ./hooks/join_network.sh
+    exec: ./hook_join_network.sh
   publish_kickstart_data:
-    exec: ./hooks/publish_kickstart_data.sh
+    exec: ./hook_publish_kickstart_data.sh
   done:
-    exec: ./hooks/done.sh
-
+    exec: ./hook_done.sh
