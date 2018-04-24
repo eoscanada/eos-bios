@@ -1,0 +1,22 @@
+producer:
+  my_account: eos.freezing
+  api_address: http://localhost:8888
+  secret_p2p_address: localhost:9876
+  block_signing_private_key_path: ./privkey-eugvSJ.key
+
+network:
+  seed_discovery_url: https://abourget.keybase.pub/testnet-cbillett.yaml
+  cache_path: /tmp/disco
+
+hooks:
+  init:
+    exec: ./hooks/init.sh
+  boot_network:
+    exec: ./hooks/boot_network.sh
+  join_network:
+    exec: ./hooks/join_network.sh
+  publish_kickstart_data:
+    exec: ./hooks/publish_kickstart_data.sh
+  done:
+    exec: ./hooks/done.sh
+

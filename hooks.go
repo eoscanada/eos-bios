@@ -33,7 +33,7 @@ func (b *BIOS) DispatchInit() error {
 }
 
 func (b *BIOS) DispatchBootNetwork(genesisJSON, publicKey, privateKey string) error {
-	return b.dispatch("start_bios_boot", []string{
+	return b.dispatch("boot_network", []string{
 		"genesis_json", genesisJSON,
 		"public_key", publicKey,
 		"private_key", privateKey,
@@ -51,7 +51,7 @@ func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*discove
 		privKey = b.Config.Peer.BlockSigningPrivateKey.String()
 	}
 
-	return b.dispatch("connect_as_abp", []string{
+	return b.dispatch("join_network", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
 		"public_key", peerDefs[0].Discovery.EOSIOABPSigningKey.String(),
 		"private_key", privKey,
