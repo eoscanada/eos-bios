@@ -15,7 +15,7 @@ import (
 	shellwords "github.com/mattn/go-shellwords"
 )
 
-var configuredHooks = []HookDef{
+var ConfiguredHooks = []HookDef{
 	HookDef{"init", "Dispatch when we start the program."},
 	HookDef{"start_bios_boot", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
 	HookDef{"publish_kickstart_data", "Dispatched with the contents of the (usually encrypted) Kickstart data, to be published to your social / web properties."},
@@ -47,21 +47,31 @@ func (b *BIOS) DispatchConnectAsABP(kickstart KickstartData, peerDefs []*discove
 		names = append(names, peer.AccountName())
 	}
 
+	privKey := ""
+	if b.Config.Peer.BlockSigningPrivateKey != nil {
+		privKey = b.Config.Peer.BlockSigningPrivateKey.String()
+	}
+
 	return b.dispatch("connect_as_abp", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
-		"public_key_used", b.Config.Producer.BlockSigningPublicKey.String(),
-		"private_key_used", b.Config.Producer.blockSigningPrivateKey.String(),
+		"public_key", peerDefs[0].Discovery.EOSIOABPSigningKey.String(),
+		"private_key", privKey,
 		"genesis_json", kickstart.GenesisJSON,
 		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
 		"producer_names", strings.Join(names, ","),
 	}, nil)
 }
 
-func (b *BIOS) DispatchConnectAsParticipant(kickstart KickstartData, myPeer *discovery.Peer) error {
+func (b *BIOS) DispatchConnectAsParticipant(kickstart *KickstartData, myPeer *discovery.Peer) error {
+	privKey := ""
+	if b.Config.Peer.BlockSigningPrivateKey != nil {
+		privKey = b.Config.Peer.BlockSigningPrivateKey.String()
+	}
+
 	return b.dispatch("connect_as_participant", []string{
 		"p2p_address", kickstart.BIOSP2PAddress,
-		"public_key_used", b.Config.Producer.BlockSigningPublicKey.String(),
-		"private_key_used", b.Config.Producer.blockSigningPrivateKey.String(),
+		"public_key", myPeer.Discovery.EOSIOABPSigningKey.String(),
+		"private_key", privKey,
 		"genesis_json", kickstart.GenesisJSON,
 		"producer_name", myPeer.AccountName(),
 	}, nil)

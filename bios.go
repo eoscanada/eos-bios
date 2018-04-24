@@ -23,6 +23,8 @@ type BIOS struct {
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
+	KickstartData *KickstartData
+
 	// ShuffledProducers is an ordered list of producers according to
 	// the shuffled peers.
 	ShuffledProducers []*discovery.Peer
@@ -44,6 +46,10 @@ func NewBIOS(network *discovery.Network, config *Config, api *eos.API) *BIOS {
 	return b
 }
 
+func (b *BIOS) SetKickstartData(ks *KickstartData) {
+	b.KickstartData = ks
+}
+
 func (b *BIOS) Init() error {
 	// Load launch data
 	launchData, err := b.Network.ConsensusLaunchData()
@@ -53,18 +59,23 @@ func (b *BIOS) Init() error {
 
 	b.LaunchData = launchData
 
+	// TODO: check that nodes that are ABP or participants do have an
+	// EOSIOABPSigningKey set.
+
 	// Load the boot sequence
 	rawBootSeq, err := b.Network.ReadFromCache(launchData.BootSequence.Hash)
 	if err != nil {
 		return fmt.Errorf("reading boot_sequence file: %s", err)
 	}
 
-	var bootSeq []*OperationType
+	var bootSeq struct {
+		BootSequence []*OperationType `json:"boot_sequence"`
+	}
 	if err := yamlUnmarshal(rawBootSeq, &bootSeq); err != nil {
 		return fmt.Errorf("loading boot sequence: %s", err)
 	}
 
-	b.BootSequence = bootSeq
+	b.BootSequence = bootSeq.BootSequence
 
 	// Load snapshot data
 	if launchData.Snapshot.Hash != "" {
@@ -90,7 +101,7 @@ func (b *BIOS) Init() error {
 	return nil
 }
 
-func (b *BIOS) Run() error {
+func (b *BIOS) Run(role Role) error {
 	fmt.Println("Start BIOS process", time.Now())
 
 	if err := b.DispatchInit(); err != nil {
@@ -99,28 +110,27 @@ func (b *BIOS) Run() error {
 
 	b.Network.PrintOrderedPeers()
 
-	if b.AmIBootNode() {
-		if err := b.RunBootNodeStage1(); err != nil {
+	switch role {
+	case RoleBootNode:
+		if err := b.RunBootSequence(); err != nil {
 			return fmt.Errorf("boot node stage1: %s", err)
 		}
-	} else if b.AmIAppointedBlockProducer() {
+	case RoleABP:
 		if err := b.RunABPStage1(); err != nil {
 			return fmt.Errorf("abp stage1: %s", err)
 		}
-	} else {
-		if err := b.WaitStage1End(); err != nil {
+	default:
+		if err := b.RunParticipant(); err != nil {
 			return fmt.Errorf("waiting stage1: %s", err)
 		}
 	}
 
 	// fmt.Println("Registering my producer account")
 
-	// _, err := b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Producer.MyAccount), b.Config.Producer.BlockSigningPublicKey, b.Config.MyParameters))
+	// _, err := b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Peer.MyAccount), b.Config.Peer.BlockSigningPublicKey, b.Config.MyParameters))
 	// if err != nil {
 	// 	return fmt.Errorf("regproducer: %s", err)
 	// }
-
-	fmt.Println("BIOS Sequence Terminated")
 
 	return b.DispatchDone()
 }
@@ -152,7 +162,7 @@ func (b *BIOS) PrintOrderedPeers() {
 	fmt.Println("")
 }
 
-func (b *BIOS) RunBootNodeStage1() error {
+func (b *BIOS) RunBootSequence() error {
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
 		return err
@@ -210,7 +220,7 @@ func (b *BIOS) RunBootNodeStage1() error {
 	fmt.Println("Preparing kickstart data")
 
 	kickstartData := &KickstartData{
-		BIOSP2PAddress: b.Config.Producer.SecretP2PAddress,
+		BIOSP2PAddress: b.Config.Peer.SecretP2PAddress,
 		PublicKeyUsed:  pubKey,
 		PrivateKeyUsed: privKey,
 		GenesisJSON:    genesisData,
@@ -228,8 +238,6 @@ func (b *BIOS) RunBootNodeStage1() error {
 	if err = b.DispatchPublishKickstartData(ksdata); err != nil {
 		return fmt.Errorf("dispatch publish_kickstart_data: %s", err)
 	}
-
-	// Call `regproducer` for myself now
 
 	return nil
 }
@@ -286,17 +294,21 @@ func (b *BIOS) RunABPStage1() error {
 	return nil
 }
 
-func (b *BIOS) WaitStage1End() error {
+func (b *BIOS) RunParticipant() error {
 	fmt.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
 
 	// TODO: check if kickstartData invalid, then either ignore it or destroy the network
 	// TODO: rather, loop for kickstar tdatas, until something valid is dropped in..
-	kickstart, err := b.waitOnKickstartData()
-	if err != nil {
-		return err
+
+	if b.KickstartData == nil {
+		kickstart, err := b.waitOnKickstartData()
+		if err != nil {
+			return err
+		}
+		b.KickstartData = &kickstart
 	}
 
-	if err = b.DispatchConnectAsParticipant(kickstart, b.MyPeers[0]); err != nil {
+	if err := b.DispatchConnectAsParticipant(b.KickstartData, b.MyPeers[0]); err != nil {
 		return err
 	}
 
@@ -384,7 +396,16 @@ func (b *BIOS) IsBootNode(account string) bool {
 }
 
 func (b *BIOS) AmIBootNode() bool {
-	return b.IsBootNode(b.Config.Producer.MyAccount)
+	return b.IsBootNode(b.Config.Peer.MyAccount)
+}
+
+func (b *BIOS) MyRole() Role {
+	if b.AmIBootNode() {
+		return RoleBootNode
+	} else if b.AmIAppointedBlockProducer() {
+		return RoleABP
+	}
+	return RoleParticipant
 }
 
 func (b *BIOS) IsAppointedBlockProducer(account string) bool {
@@ -397,12 +418,12 @@ func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 }
 
 func (b *BIOS) AmIAppointedBlockProducer() bool {
-	return b.IsAppointedBlockProducer(b.Config.Producer.MyAccount)
+	return b.IsAppointedBlockProducer(b.Config.Peer.MyAccount)
 }
 
 func (b *BIOS) MyPeer() (*discovery.Peer, error) {
 	for _, peer := range b.Network.OrderedPeers() {
-		if b.Config.Producer.MyAccount == peer.Discovery.EOSIOAccountName {
+		if b.Config.Peer.MyAccount == peer.Discovery.EOSIOAccountName {
 			return peer, nil
 		}
 	}

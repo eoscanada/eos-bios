@@ -14,8 +14,10 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
 
+	bios "github.com/eoscanada/eos-bios"
+	eos "github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
 )
 
@@ -30,20 +32,31 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("boot called")
+		net, err := fetchNetwork(false)
+		if err != nil {
+			log.Fatalln("fetch network:", err)
+		}
+
+		if biosConfig.Peer.APIAddressURL == nil {
+			log.Fatalln("peer.api_address not found")
+		}
+
+		api := eos.New(biosConfig.Peer.APIAddressURL, net.ChainID())
+		api.SetSigner(eos.NewKeyBag())
+
+		b := bios.NewBIOS(net, biosConfig, api)
+
+		if err := b.Init(); err != nil {
+			log.Fatalf("BIOS initialization error: %s", err)
+		}
+
+		// TODO: only run the `boot` part, ensure we're the BIOS Boot Node..
+		if err := b.Run(bios.RoleBootNode); err != nil {
+			log.Fatalf("ERROR RUNNING BIOS: %s", err)
+		}
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(bootCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// bootCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// bootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

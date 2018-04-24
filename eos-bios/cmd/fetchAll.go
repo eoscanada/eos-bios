@@ -29,7 +29,7 @@ var fetchAllCmd = &cobra.Command{
 		// load cache_path
 		// the second param to `NewNetwork` can be the path where this file will live,
 		// for references
-		net, err := fetchNetwork(false)
+		net, err := fetchNetwork(true)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

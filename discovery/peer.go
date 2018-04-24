@@ -1,5 +1,9 @@
 package discovery
 
+import (
+	"fmt"
+)
+
 type Peer struct {
 	DiscoveryURL string
 	Discovery    *Discovery
@@ -14,4 +18,8 @@ func (p *Peer) AccountName() string {
 		return p.ClonedAccountName
 	}
 	return p.Discovery.EOSIOAccountName
+}
+
+func (p *Peer) String() string {
+	return fmt.Sprintf("Account: % 15s   Org: % 30s   Weight: % 2.2f", p.AccountName(), p.Discovery.OrganizationName, p.TotalWeight)
 }

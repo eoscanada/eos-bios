@@ -21,29 +21,17 @@ import (
 
 // fetchOneCmd represents the fetchOne command
 var fetchOneCmd = &cobra.Command{
-	Use:   "fetchOne",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "fetch-one [account_name]",
+	Args:  cobra.ExactArgs(1),
+	Short: "Refreshes a single account_name, does not attempt to re-download all discovery_urls and traverse the whole graph.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("fetchOne called")
+		// Load from cache
+		// Then FetchOne with the discovery URL of a given name (that is already in cache?)
+		// or take a URL from the command line..
+		fmt.Println("fetch-one called")
 	},
 }
 
 func init() {
 	discoveryCmd.AddCommand(fetchOneCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// fetchOneCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// fetchOneCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

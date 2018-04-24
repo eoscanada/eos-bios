@@ -1,10 +1,7 @@
 package bios
 
 import (
-	"fmt"
-	"io/ioutil"
 	"net/url"
-	"strings"
 
 	"github.com/eoscanada/eos-go/ecc"
 	"github.com/eoscanada/eos-go/system"
@@ -12,12 +9,12 @@ import (
 
 type Config struct {
 	// Producer describes your producing node.
-	Producer struct {
+	Peer struct {
 		// MyAccount is the name of the `account_name` this producer will be using on chain
 		MyAccount string `json:"my_account"`
 		// APIAddress is the target API endpoint for the locally booting node, a clean-slate node. It can be routable only from the local machine.
-		APIAddress    string `json:"api_address"`
-		apiAddressURL *url.URL
+		APIAddress    string   `json:"api_address"`
+		APIAddressURL *url.URL `json:"-"`
 		// SecretP2PAddress is the endpoint which will be published at the end of the process. Needs to be externally routable.  It must be kept secret for DDoS protection.
 		SecretP2PAddress string `json:"secret_p2p_address"`
 
@@ -28,7 +25,7 @@ type Config struct {
 		BlockSigningPrivateKeyPath string `json:"block_signing_private_key_path"`
 
 		// Available once loaded successfuly from the previous field's path.
-		blockSigningPrivateKey *ecc.PrivateKey
+		BlockSigningPrivateKey *ecc.PrivateKey `json:"-"`
 	} `json:"producer"`
 
 	// Hooks are called at different stages in the process, for
@@ -48,66 +45,10 @@ type Config struct {
 	} `json:"pgp"`
 }
 
-type ContractLocation struct {
-	CodePath string `json:"code_path"`
-	ABIPath  string `json:"abi_path"`
-}
-
 type HookConfig struct {
 	URL  string `json:"url"`
 	Exec string `json:"exec"`
 	Wait bool   `json:"wait"`
-}
-
-func LoadLocalConfig(localConfigPath string) (*Config, error) {
-	cnt, err := ioutil.ReadFile(localConfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var c *Config
-	if err = yamlUnmarshal(cnt, &c); err != nil {
-		return nil, err
-	}
-
-	// TODO: do more checks on configuration...
-	// TODO: test all Webhook URLs if defined
-	// TODO: test all Hooks's Exec templates, and compile them right away..
-	h := c.Hooks
-	fmt.Println("Hooks runtime config (see `hooks.go`):")
-	for _, hook := range configuredHooks {
-		hconf := h[hook.Key]
-		if hconf == nil {
-			fmt.Printf("Hook %q NOT configured\n", hook.Key)
-			continue
-		}
-
-		if hconf.Exec != "" {
-			fmt.Printf("Hook %q configured to EXEC\n", hook.Key)
-		}
-		if hconf.URL != "" {
-			fmt.Printf("Hook %q configured to POST via HTTP\n", hook.Key)
-		}
-	}
-
-	c.Producer.apiAddressURL, err = url.Parse(c.Producer.APIAddress)
-	if err != nil {
-		return c, err
-	}
-
-	privKey, err := ioutil.ReadFile(c.Producer.BlockSigningPrivateKeyPath)
-	if err != nil {
-		return c, err
-	}
-
-	wif, err := ecc.NewPrivateKey(strings.TrimSpace(string(privKey)))
-	if err != nil {
-		return c, err
-	}
-
-	c.Producer.blockSigningPrivateKey = wif
-
-	return c, nil
 }
 
 /*

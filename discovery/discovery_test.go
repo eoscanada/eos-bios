@@ -15,7 +15,6 @@ func TestDiscoveryDir(t *testing.T) {
 	defer ts.Close()
 
 	net := NewNetwork("/tmp/disco", ts.URL+"/bp1.yaml")
-	assert.NoError(t, net.EnsureExists())
 	assert.NoError(t, net.FetchAll())
 	assert.NoError(t, net.VerifyGraph())
 	assert.NoError(t, net.CalculateWeights())

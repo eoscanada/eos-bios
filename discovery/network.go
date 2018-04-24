@@ -15,6 +15,8 @@ import (
 )
 
 type Network struct {
+	ForceFetch bool
+
 	cachePath        string
 	seedDiscoveryURL string
 	visitedURLs      map[string]bool
@@ -31,13 +33,18 @@ func NewNetwork(cachePath string, seedDiscoveryURL string) *Network {
 	}
 }
 
-func (c *Network) EnsureExists() error {
+func (c *Network) ensureExists() error {
 	return os.MkdirAll(c.cachePath, 0777)
 }
 
 func (c *Network) FetchAll() error {
 	c.visitedURLs = map[string]bool{}
 	c.discoveredPeers = map[string]*Peer{}
+
+	err := c.ensureExists()
+	if err != nil {
+		return fmt.Errorf("error creating cache path: %s", err)
+	}
 
 	if err := c.FetchOne(c.seedDiscoveryURL); err != nil {
 		return fmt.Errorf("fetching %q: %s", c.seedDiscoveryURL, err)
@@ -52,6 +59,12 @@ func (c *Network) ValidateLocalFile(filename string) error {
 	// etc..
 
 	return nil
+}
+
+func (c *Network) ChainID() []byte {
+	// TODO: compute based on all the hashes in the elected launchdata?
+	// have a value be voted for ?
+	return make([]byte, 32, 32)
 }
 
 func (c *Network) FetchOne(discoveryURL string) error {
@@ -102,11 +115,13 @@ func (c *Network) FetchOne(discoveryURL string) error {
 
 	// Save the content of the disco file in here
 	fsFile := replaceAllWeirdities(discoveryURL)
+	// fmt.Printf("Discovery: writing %q to cache\n", fsFile)
 	err = c.writeToCache(fsFile, rawDisco)
 	if err != nil {
 		return fmt.Errorf("writing discovery data to %q: %s", fsFile, err)
 	}
 
+	fmt.Printf("Discovery: traversing %d wingmen\n", len(launchData.Wingmen))
 	for _, wingman := range launchData.Wingmen {
 		if wingman.Weight > 1.0 || wingman.Weight < 0.0 {
 			return fmt.Errorf("weight for wingmen should be between 0.0 and 1.0, %f invalid", wingman.Weight)
@@ -124,6 +139,7 @@ func (c *Network) FetchOne(discoveryURL string) error {
 }
 
 func (c *Network) DownloadHashURL(discoveryURL string, hu HashURL) error {
+
 	if hu.Hash == "" {
 		return errors.New("no hash provided")
 	}
@@ -133,6 +149,7 @@ func (c *Network) DownloadHashURL(discoveryURL string, hu HashURL) error {
 
 	fileName := hu.Hash
 	if c.isInCache(fileName) {
+		// fmt.Printf("Discovery: %q in cache\n", hu.Hash)
 		return nil
 	}
 
@@ -141,6 +158,7 @@ func (c *Network) DownloadHashURL(discoveryURL string, hu HashURL) error {
 		return err
 	}
 
+	fmt.Printf("Discovery: downloading %q from %q\n", hu.Hash, destURL)
 	resp, err := http.Get(destURL)
 	if err != nil {
 		return err
@@ -207,6 +225,11 @@ func (c *Network) CalculateWeights() error {
 				return err
 			}
 
+			if peer.DiscoveryURL == absDiscoURL {
+				// Can't vouch for yourself
+				continue
+			}
+
 			wingmanDisco, found := c.discoveredPeers[absDiscoURL]
 			if !found {
 				return fmt.Errorf("couldn't find %q in list of peers", absDiscoURL)
@@ -250,17 +273,29 @@ func (c *Network) VerifyGraph() error {
 	return nil
 }
 
-func (c *Network) DownloadDiscoveryURL(discoURL string) (out *Discovery, rawDiscovery []byte, err error) {
-	resp, err := http.Get(discoURL)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
+func (c *Network) DownloadDiscoveryURL(discoveryURL string) (out *Discovery, rawDiscovery []byte, err error) {
 	var buf bytes.Buffer
-	_, err = io.Copy(&buf, resp.Body)
-	if err != nil {
-		return
+
+	fsFile := replaceAllWeirdities(discoveryURL)
+	if c.ForceFetch || !c.isInCache(fsFile) {
+		fmt.Println("Discovery: downloading discovery_url", discoveryURL)
+		resp, err := http.Get(discoveryURL)
+		if err != nil {
+			return out, nil, err
+		}
+		defer resp.Body.Close()
+
+		_, err = io.Copy(&buf, resp.Body)
+		if err != nil {
+			return out, nil, err
+		}
+	} else {
+		cnt, err := c.ReadFromCache(fsFile)
+		if err != nil {
+			return out, cnt, err
+		}
+
+		_, _ = buf.Write(cnt)
 	}
 
 	rawDiscovery = buf.Bytes()
@@ -280,12 +315,12 @@ func (c *Network) PrintOrderedPeers() {
 	fmt.Println("####################################    PEER NETWORK    #######################################")
 	fmt.Println("")
 
-	fmt.Printf("BIOS NODE: %s\n", c.orderedPeers[0].AccountName())
+	fmt.Printf("BIOS NODE: %s\n", c.orderedPeers[0].String())
 	for i := 1; i < 22 && len(c.orderedPeers) > i; i++ {
-		fmt.Printf("ABP %02d:    %s\n", i, c.orderedPeers[i].AccountName())
+		fmt.Printf("ABP %02d:    %s\n", i, c.orderedPeers[i].String())
 	}
 	for i := 22; len(c.orderedPeers) > i; i++ {
-		fmt.Printf("Part. %02d:  %s\n", i, c.orderedPeers[i].AccountName())
+		fmt.Printf("Part. %02d:  %s\n", i, c.orderedPeers[i].String())
 	}
 	fmt.Println("")
 	fmt.Println("###############################################################################################")

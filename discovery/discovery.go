@@ -5,6 +5,9 @@ import (
 	"github.com/eoscanada/eos-go/ecc"
 )
 
+// Discovery is data published autonomously by Block Producer
+// candidates. LaunchData will contain the topology and build up the
+// graph.  Otherwise, this data is simply metadata about a BP.
 type Discovery struct {
 	// Testnet is true if this discovery file represents a testing
 	// network.
@@ -21,7 +24,7 @@ type Discovery struct {
 		Active eos.Authority `json:"active"`
 	} `json:"eosio_initial_authority"`
 
-	Organizationname string `json:"organization_name"`
+	OrganizationName string `json:"organization_name"`
 
 	LaunchData LaunchData `json:"launch_data"`
 
