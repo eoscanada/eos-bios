@@ -33,8 +33,10 @@ var biosConfig *bios.Config
 var RootCmd = &cobra.Command{
 	Use:   "eos-bios",
 	Short: "A tool to launch EOS.IO Software-based networks",
-	Long: `This tools allows orchestration of community launches for the mainnet,
-for test networks, for in-house networks bootstrapping as well as local development nodes.`,
+	Long: `A tool to launch EOS.IO Software-based networks
+
+It provides orchestration of community launches for the mainnet, test
+networks, in-house networks as well as local development nodes.`,
 }
 
 func Execute() {
