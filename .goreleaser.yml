@@ -8,12 +8,12 @@ brew:
   name: eos-bios
   commit_author:
     name: Alexandre Bourget
-    email: alex@diagram.ca
+    email: alex@eoscanada.com
   install: bin.install "eos-bios"
 scoop:
   commit_author:
-    name: goreleaserbot
-    email: goreleaser@carlosbecker.com
+    name: Alexandre Bourget
+    email: alex@eoscanada.com
 builds:
 - goos:
   - linux
@@ -24,12 +24,10 @@ builds:
   - "386"
   targets:
   - linux_amd64
-  - linux_386
   - darwin_amd64
-  - darwin_386
   - windows_amd64
   - windows_386
-  main: .
+  main: ./eos-bios
   ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
   binary: eos-bios
   env:
@@ -73,15 +71,16 @@ changelog:
   sort: asc
 dist: dist
 sign:
-  cmd: gpg
+  cmd: keybase
   args:
-  - --output
-  - $signature
-  - --detach-sig
+  - sign
+  - --infile
   - $artifact
+  - --binary
+  - --outfile
+  - $signature
+  - --detached
   signature: ${artifact}.sig
-  artifacts: none
+  artifacts: checksum
 env_files:
   github_token: ~/.config/goreleaser/github_token
-github_urls:
-  download: https://github.com
