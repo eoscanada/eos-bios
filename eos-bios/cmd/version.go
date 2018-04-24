@@ -24,7 +24,7 @@ var version string
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show the program version (hint hint, it's " + version,
+	Short: "Show the program version (hint hint, it's " + version + ")",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("eos-bios version", version, "- https://github.com/eoscanada/eos-bios")
 	},
