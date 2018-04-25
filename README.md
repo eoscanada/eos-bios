@@ -15,6 +15,20 @@ This program relies on you publishing a `discovery` file. See
 https://github.com/eoscanada/network-discovery for more information
 about the discovery file.
 
+
+Launch a node with a single command
+-----------------------------------
+
+Download `eos-bios`, clone this repo, go to `sample_configs/docker` and run:
+
+    eos-bios boot
+
+Enjoy.
+
+
+Minimal real setup
+------------------
+
 To discover a network, you need a minimal configuration file like this:
 
 ```
