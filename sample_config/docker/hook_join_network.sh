@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# `connect_as_abp` hook:
+# `join_network` hook:
 # $1 = p2p_address
 # $2 = public key for this node (the one you published in your discovery file)
 # $3 = private key for this node (loaded from `block_signing_private_key_path`)

@@ -1,2 +1,7 @@
-This is the setup you might want to use for booting a local node using
-`eos-bios`.
+## Sample config setups to run `eos-bios`
+
+The `local` directory has configs to run a local `nodeos` instance on your machine.
+
+The `docker` directory has config to run a `nodeos` instance through Docker on your local machine.
+
+

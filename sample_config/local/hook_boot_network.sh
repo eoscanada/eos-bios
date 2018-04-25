@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# `start_bios_boot` hook
+# `boot_network` hook
 # $1 genesis JSON
 # $2 ephemeral public key
 # $3 ephemeral private key
