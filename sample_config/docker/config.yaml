@@ -1,4 +1,4 @@
-producer:
+peer:
   my_account: eos.freezing
   api_address: http://localhost:8888
   secret_p2p_address: localhost:9876
