@@ -369,22 +369,24 @@ func (b *BIOS) shuffleProducers() error {
 	b.ShuffledProducers = b.Network.OrderedPeers()
 
 	// We'll multiply the other producers as to have a full schedule
-	if numProds := len(b.ShuffledProducers); numProds < 22 {
-		cloneCount := numProds - 1
-		count := 0
-		for {
-			if len(b.ShuffledProducers) == 22 {
-				break
-			}
+	if len(b.ShuffledProducers) > 1 {
+		if numProds := len(b.ShuffledProducers); numProds < 22 {
+			cloneCount := numProds - 1
+			count := 0
+			for {
+				if len(b.ShuffledProducers) == 22 {
+					break
+				}
 
-			fromPeer := b.ShuffledProducers[1+count%cloneCount]
-			count++
+				fromPeer := b.ShuffledProducers[1+count%cloneCount]
+				count++
 
-			clonedProd := &discovery.Peer{
-				ClonedAccountName: accountVariation(fromPeer.AccountName(), count),
-				Discovery:         fromPeer.Discovery,
+				clonedProd := &discovery.Peer{
+					ClonedAccountName: accountVariation(fromPeer.AccountName(), count),
+					Discovery:         fromPeer.Discovery,
+				}
+				b.ShuffledProducers = append(b.ShuffledProducers, clonedProd)
 			}
-			b.ShuffledProducers = append(b.ShuffledProducers, clonedProd)
 		}
 	}
 
