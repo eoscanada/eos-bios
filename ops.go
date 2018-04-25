@@ -181,6 +181,9 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 			Recovery: prod.Discovery.EOSIOInitialAuthority.Recovery,
 		})
 
+		mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
+		fmt.Println("Some JSON", string(mama))
+
 		fmt.Printf("- Creating new account %q\n", prod.AccountName())
 		out = append(out, newAccount)
 

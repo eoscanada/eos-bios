@@ -1,5 +1,5 @@
 peer:
-  my_account: eos.freezing
+  my_account: eos.local
   api_address: http://localhost:8888
   secret_p2p_address: localhost:9876
   block_signing_private_key_path: ./privkey-GDW5CV.key
