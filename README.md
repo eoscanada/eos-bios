@@ -126,3 +126,13 @@ Previous proposition
 --------------------
 
 See the previous proposition in this repo in README.v0.md
+
+
+
+TODO
+----
+
+* Shuffling of the top 5 for Boot selection
+* Wait on Bitcoin Block
+  * Add bitcoin_block_height in LaunchData
+* In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
