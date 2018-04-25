@@ -14,19 +14,30 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
-// discoveryCmd represents the discovery command
-var discoveryCmd = &cobra.Command{
-	Use:   "discovery",
-	Short: "Tools to discover networks based on the network discovery protocol",
-	Long:  ``,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("discovery called")
-	// },
+// discoverCmd represents the discovery command
+var discoverCmd = &cobra.Command{
+	Use:   "discover",
+	Short: "Discover and update info about all peers in the network, based on an initial discovery URL",
+	Long:  `This uses the "network.seed_discovery_url" key in your configuration to start discovery.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		net, err := fetchNetwork(true)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Fetched successfully")
+
+		net.PrintOrderedPeers()
+	},
 }
 
 func init() {
-	RootCmd.AddCommand(discoveryCmd)
+	RootCmd.AddCommand(discoverCmd)
 }

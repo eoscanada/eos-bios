@@ -24,10 +24,10 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate check for the integrity of a local discovery file, before you put it out.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("validate called")
+		fmt.Println("Not implemented.  Validate will check the integrity of a discovery file.")
 	},
 }
 
 func init() {
-	discoveryCmd.AddCommand(validateCmd)
+	discoverCmd.AddCommand(RootCmd)
 }
