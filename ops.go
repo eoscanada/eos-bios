@@ -174,10 +174,11 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
 		newAccount := system.NewNewAccount(AN("eosio"), AN(prod.AccountName()), nil)
 		newAccount.Data = eos.NewActionData(system.NewAccount{
-			Creator: AN("eosio"),
-			Name:    AN(prod.AccountName()),
-			Owner:   prod.Discovery.EOSIOInitialAuthority.Owner,
-			Active:  prod.Discovery.EOSIOInitialAuthority.Active,
+			Creator:  AN("eosio"),
+			Name:     AN(prod.AccountName()),
+			Owner:    prod.Discovery.EOSIOInitialAuthority.Owner,
+			Active:   prod.Discovery.EOSIOInitialAuthority.Active,
+			Recovery: prod.Discovery.EOSIOInitialAuthority.Recovery,
 		})
 
 		fmt.Printf("- Creating new account %q\n", prod.AccountName())

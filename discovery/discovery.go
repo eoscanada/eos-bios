@@ -20,8 +20,9 @@ type Discovery struct {
 	EOSIOAccountName      string        `json:"eosio_account_name"`
 	EOSIOABPSigningKey    ecc.PublicKey `json:"eosio_appointed_block_producer_signing_key"`
 	EOSIOInitialAuthority struct {
-		Owner  eos.Authority `json:"owner"`
-		Active eos.Authority `json:"active"`
+		Owner    eos.Authority `json:"owner"`
+		Active   eos.Authority `json:"active"`
+		Recovery eos.Authority `json:"recovery"`
 	} `json:"eosio_initial_authority"`
 
 	OrganizationName string `json:"organization_name"`
