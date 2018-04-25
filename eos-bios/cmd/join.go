@@ -22,6 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var verifyFlag bool
+
 // joinCmd represents the join command
 var joinCmd = &cobra.Command{
 	Use:   "join",
@@ -34,35 +36,19 @@ var joinCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// TODO: if the network doesn't contain the `genesis.json` at all, ask for the kickstart data on the command line, and use that to boot.
-
 		b := bios.NewBIOS(net, biosConfig, nil)
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		// TODO: only run the `boot` part, ensure we're the BIOS Boot Node..
-		if err := b.Run(bios.RoleParticipant); err != nil {
-			log.Fatalf("ERROR RUNNING BIOS: %s", err)
+		if err := b.StartJoin(verifyFlag); err != nil {
+			log.Fatalf("error joining network: %s", err)
 		}
-
-		// Fetch the kickstart data through the discovery_url (the genesis should be present somewhere on the network)
-		// run b.DispatchConnectAsParticipant(kickstart, mypeer)
-		//
-		fmt.Println("join called")
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(joinCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// joinCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// joinCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	joinCmd.Flags().BoolVarP(&verifyFlag, "verify", "v", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
 }

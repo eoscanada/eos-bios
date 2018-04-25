@@ -16,67 +16,88 @@ https://github.com/eoscanada/network-discovery for more information
 about the discovery file.
 
 
-Launch a node with a single command
------------------------------------
+Launch a local node with a single command
+-----------------------------------------
 
-Download `eos-bios`, clone this repo, go to `sample_configs/docker` and run:
+[Download `eos-bios`](https://github.com/eoscanada/eos-bios/releases),
+clone this repo, go to `sample_configs/docker`:
 
-    eos-bios boot
+    git clone https://github.com/eoscanada/eos-bios
+    cd eos-bios/sample_configs/docker
+    wget https://github.com/eoscanada/eos-bios/releases/download/......tar.gz  # Pick the right one for you
+    tar -zxvf eos-bios*tar.gz
+    mv eos-bios_/eos-bios .
+
+Then run:
+
+    ./eos-bios boot
 
 Enjoy.
 
+This gives you a fully fledged development environment, a chain loaded
+with all system contracts, very similar to what you will get on the
+main network once launched.
 
-Minimal real setup
-------------------
+The sample configuration sets up a single node, as it doesn't point to
+other block producer candidates (through the `wingmen` property).
 
-To discover a network, you need a minimal configuration file like this:
 
-```
-network:
-  seed_discovery_url: https://abourget.keybase.pub/testnet-cbillett.yaml
-  cache_path: /tmp/disco-cbillett
-```
+Boot a network
+--------------
 
-The `seed_discovery_url` indicates where to first look for, and `eos-bios` will start traversing the graph created by links to other discovery URLs.
+By tweaking your configuration, you can grow the network.  To force
+the `boot` operation, run:
 
-Run `eos-bios` with:
+    ./eos-bios boot
 
-```
-$ eos-bios -c config.yaml discover
-...
-```
+Have your friends run:
 
-To use `eos-bios` to launch a network, you need to add two sections to your local config file:
+    ./eos-bios join --verify
 
-```
-peer:
-  my_account: eoscanada   # This identifies you within the graph, matches eosio_account_name in there.
-  api_address: http://localhost:8889  # For eos-bios to reach your node and interact with it.
-  secret_p2p_address: localhost:19876  # The bit of information you're going to publish to other parties for them to join you, as the BOOT node.
-  block_signing_private_key_path: ./privkey-GDW5CV.key  # The private key you want to pass to your hooks, depending on the boot scenario.
+Once your `boot` call finishes properly, it will display the
+_Kickstart Data_ that you can provide your friends with.  Once they
+paste that in their terminal, they will join your network.
 
-hooks:
-  init:
-    exec: ./hooks/local_init.sh
-  boot_network:
-    exec: ./hooks/local_boot_network.sh
-  join_network:
-    exec: ./hooks/local_join_network.sh
-  done:
-    exec: ./hooks/local_done.sh
-```
+For this to work, you need to properly configure your `config.yaml`
+and have properly disseminated your `discovery` files, and given the
+URL to your friends.
 
-and run one of the following:
 
-```
-$ eos-bios -c config.yaml boot  # Act as the boot node, and run those hooks, run the boot sequence
 
-$ eos-bios -c config.yaml join  # Connect to another node, eventually --verify that actions on chain
-                                # conform to what's in the boot_sequence
+Join an existing network
+------------------------
 
-$ eos-bios -c config.yaml orchestrate  # Use the orchestration algorithms for a decentralized yet
-                                       # deterministic way to boot a network together.
-```
+To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `wingmen`.
+
+* Read the [annotated sample configuration file](sample_configs/docker/config.yaml).
+* Read [sample discovery file here](https://github.com/eoscanada/network-discovery)
+
+Run:
+
+    eos-bios join [--verify]
+
+The `--verify` option toggles the boot sequence verification.
+
+
+Orchestrate a community launch
+------------------------------
+
+When the time comes to orchestrate a launch, *everyone* will run:
+
+    eos-bios orchestrate
+
+According to an algorithm, and using the network discovery data, each
+team will be assigned a role deterministically.
+
+You then fall in one of these three categories:
+
+1. The BIOS Boot node, which will execute the equivalent of `eos-bios boot`.
+2. The Appointed Block Producers, which will execute the equivalent of `eos-bios join --verify`
+3. The other participants, which will execute the equivalent of `eos-bios join`
+
+The same hooks are used in the orchestration, so get them right and practice.
+
+
 
 Install / Download
 ------------------

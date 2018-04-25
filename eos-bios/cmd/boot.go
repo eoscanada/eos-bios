@@ -50,9 +50,8 @@ to quickly create a Cobra application.`,
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		// TODO: only run the `boot` part, ensure we're the BIOS Boot Node..
-		if err := b.Run(bios.RoleBootNode); err != nil {
-			log.Fatalf("ERROR RUNNING BIOS: %s", err)
+		if err := b.StartBoot(); err != nil {
+			log.Fatalf("error booting network: %s", err)
 		}
 	},
 }

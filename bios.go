@@ -101,8 +101,8 @@ func (b *BIOS) Init() error {
 	return nil
 }
 
-func (b *BIOS) Run(role Role) error {
-	fmt.Println("Start BIOS process", time.Now())
+func (b *BIOS) StartOrchestrate() error {
+	fmt.Println("Starting Orchestraion process", time.Now())
 
 	if err := b.DispatchInit(); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
@@ -110,13 +110,13 @@ func (b *BIOS) Run(role Role) error {
 
 	b.Network.PrintOrderedPeers()
 
-	switch role {
+	switch b.MyRole() {
 	case RoleBootNode:
 		if err := b.RunBootSequence(); err != nil {
 			return fmt.Errorf("boot node stage1: %s", err)
 		}
 	case RoleABP:
-		if err := b.RunABPStage1(); err != nil {
+		if err := b.RunJoinNetwork(true, true); err != nil {
 			return fmt.Errorf("abp stage1: %s", err)
 		}
 	default:
@@ -125,12 +125,37 @@ func (b *BIOS) Run(role Role) error {
 		}
 	}
 
-	// fmt.Println("Registering my producer account")
+	return b.DispatchDone()
+}
 
-	// _, err := b.API.SignPushActions(system.NewRegProducer(AN(b.Config.Peer.MyAccount), b.Config.Peer.BlockSigningPublicKey, b.Config.MyParameters))
-	// if err != nil {
-	// 	return fmt.Errorf("regproducer: %s", err)
-	// }
+func (b *BIOS) StartJoin(verify bool) error {
+	fmt.Println("Starting network join process", time.Now())
+
+	if err := b.DispatchInit(); err != nil {
+		return fmt.Errorf("failed init hook: %s", err)
+	}
+
+	b.Network.PrintOrderedPeers()
+
+	if err := b.RunJoinNetwork(verify, false); err != nil {
+		return fmt.Errorf("boot network: %s", err)
+	}
+
+	return b.DispatchDone()
+}
+
+func (b *BIOS) StartBoot() error {
+	fmt.Println("Starting network join process", time.Now())
+
+	if err := b.DispatchInit(); err != nil {
+		return fmt.Errorf("failed init hook: %s", err)
+	}
+
+	b.Network.PrintOrderedPeers()
+
+	if err := b.RunBootSequence(); err != nil {
+		return fmt.Errorf("join network: %s", err)
+	}
 
 	return b.DispatchDone()
 }
@@ -242,47 +267,53 @@ func (b *BIOS) RunBootSequence() error {
 	return nil
 }
 
-func (b *BIOS) RunABPStage1() error {
+func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	fmt.Println("Waiting on kickstart data from the BIOS Node.")
 	fmt.Println("Paste it in here. Finish with a blank line (ENTER)")
 
-	kickstart, err := b.waitOnKickstartData()
-	if err != nil {
-		return err
-	}
-
-	// TODO: Decrypt the Kickstart data
-	//   Do extensive validation on the input (tight regexp for address, for private key?)
-
-	if err = b.DispatchJoinNetwork(&kickstart, b.MyPeers); err != nil {
-		return err
-	}
-
-	fmt.Println("###############################################################################################")
-	fmt.Println("As an Appointer Block Producer, we're now launching battery of verifications...")
-
-	fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
-	for {
-		time.Sleep(1 * time.Second)
-		acct, err := b.API.GetAccount(AN("eosio"))
+	if b.KickstartData == nil {
+		// TODO: Decrypt the Kickstart data
+		//   Do extensive validation on the input (tight regexp for address, for private key?)
+		kickstart, err := b.waitOnKickstartData()
 		if err != nil {
-			fmt.Printf("e")
-			continue
+			return err
 		}
-
-		if len(acct.Permissions) != 2 || acct.Permissions[0].RequiredAuth.Threshold != 0 || acct.Permissions[1].RequiredAuth.Threshold != 0 {
-			// FIXME: perhaps check that there are no keys and
-			// accounts.. that the account is *really* disabled.  we
-			// can check elsewhere though.
-			fmt.Printf(".")
-			continue
-		}
-
-		fmt.Println(" OKAY")
-		break
+		b.KickstartData = &kickstart
 	}
 
-	fmt.Println("Chain sync'd!")
+	if err := b.DispatchJoinNetwork(b.KickstartData, b.MyPeers); err != nil {
+		return err
+	}
+
+	fmt.Println("Not doing any validation, the ABPs have done it")
+
+	if verify {
+		fmt.Println("###############################################################################################")
+		fmt.Println("Launching chain verification")
+
+		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
+		for {
+			time.Sleep(1 * time.Second)
+			acct, err := b.API.GetAccount(AN("eosio"))
+			if err != nil {
+				fmt.Printf("e")
+				continue
+			}
+
+			if len(acct.Permissions) != 2 || acct.Permissions[0].RequiredAuth.Threshold != 0 || acct.Permissions[1].RequiredAuth.Threshold != 0 {
+				// FIXME: perhaps check that there are no keys and
+				// accounts.. that the account is *really* disabled.  we
+				// can check elsewhere though.
+				fmt.Printf(".")
+				continue
+			}
+
+			fmt.Println(" OKAY")
+			break
+		}
+
+		fmt.Println("Chain sync'd!")
+	}
 
 	// TODO: loop operations, check all actions against blocks that you can fetch from here.
 	// Do all the checks:
@@ -299,20 +330,6 @@ func (b *BIOS) RunParticipant() error {
 
 	// TODO: check if kickstartData invalid, then either ignore it or destroy the network
 	// TODO: rather, loop for kickstar tdatas, until something valid is dropped in..
-
-	if b.KickstartData == nil {
-		kickstart, err := b.waitOnKickstartData()
-		if err != nil {
-			return err
-		}
-		b.KickstartData = &kickstart
-	}
-
-	if err := b.DispatchJoinNetwork(b.KickstartData, b.MyPeers); err != nil {
-		return err
-	}
-
-	fmt.Println("Not doing any validation, the ABPs have done it")
 
 	return nil
 }

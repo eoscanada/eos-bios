@@ -46,8 +46,8 @@ var orchestrateCmd = &cobra.Command{
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := bios.Run(bios.MyRole()); err != nil {
-			log.Fatalf("ERROR RUNNING BIOS: %s", err)
+		if err := bios.StartOrchestrate(); err != nil {
+			log.Fatalf("error orchestrating: %s", err)
 		}
 
 	},
