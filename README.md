@@ -28,7 +28,7 @@ The `seed_discovery_url` indicates where to first look for, and `eos-bios` will 
 Run `eos-bios` with:
 
 ```
-$ eos-bios -c config.yaml discovery fetch-all
+$ eos-bios -c config.yaml discover
 ...
 ```
 
