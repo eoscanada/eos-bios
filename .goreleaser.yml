@@ -43,6 +43,9 @@ archive:
     linux: linux
     windows: windows
   format: tar.gz
+  format_overrides:
+  - goos: windows
+    format: zip
   files:
   - licence*
   - LICENCE*
