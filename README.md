@@ -92,10 +92,11 @@ team will be assigned a role deterministically.
 You then fall in one of these three categories:
 
 1. The BIOS Boot node, which will, alone, execute the equivalent of `eos-bios boot`.
-2. An Appointed Block Producer, which will all execute the equivalent of `eos-bios join --verify`
-3. An other participants, which will all execute the equivalent of `eos-bios join`
+2. An Appointed Block Producer, which executes the equivalent of `eos-bios join --verify`
+3. An other participant, which executes the equivalent of `eos-bios join`
 
-The same hooks are used in the orchestration, so get them right and practice.
+The same hooks are used in `boot`, `join` and `orchestrate`, so get
+them right and practice.
 
 
 
