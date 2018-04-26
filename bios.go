@@ -188,6 +188,8 @@ func (b *BIOS) PrintOrderedPeers() {
 }
 
 func (b *BIOS) RunBootSequence() error {
+	fmt.Println("START BOOT SEQUENCE...")
+
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
 		return err
