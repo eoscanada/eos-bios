@@ -21,10 +21,10 @@ Launch a local node with a single command
 -----------------------------------------
 
 [Download `eos-bios`](https://github.com/eoscanada/eos-bios/releases),
-clone this repo, go to `sample_configs/docker`:
+clone this repo, go to `sample_config/docker`:
 
     git clone https://github.com/eoscanada/eos-bios
-    cd eos-bios/sample_configs/docker
+    cd eos-bios/sample_config
     wget https://github.com/eoscanada/eos-bios/releases/download/......tar.gz  # Pick the right one for you
     tar -zxvf eos-bios*tar.gz
     mv eos-bios_*/eos-bios .
@@ -70,7 +70,7 @@ Join an existing network
 
 To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `wingmen`.
 
-* Read the [annotated sample configuration file](sample_configs/config.yaml).
+* Read the [annotated sample configuration file](sample_config/config.yaml).
 * Read [sample discovery file here](https://github.com/eoscanada/network-discovery)
 
 Run:

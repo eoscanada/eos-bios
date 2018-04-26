@@ -11,20 +11,31 @@
 echo "Killing running nodes"
 killall nodeos
 
-echo "Phasing out any previous blockchain from disk"
-rm -rf ~/.eos/blocks ~/.eos/shared_mem
+echo "Removing old nodeos data (you might be asked for your sudo password)..."
+sudo rm -rf /tmp/nodeos-data
 
 echo "Writing genesis.json"
-echo $4 > ~/.eos/genesis.json
+echo $4 > genesis.json
 
 echo "Copying base config"
 # Your base_config.ini shouldn't contain any `producer-name` nor `private-key` nor `enable-stale-production` statements.
-cp base_config.ini ~/.eos/config.ini
-echo "p2p-peer-address = $1" >> ~/.eos/config.ini
-echo "$5" >> ~/.eos/config.ini
-echo "private-key = [\"$2\",\"$3\"]" >> ~/.eos/config.ini
+cp base_config.ini config.ini
+echo "p2p-peer-address = $1" >> config.ini
+echo "$5" >> config.ini
+echo "private-key = [\"$2\",\"$3\"]" >> config.ini
 
-# Replace this by some automated command to restart the node.
-echo "CONFIGURATION DONE: Re/start nodeos, and press ENTER"
+echo "Running 'nodeos' through Docker."
+docker run -ti --rm --detach --name nodeos-bios \
+       -v `pwd`:/etc/nodeos -v /tmp/nodeos-data:/data \
+       -p 8888:8888 -p 9876:9876 \
+       eosio/eos:dawn3x \
+       /opt/eosio/bin/nodeos --data-dir=/data \
+                             --genesis-json=/etc/nodeos/genesis.json \
+                             --config-dir=/etc/nodeos
 
-read
+echo ""
+echo "   View logs with: docker logs -f nodeos-bios"
+echo ""
+
+echo "Waiting for nodeos to launch through Docker"
+sleep 3
