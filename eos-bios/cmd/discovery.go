@@ -26,7 +26,7 @@ var discoverCmd = &cobra.Command{
 	Short: "Discover and update info about all peers in the network, based on an initial discovery URL",
 	Long:  `This uses the "network.seed_discovery_url" key in your configuration to start discovery.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(true)
+		net, err := fetchNetwork()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

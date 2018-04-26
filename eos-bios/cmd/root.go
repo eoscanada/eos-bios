@@ -27,6 +27,7 @@ import (
 )
 
 var cfgFile string
+var useCache bool
 var biosConfig *bios.Config
 
 // RootCmd represents the base command when called without any subcommands
@@ -50,6 +51,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./config.yaml", "config file")
+	RootCmd.PersistentFlags().BoolVarP(&useCache, "use-cache", "", false, "don't traverse the discovery URLs graph, but use the cached version (will still traverse if the cache is incomplete)")
 }
 
 // initConfig reads in config file and ENV variables if set.

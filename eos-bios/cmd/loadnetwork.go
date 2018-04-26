@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork(forceFetch bool) (*discovery.Network, error) {
+func fetchNetwork() (*discovery.Network, error) {
 	cachePath := viper.GetString("network.cache_path")
 	if cachePath == "" {
 		return nil, fmt.Errorf("`network.cache_path` config not specified")
@@ -20,7 +20,7 @@ func fetchNetwork(forceFetch bool) (*discovery.Network, error) {
 
 	net := discovery.NewNetwork(cachePath, seedURL)
 
-	net.ForceFetch = forceFetch
+	net.ForceFetch = !useCache
 
 	if err := net.FetchAll(); err != nil {
 		return nil, fmt.Errorf("fetch-all error: %s", err)
