@@ -7,15 +7,3 @@ peer:
 network:
   seed_discovery_url: https://abourget.keybase.pub/testnet-docker.yaml
   cache_path: /tmp/eos-bios-docker-discovery
-
-hooks:
-  init:
-    exec: ./hook_init.sh
-  boot_network:
-    exec: ./hook_boot_network.sh
-  join_network:
-    exec: ./hook_join_network.sh
-  publish_kickstart_data:
-    exec: ./hook_publish_kickstart_data.sh
-  done:
-    exec: ./hook_done.sh

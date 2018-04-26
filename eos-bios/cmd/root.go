@@ -101,20 +101,6 @@ func buildConfig() (*bios.Config, error) {
 		c.Peer.BlockSigningPrivateKey = wif
 	}
 
-	c.Hooks = map[string]*bios.HookConfig{}
-	for _, hook := range bios.ConfiguredHooks {
-		hookURL := viper.GetString(fmt.Sprintf("hooks.%s.url", hook.Key))
-		hookExec := viper.GetString(fmt.Sprintf("hooks.%s.exec", hook.Key))
-		hookWait := viper.GetBool(fmt.Sprintf("hooks.%s.wait", hook.Key))
-		if hookURL != "" || hookExec != "" || hookWait {
-			c.Hooks[hook.Key] = &bios.HookConfig{
-				Exec: hookExec,
-				URL:  hookURL,
-				Wait: hookWait,
-			}
-		}
-	}
-
 	// TODO: do `pgp` struct? not used
 	// TODO: MyParameters ? not used either..
 

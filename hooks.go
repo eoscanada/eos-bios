@@ -1,18 +1,12 @@
 package bios
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/eoscanada/eos-bios/discovery"
-	shellwords "github.com/mattn/go-shellwords"
 )
 
 var ConfiguredHooks = []HookDef{
@@ -73,114 +67,50 @@ func (b *BIOS) DispatchDone() error {
 
 // dispatch to both exec calls, and remote web hooks.
 func (b *BIOS) dispatch(hookName string, data []string, f func() error) error {
-	conf := b.Config.Hooks[hookName]
-	if conf == nil {
-		return nil
-	}
-
-	fmt.Printf("Dispatching hook %q\n", hookName)
+	fmt.Printf("---- BEGIN HOOK %q ----\n", hookName)
 
 	if len(data)%2 != 0 {
 		return fmt.Errorf("data should be pairs of key and values, cannot have %d elements", len(data))
 	}
 
-	if conf.Exec != "" {
-		if err := b.execCall(conf, data); err != nil {
-			return err
+	// check if `hook_[hookName]` exists or `hook_[hookName].sh` exists, and use that as a command,
+	// otherwise, print that the hook is not present.
+	filePaths := []string{
+		fmt.Sprintf("./hook_%s", hookName),
+		fmt.Sprintf("./hook_%s.sh", hookName),
+	}
+	var executable string
+	for _, fl := range filePaths {
+		if _, err := os.Stat(fl); err == nil {
+			executable = fl
 		}
 	}
-	if conf.URL != "" {
-		if err := b.webhookCall(conf, data); err != nil {
-			return err
-		}
-	}
-	if conf.Wait {
-		fmt.Printf("Press ENTER to continue... ")
-		_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
+
+	if executable == "" {
+		fmt.Printf("  - Hook not found (searched %q)\n", filePaths)
+		return nil
 	}
 
-	return nil
-}
-
-func (b *BIOS) execCall(conf *HookConfig, data []string) error {
-	p := shellwords.NewParser()
-	p.ParseEnv = true
-	args, err := p.Parse(conf.Exec)
-	if err != nil {
-		return err
-	}
-
+	args := []string{}
 	for i := 0; i < len(data); i += 2 {
 		v := data[i+1]
 		args = append(args, v)
 	}
 
-	var cmd *exec.Cmd
-	if len(args) > 1 {
-		cmd = exec.Command(args[0], args[1:]...)
-	} else {
-		cmd = exec.Command(args[0])
-	}
+	cmd := exec.Command(executable, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	cmd.Env = os.Environ()
 
-	fmt.Printf("  Executing hook: %q\n", cmd.Args)
+	//fmt.Printf("  Executing hook: %q\n", cmd.Args)
 
-	return cmd.Run()
-}
-
-func (b *BIOS) webhookCall(conf *HookConfig, data []string) error {
-	jsonBody, err := enc(data)
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", conf.URL, jsonBody)
-	if err != nil {
-		return fmt.Errorf("NewRequest: %s", err)
-	}
-
-	// // Useful when debugging API calls
-	// requestDump, err := httputil.DumpRequest(req, true)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println(string(requestDump))
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("Do: %s", err)
-	}
-	defer resp.Body.Close()
-
-	var cnt bytes.Buffer
-	_, err = io.Copy(&cnt, resp.Body)
-	if err != nil {
-		return fmt.Errorf("Copy: %s", err)
-	}
-
-	if resp.StatusCode > 299 {
-		return fmt.Errorf("status code=%d, body=%s", resp.StatusCode, cnt.String())
-	}
-
-	// fmt.Println("SERVER RESPONSE", cnt.String())
+	fmt.Printf("---- END HOOK %q ----\n", hookName)
 
 	return nil
-}
-
-func enc(v interface{}) (io.Reader, error) {
-	if v == nil {
-		return nil, nil
-	}
-
-	cnt, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-
-	//fmt.Println("BODY", string(cnt))
-
-	return bytes.NewReader(cnt), nil
 }

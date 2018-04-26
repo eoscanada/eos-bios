@@ -4,7 +4,6 @@ import (
 	"net/url"
 
 	"github.com/eoscanada/eos-go/ecc"
-	"github.com/eoscanada/eos-go/system"
 )
 
 type Config struct {
@@ -28,13 +27,7 @@ type Config struct {
 		BlockSigningPrivateKey *ecc.PrivateKey `json:"-"`
 	} `json:"producer"`
 
-	// Hooks are called at different stages in the process, for
-	// remote systems to be notified and act.  They are simply `http`
-	// endpoints to which a POST will be sent with pre-defined structs
-	// as JSON.  See `hooks.go`
-	Hooks map[string]*HookConfig `json:"hooks"`
-
-	MyParameters system.EOSIOParameters `json:"my_parameters"`
+	// MyParameters system.EOSIOParameters `json:"my_parameters"`
 
 	// PGP manages the PGP keys, used for the communications channel.
 	PGP struct {
@@ -43,12 +36,6 @@ type Config struct {
 		// Path to binary executable.. unless we use in-process cryptography..
 		Path string `json:"path"`
 	} `json:"pgp"`
-}
-
-type HookConfig struct {
-	URL  string `json:"url"`
-	Exec string `json:"exec"`
-	Wait bool   `json:"wait"`
 }
 
 /*

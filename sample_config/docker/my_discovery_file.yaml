@@ -1,0 +1,140 @@
+# See ref sample file at: https://github.com/eoscanada/network-discovery/blob/master/sample-mainnet.yaml
+
+mainnet: true  # REQUIRED, one or the other, not both.
+# testnet: true
+# Marking mainnet=true means we automatically disabling all the TESTNET features in the boot_sequence
+
+email_support: support@example.com
+email_abuse: abuse@example.com
+email_tech: tech@example.com
+
+social_twitter: https://twitter/example
+social_telegram: https://t.me/link
+social_github: https://github.com/exampleorg
+social_youtube: https://youtube.com/example
+social_facebook: ...
+social_slack: ...
+social_wechat: ...
+social_steem: ...
+
+social_keybase: https://keybase.io/exampleuser  # Potentially used for
+                                                # cryptographic
+                                                # operations. Please
+                                                # provide this one.
+
+eosio_account_name: example  # The account you go by
+eosio_p2p: peering.example.com:9876  # This could be hidden until
+                                     # after launch.  You will have it
+                                     # in your local configuration.
+eosio_http: http://http.example.com:8888
+eosio_https: https://http.example.com
+eosio_initial_authority:  # To be injected in a newly created network where you participate.
+  owner:
+    threshold: 1
+    keys:
+    - public_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+      weight: 1
+  active:
+    threshold: 1
+    keys:
+    - public_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+      weight: 1
+  recovery:
+    threshold: 1
+    accounts:
+    - permission:
+        actor: eosio
+        permission: active
+      weight: 1
+
+# The following one is used by the boot to setup the initial appointed
+# block producer's signing key.  It is not used elsewhere. If you
+# don't think you'll ever be an Appointed Block Producer, you can
+# ignore this line.
+eosio_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+
+website: "https://example.com"
+introduction_post_url: "https://steemit.com/something/"  # Like your BP candidacy proposal.
+
+organization_name: EOS Example
+organization_tagline: The example in the EOS space  # For websites who
+                                                    # want to feed
+                                                    # from the graph
+                                                    # created herein.
+logo_url_1024: "https://example.com/logo_1024x1024.jpg"
+logo_url_256: "https://example.com/logo_256x256.png"
+
+timezone: Africa/Abidjan  # From https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones, only non-deprecated ones.
+
+launch_data:  # `eos-bios` tooling requirement.
+
+  # other BPs' discovery_url you're comfortable launching the network
+  # with, you've discussed and think they are competent to 1) not
+  # screw up a launch and, 2) run the network and take good decisions.
+  #
+  # By tagging along wingmen, we are effectively creating a
+  # distributed graph.  `eos-bios` will be able to traverse this graph
+  # and create a full portrait of the community, with all information
+  # necessary to automate the steps of network boot.
+  wingmen:
+  - discovery_url: https://github.com/eosexample1/network-discovery/raw/master/mainnet.yaml
+    comment: "I met the guy, really solid..."  # optional field
+    weight: 1.0  # from 0.0 to 1.0, floating point number
+  - discovery_url: https://github.com/eosexample2/network-discovery/raw/master/mainnet.yaml
+    weight: 0.8
+  - discovery_url: https://github.com/eosexample3/network-discovery/raw/master/mainnet.yaml
+    weight: 0.2
+  - discovery_url: https://github.com/eosexample4/network-discovery/raw/master/mainnet.yaml
+    comment: "Just learn was 'ls' was.. but he'll ramp up fast I'm sure"
+    weight: 0.0  # Link him on the network, but not vouching for them.
+
+  boot_sequence:
+    hash: 325d38f8e016cabb55e89838b8715be6da18f00c06d707d1c334b499ed4cff55
+    url: https://abourget.keybase.pub/bootseq-dawn3.yaml
+    comment: "Takes into consideration the snapshot, msig, token, system and bios contracts."
+
+  snapshot:
+    hash: af36de814f2b63484cbc565effc03c3b9277882d01ff5c0c85f924cf4b53a9d5
+    url: https://github.com/eosdublin/eos-bios-launch-data/raw/master/snapshot/snapshot_290.csv
+    comment: "Built by Rob on Nov 21st 2016 on his machine."
+  # snapshot_unregistered:
+  #   hash:
+  #   url:
+
+  contracts:
+    eosio.bios:
+      abi:
+        hash: 08249507deccffd333d240e83f87f43dca6158f61a611969a8182732d79e1069
+        url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.bios.abi
+        comment: "Taken from github.com/eosio/eos, built from git commit abcdef1123 on Jan 21st 2018, by EOS Example"
+      code:
+        hash: 2c63d42a297f8378af806e08ddc5ddbe3aed7a078124d53075dafb7ac6b460e0
+        url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.bios.wasm
+    eosio.system:
+      abi:
+        hash: 24dfb654f969f55fcd4a926b44bbe12c95411a502b280a69d927a5a69a4fc256
+        url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.system.abi
+      code:
+        hash: 550ac8a9c543c7f6ee4598471c42bbb0584f4a35270659529d8920f8f3189229
+        url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.system.wasm
+    eosio.msig:
+      abi:
+        hash: ef7914c6375b9014ac32cb52e03cafa5d8c08a1305df038bd0b8e0176a51a434
+        url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.msig.abi
+      code:
+        hash: 51ec6dee95e0275e4c84e89d41e1fc4d02e5df48b619cd1e2534d8cc45901bf5
+        url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.msig.wasm
+    eosio.token:
+      abi:
+        hash: "55ad376feeb6681c50f3b086a9646daede4b34bb3448cb0f5ce30b69ef17c542"
+        url: https://gitcdn.link/repo/eoscanada/eos-bios-launch-data/master/contracts/eosio.token.abi
+      code:
+        hash: "7c6a300874835ad928de4f30712023758157bd50cb423ab039443f56a84167ff"
+        url: https://gitcdn.link/repo/eoscanada/eos-bios-launch-data/master/contracts/eosio.token.wasm
+    # eosio.unregd:
+    #   abi:
+    #     hash: ...
+    #     url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.unregd.abi
+    #   code:
+    #     hash: ...
+    #     url: https://github.com/eoscanada/eos-bios-launch-data/raw/master/contracts/eosio.unregd.wasm
