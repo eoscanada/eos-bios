@@ -25,7 +25,19 @@ type Discovery struct {
 		Recovery eos.Authority `json:"recovery"`
 	} `json:"eosio_initial_authority"`
 
-	OrganizationName string `json:"organization_name"`
+	Website             string `json:"website"`
+	IntroductionPostURL string `json:"introduction_post_url"`
+	SocialFacebook      string `json:"social_facebook"`
+	SocialTwitter       string `json:"social_twitter"`
+	SocialYouTube       string `json:"social_youtube"`
+	SocialTelegram      string `json:"social_telegram"`
+	SocialWeChat        string `json:"social_wechat"`
+	SocialSlack         string `json:"social_slack"`
+	SocialGitHub        string `json:"social_github"`
+	SocialKeybase       string `json:"social_keybase"`
+
+	OrganizationName    string `json:"organization_name"`
+	OrganizationTagline string `json:"organization_tagline"`
 
 	LaunchData LaunchData `json:"launch_data"`
 

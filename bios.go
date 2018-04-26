@@ -113,15 +113,15 @@ func (b *BIOS) StartOrchestrate() error {
 	switch b.MyRole() {
 	case RoleBootNode:
 		if err := b.RunBootSequence(); err != nil {
-			return fmt.Errorf("boot node stage1: %s", err)
+			return fmt.Errorf("orchestrate boot: %s", err)
 		}
 	case RoleABP:
 		if err := b.RunJoinNetwork(true, true); err != nil {
-			return fmt.Errorf("abp stage1: %s", err)
+			return fmt.Errorf("orchestrate join: %s", err)
 		}
 	default:
-		if err := b.RunParticipant(); err != nil {
-			return fmt.Errorf("waiting stage1: %s", err)
+		if err := b.RunJoinNetwork(true, false); err != nil {
+			return fmt.Errorf("orchestrate participate: %s", err)
 		}
 	}
 
@@ -268,12 +268,7 @@ func (b *BIOS) RunBootSequence() error {
 }
 
 func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
-	fmt.Println("Waiting on kickstart data from the BIOS Node.")
-	fmt.Println("Paste it in here. Finish with a blank line (ENTER)")
-
 	if b.KickstartData == nil {
-		// TODO: Decrypt the Kickstart data
-		//   Do extensive validation on the input (tight regexp for address, for private key?)
 		kickstart, err := b.waitOnKickstartData()
 		if err != nil {
 			return err
@@ -325,16 +320,42 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	return nil
 }
 
-func (b *BIOS) RunParticipant() error {
-	fmt.Println("Waiting for Appointed Block Producers to finish their jobs. Check their social presence!")
-
-	// TODO: check if kickstartData invalid, then either ignore it or destroy the network
-	// TODO: rather, loop for kickstar tdatas, until something valid is dropped in..
-
-	return nil
-}
-
 func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
+	fmt.Println("")
+	fmt.Println("The BIOS node will publish the Kickstart Data through their social media.")
+	bootNode := b.ShuffledProducers[0]
+	disco := bootNode.Discovery
+	if disco.Website != "" {
+		fmt.Println("  Main website:", disco.Website)
+	}
+	if disco.SocialTwitter != "" {
+		fmt.Println("  Twitter:", disco.SocialTwitter)
+	}
+	if disco.SocialFacebook != "" {
+		fmt.Println("  Facebook:", disco.SocialFacebook)
+	}
+	if disco.SocialTelegram != "" {
+		fmt.Println("  Telegram:", disco.SocialTelegram)
+	}
+	if disco.SocialSlack != "" {
+		fmt.Println("  Slack:", disco.SocialSlack)
+	}
+	if disco.SocialKeybase != "" {
+		fmt.Println("  Keybase:", disco.SocialKeybase)
+	}
+	if disco.SocialWeChat != "" {
+		fmt.Println("  WeChat:", disco.SocialWeChat)
+	}
+	if disco.SocialYouTube != "" {
+		fmt.Println("  YouTube:", disco.SocialYouTube)
+	}
+	if disco.SocialGitHub != "" {
+		fmt.Println("  GitHub:", disco.SocialGitHub)
+	}
+	// TODO: print the social media properties of the BP..
+	fmt.Println("Paste it here and finish with two blank lines (ENTER twice):")
+	fmt.Println("")
+
 	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
 	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
 	// FIXME: this is a quick hack to just pass the p2p address
@@ -446,7 +467,7 @@ func (b *BIOS) MyPeer() (*discovery.Peer, error) {
 			return peer, nil
 		}
 	}
-	return nil, fmt.Errorf("no peer config found (make sure producer.my_account in your config matches an `eosio_account_name` peer in the network)")
+	return nil, fmt.Errorf("no peer config found (peer.my_account doesn't match any discovery file's `eosio_account_name`)")
 }
 
 // MyProducerDefs will provide more than one producer def ONLY when
