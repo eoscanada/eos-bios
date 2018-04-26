@@ -24,7 +24,7 @@ Launch a local node with a single command
 clone this repo, go to `sample_configs/docker`:
 
     git clone https://github.com/eoscanada/eos-bios
-    cd eos-bios/sample_configs/docker
+    cd eos-bios/sample_config/docker
     wget https://github.com/eoscanada/eos-bios/releases/download/......tar.gz  # Pick the right one for you
     tar -zxvf eos-bios*tar.gz
     mv eos-bios_*/eos-bios .
