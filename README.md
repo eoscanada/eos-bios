@@ -138,3 +138,6 @@ TODO
 * Wait on Bitcoin Block
   * Add bitcoin_block_height in LaunchData
 * In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
+* Do we auto-publish the `my_discovery_file.yaml` ? Make it a hook?
+* canonical_url ?
+* convention regarding URLs, which pieces we want to see in there (the name of the organization, `testnet-[network_name])

@@ -104,11 +104,11 @@ func (b *BIOS) Init() error {
 func (b *BIOS) StartOrchestrate() error {
 	fmt.Println("Starting Orchestraion process", time.Now())
 
+	b.Network.PrintOrderedPeers()
+
 	if err := b.DispatchInit(); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
-
-	b.Network.PrintOrderedPeers()
 
 	switch b.MyRole() {
 	case RoleBootNode:
@@ -131,11 +131,11 @@ func (b *BIOS) StartOrchestrate() error {
 func (b *BIOS) StartJoin(verify bool) error {
 	fmt.Println("Starting network join process", time.Now())
 
+	b.Network.PrintOrderedPeers()
+
 	if err := b.DispatchInit(); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
-
-	b.Network.PrintOrderedPeers()
 
 	if err := b.RunJoinNetwork(verify, false); err != nil {
 		return fmt.Errorf("boot network: %s", err)
@@ -147,11 +147,11 @@ func (b *BIOS) StartJoin(verify bool) error {
 func (b *BIOS) StartBoot() error {
 	fmt.Println("Starting network join process", time.Now())
 
+	b.Network.PrintOrderedPeers()
+
 	if err := b.DispatchInit(); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
-
-	b.Network.PrintOrderedPeers()
 
 	if err := b.RunBootSequence(); err != nil {
 		return fmt.Errorf("join network: %s", err)
@@ -222,10 +222,6 @@ func (b *BIOS) RunBootSequence() error {
 
 	fmt.Println(b.API.Signer.AvailableKeys())
 
-	// Run boot sequence
-
-	// TODO: add an action at the end, with `nonce` and a message to indicate the end of the Boot process ?
-	// This way, nodes that sync can assume all boot actions are done once that nonce action goes through.
 	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
@@ -287,6 +283,20 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if verify {
 		fmt.Println("###############################################################################################")
 		fmt.Println("Launching chain verification")
+
+		// Grab all the Actions, serialize them.
+		// Grab all the blocks from the chain
+		// Compare each action, find it in our list
+		// Use an ordered map ?
+		// for _, step := range b.BootSequence {
+		// 	fmt.Printf("%s  [%s]\n", step.Label, step.Op)
+
+		// 	acts, err := step.Data.Actions(b)
+		// 	if err != nil {
+		// 		return fmt.Errorf("getting actions for step %q: %s", step.Op, err)
+		// 	}
+
+		// }
 
 		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
 		for {

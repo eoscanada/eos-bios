@@ -6,4 +6,4 @@ peer:
 
 network:
   seed_discovery_url: https://abourget.keybase.pub/testnet-docker.yaml
-  cache_path: /tmp/eos-bios-docker-discovery
+  cache_path: .cache
