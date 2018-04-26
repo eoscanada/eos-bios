@@ -26,7 +26,7 @@ clone this repo, go to `sample_configs/docker`:
     cd eos-bios/sample_configs/docker
     wget https://github.com/eoscanada/eos-bios/releases/download/......tar.gz  # Pick the right one for you
     tar -zxvf eos-bios*tar.gz
-    mv eos-bios_/eos-bios .
+    mv eos-bios_*/eos-bios .
 
 Then run:
 
