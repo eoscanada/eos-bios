@@ -33,6 +33,8 @@ type Discovery struct {
 	SocialTelegram      string `json:"social_telegram"`
 	SocialWeChat        string `json:"social_wechat"`
 	SocialSlack         string `json:"social_slack"`
+	SocialSteemIt       string `json:"social_steemit"`
+	SocialSteem         string `json:"social_steem"`
 	SocialGitHub        string `json:"social_github"`
 	SocialKeybase       string `json:"social_keybase"`
 

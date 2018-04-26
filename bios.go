@@ -340,6 +340,12 @@ func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
 	if disco.SocialSlack != "" {
 		fmt.Println("  Slack:", disco.SocialSlack)
 	}
+	if disco.SocialSteem != "" {
+		fmt.Println("  Steem:", disco.SocialSteem)
+	}
+	if disco.SocialSteemIt != "" {
+		fmt.Println("  SteemIt:", disco.SocialSteemIt)
+	}
 	if disco.SocialKeybase != "" {
 		fmt.Println("  Keybase:", disco.SocialKeybase)
 	}
