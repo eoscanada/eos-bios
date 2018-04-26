@@ -11,9 +11,10 @@ It implements the following:
 * Booting consortium or private networks
 * Orchestrates launches with many participants through the Network Discovery Protocol.
 
-This program relies on you publishing a `discovery` file. See
-https://github.com/eoscanada/network-discovery for more information
-about the discovery file.
+This program relies on you publishing a `discovery` file.
+
+NOTE: Jump directly to the [sample configurations](./sample_config) if
+you know what you're doing.
 
 
 Launch a local node with a single command
@@ -69,7 +70,7 @@ Join an existing network
 
 To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `wingmen`.
 
-* Read the [annotated sample configuration file](sample_configs/docker/config.yaml).
+* Read the [annotated sample configuration file](sample_configs/config.yaml).
 * Read [sample discovery file here](https://github.com/eoscanada/network-discovery)
 
 Run:
