@@ -65,6 +65,9 @@ logo_url_256: "https://example.com/logo_256x256.png"
 
 timezone: Africa/Abidjan  # From https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones, only non-deprecated ones.
 
+latitude: 27.98785      # For websites displaying maps
+longitude: 86.9250261
+
 # This section is required for an `eos-bios` launch.  It can be
 # omitted by nodes that do not participate in the launch, but still
 # want to have their BP be discoverable.
