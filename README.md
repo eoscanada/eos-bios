@@ -1,5 +1,6 @@
 EOS.IO Software-based blockchain boot orchestration tool
 --------------------------------------------------------
+[chinese version](./README-cn.md)
 
 `eos-bios` is a command-line tool for people who want to kickstart a
 blockchain using EOS.IO Software.
