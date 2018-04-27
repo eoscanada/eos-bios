@@ -278,7 +278,10 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 		out = append(out,
 			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
 			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+			// TODO: add recovery here ??
 		)
+
+		// unregister the producer at the same time ?
 	}
 	return
 }
