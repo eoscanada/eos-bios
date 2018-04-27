@@ -26,7 +26,7 @@ clone 代码, 进入 `sample_config/docker` 文件夹，并执行如下命令：
     cd eos-bios/sample_config
     wget https://github.com/eoscanada/eos-bios/releases/download/......tar.gz  # 选择最新版本
     tar -zxvf eos-bios*tar.gz
-    
+
 
 然后运行：
 
@@ -51,7 +51,7 @@ clone 代码, 进入 `sample_config/docker` 文件夹，并执行如下命令：
 
     ./eos-bios join --verify
 
-在 `boot` 命令执行完毕之后，你将看到一个 
+在 `boot` 命令执行完毕之后，你将看到一个
 _Kickstart Data_ 字符串。其他节点在执行 `join` 命令的时候，可以提供这串字符（目前该字符串是一个 base64 编码的 json），以便加入你的网络。
 
 上述功能的实现，需要配合 `config.yaml` 和 `discovery` 文件的正确配置，并且需要将 `discovery` 文件，以链接的形式提供给其他想要加入的节点。
@@ -104,7 +104,7 @@ To join a network, tweak your discovery file to point to the network you're tryi
 
     go get -v github.com/eoscanada/eos-bios/eos-bios
 
-编译成功之后，可执行文件将默认安装到 `~/go/bin` 目录下。
+编译成功之后，可执行文件将默认安装到 `~/go/bin` 目录下（安装Go请查阅https://golang.org/dl）。
 
 
 加入讨论
