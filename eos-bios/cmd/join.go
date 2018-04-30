@@ -37,7 +37,13 @@ var joinCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		b := bios.NewBIOS(net, nil)
+		ipfs, err := bios.NewIPFS(ipfsAPIAddress, ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		if err != nil {
+			fmt.Println("ipfs client error:", err)
+			os.Exit(1)
+		}
+
+		b := bios.NewBIOS(net, nil, ipfs)
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}

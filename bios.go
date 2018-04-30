@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -22,6 +22,9 @@ type BIOS struct {
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
+	// IPFS connection and client
+	IPFS *IPFS
+
 	KickstartData *KickstartData
 
 	// ShuffledProducers is an ordered list of producers according to
@@ -36,8 +39,9 @@ type BIOS struct {
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
-func NewBIOS(network *discovery.Network, api *eos.API) *BIOS {
+func NewBIOS(network *discovery.Network, api *eos.API, ipfs *IPFS) *BIOS {
 	b := &BIOS{
+		IPFS:    ipfs,
 		Network: network,
 		API:     api,
 	}
@@ -52,7 +56,8 @@ func (b *BIOS) Init() error {
 	// Load launch data
 	launchData, err := b.Network.ConsensusLaunchData()
 	if err != nil {
-		log.Fatalln("couldn'get consensus launch data:", err)
+		fmt.Println("couldn'get consensus on launch data:", err)
+		os.Exit(1)
 	}
 
 	b.LaunchData = launchData
@@ -76,11 +81,12 @@ func (b *BIOS) Init() error {
 	b.BootSequence = bootSeq.BootSequence
 
 	// Load snapshot data
-	if launchData.Snapshot.Hash != "" {
+	if launchData.Snapshot != "" {
 		rawSnapshot, err := b.Network.ReadFromCache(launchData.Snapshot.Hash)
 		if err != nil {
 			return fmt.Errorf("reading snapshot file: %s", err)
 		}
+
 		snapshotData, err := NewSnapshot(rawSnapshot)
 		if err != nil {
 			return fmt.Errorf("loading snapshot csv: %s", err)

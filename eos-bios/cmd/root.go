@@ -26,12 +26,15 @@ import (
 var Version string
 
 // Flags
-var useCache bool
+var noDiscovery bool
 var cachePath string
 var myDiscoveryFile string
 var secretP2PAddress string
 var apiAddress string
 var apiAddressURL *url.URL
+var ipfsAPIAddress string
+var ipfsGatewayAddress string
+var ipfsLocalGatewayAddress string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -53,11 +56,14 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().BoolVarP(&useCache, "use-cache", "", false, "don't traverse the discovery URLs graph, but use the cached version (will still traverse if the cache is incomplete)")
-	RootCmd.PersistentFlags().StringVarP(&cachePath, "cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
+	RootCmd.PersistentFlags().BoolVarP(&noDiscovery, "no-discovery", "", false, "Don't traverse the discovery graph, but use the cached version instead (will still traverse if the cache is incomplete)")
 	RootCmd.PersistentFlags().StringVarP(&myDiscoveryFile, "my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
+	RootCmd.PersistentFlags().StringVarP(&ipfsGatewayAddress, "ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
+	RootCmd.PersistentFlags().StringVarP(&ipfsLocalGatewayAddress, "ipfs-local-gateway-address", "", "http://127.0.0.1:8080", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
 
-	for _, flag := range []string{"use-cache", "cache-path", "my-discovery"} {
+	RootCmd.PersistentFlags().StringVarP(&cachePath, "cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
+
+	for _, flag := range []string{"no-discovery", "cache-path", "my-discovery", "ipfs-api-address", "ipfs-gateway-address"} {
 		viper.BindPFlag(flag, RootCmd.Flags().Lookup(flag))
 	}
 }

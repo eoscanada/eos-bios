@@ -4,19 +4,12 @@ import (
 	"fmt"
 
 	"github.com/eoscanada/eos-bios/discovery"
-	"github.com/spf13/viper"
 )
 
 func fetchNetwork() (*discovery.Network, error) {
-	seedURL := viper.GetString("network.seed_discovery_url")
-	if seedURL == "" {
-		return nil, fmt.Errorf("`network.seed_discovery_url` config not specified")
-	}
+	net := discovery.NewNetwork(cachePath, myDiscoveryFile)
 
-	// TODO: use `myDiscoveryFile` instead of a URL
-	net := discovery.NewNetwork(cachePath, seedURL)
-
-	net.ForceFetch = !useCache
+	net.ForceFetch = !noDiscovery
 
 	if err := net.FetchAll(); err != nil {
 		return nil, fmt.Errorf("fetch-all error: %s", err)

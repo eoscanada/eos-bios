@@ -14,8 +14,10 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"net/url"
+	"os"
 
 	bios "github.com/eoscanada/eos-bios"
 	eos "github.com/eoscanada/eos-go"
@@ -34,6 +36,12 @@ var orchestrateCmd = &cobra.Command{
 			log.Fatalln("fetch network:", err)
 		}
 
+		ipfs, err := bios.NewIPFS(ipfsAPIAddress, ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		if err != nil {
+			fmt.Println("ipfs client error:", err)
+			os.Exit(1)
+		}
+
 		apiAddressURL, err = url.Parse(apiAddress)
 		if err != nil {
 			log.Fatalln("error parsing --api-address:", err)
@@ -42,7 +50,7 @@ var orchestrateCmd = &cobra.Command{
 		api := eos.New(apiAddressURL, net.ChainID())
 		api.SetSigner(eos.NewKeyBag())
 
-		b := bios.NewBIOS(net, api)
+		b := bios.NewBIOS(net, api, ipfs)
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)

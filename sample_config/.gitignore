@@ -1,2 +1,6 @@
 config.ini
 genesis.json
+.ipfs-data
+.eos-bios-cache
+.cache
+ipfs

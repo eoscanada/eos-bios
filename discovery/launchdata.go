@@ -1,33 +1,23 @@
 package discovery
 
+type IPFSRef string
+type IPNSRef string
+
 type LaunchData struct {
 	Peers                []PeerLink              `json:"peers"`
-	BootSequence         HashURL                 `json:"boot_sequence"`
-	Snapshot             HashURL                 `json:"snapshot"`
-	SnapshotUnregistered HashURL                 `json:"snapshot_unregistered"`
+	BootSequence         IPFSRef                 `json:"boot_sequence"`
+	Snapshot             IPFSRef                 `json:"snapshot"`
+	SnapshotUnregistered IPFSRef                 `json:"snapshot_unregistered"`
 	Contracts            map[string]ContractHash `json:"contracts"`
 }
 
 type PeerLink struct {
-	DiscoveryURL string  `json:"discovery_url"`
-	Comment      string  `json:"comment"`
-	Weight       float64 `json:"weight"` // From 0.0 to 1.0
+	DiscoveryFile IPNSRef `json:"discovery_url"`
+	Comment       string  `json:"comment"`
+	Weight        float64 `json:"weight"` // From 0.0 to 1.0
 }
 
 type ContractHash struct {
-	ABI  HashURL `json:"abi"`
-	Code HashURL `json:"code"`
-}
-
-type HashURL struct {
-	// Hash is the important bit, used to weight in votes from
-	// different BPs.
-	Hash string `json:"hash"`
-	// URL is the downloadable location of the resource, which should
-	// hash to `Hash`.
-	URL string `json:"url"`
-	// Comment has any relevant details, how the resource was built,
-	// produced, who did it, when, based on what revision of which
-	// source code, and whatnot.
-	Comment string `json:"comment"`
+	ABI  IPFSRef `json:"abi"`
+	Code IPFSRef `json:"code"`
 }
