@@ -21,9 +21,6 @@ type BIOS struct {
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
-	// IPFS connection and client
-	IPFS *IPFS
-
 	KickstartData *KickstartData
 
 	// ShuffledProducers is an ordered list of producers according to
@@ -38,9 +35,8 @@ type BIOS struct {
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
-func NewBIOS(network *Network, api *eos.API, ipfs *IPFS) *BIOS {
+func NewBIOS(network *Network, api *eos.API) *BIOS {
 	b := &BIOS{
-		IPFS:    ipfs,
 		Network: network,
 		EOSAPI:  api,
 	}

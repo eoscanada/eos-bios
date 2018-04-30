@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 
+	bios "github.com/eoscanada/eos-bios"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,13 @@ var discoverCmd = &cobra.Command{
 	Short: "Discover and update info about all peers in the network, based on an initial discovery URL",
 	Long:  `This uses the "network.seed_discovery_url" key in your configuration to start discovery.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork()
+		ipfs, err := bios.NewIPFS(ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		if err != nil {
+			fmt.Println("ipfs client error:", err)
+			os.Exit(1)
+		}
+
+		net, err := fetchNetwork(ipfs)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

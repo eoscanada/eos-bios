@@ -31,19 +31,19 @@ var joinCmd = &cobra.Command{
 	Short: "Triggers the hooks to join an already running network",
 	Long:  `This will run the "join_network" hook with data discovered from the network pointed to by the seed_discovery_url.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork()
-		if err != nil {
-			fmt.Println("error loading network:", err)
-			os.Exit(1)
-		}
-
-		ipfs, err := bios.NewIPFS(ipfsAPIAddress, ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		ipfs, err := bios.NewIPFS(ipfsGatewayAddress, ipfsLocalGatewayAddress)
 		if err != nil {
 			fmt.Println("ipfs client error:", err)
 			os.Exit(1)
 		}
 
-		b := bios.NewBIOS(net, nil, ipfs)
+		net, err := fetchNetwork(ipfs)
+		if err != nil {
+			fmt.Println("error loading network:", err)
+			os.Exit(1)
+		}
+
+		b := bios.NewBIOS(net, nil)
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}

@@ -9,20 +9,14 @@ import (
 )
 
 type IPFS struct {
-	APIAddressURL             *url.URL
 	GatewayAddressURL         *url.URL
 	FallbackGatewayAddressURL *url.URL
 	Client                    *http.Client
 }
 
-func NewIPFS(apiAddress, gatewayAddress, fallbackGatewayAddress string) (out *IPFS, err error) {
+func NewIPFS(gatewayAddress, fallbackGatewayAddress string) (out *IPFS, err error) {
 	out = &IPFS{
 		Client: http.DefaultClient,
-	}
-
-	out.APIAddressURL, err = url.Parse(apiAddress)
-	if err != nil {
-		return nil, fmt.Errorf("parsing api address: %s", err)
 	}
 
 	out.GatewayAddressURL, err = url.Parse(gatewayAddress)
@@ -52,6 +46,7 @@ func (i *IPFS) Get(ref IPFSRef) ([]byte, error) {
 	reqs := []*http.Request{req1, req2}
 	var resp *http.Response
 	for _, req := range reqs {
+		fmt.Println("Fetching from:", req.URL.String())
 		resp, err = i.Client.Do(req)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "NOTE: %q unavailable (%s), trying fallback\n", req.URL.String(), err)

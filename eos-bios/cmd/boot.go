@@ -36,15 +36,15 @@ The "publish_kickstart_data" will also be run, giving you the opportunity to dis
 Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork()
-		if err != nil {
-			log.Fatalln("fetch network:", err)
-		}
-
-		ipfs, err := bios.NewIPFS(ipfsAPIAddress, ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		ipfs, err := bios.NewIPFS(ipfsGatewayAddress, ipfsLocalGatewayAddress)
 		if err != nil {
 			fmt.Println("ipfs client error:", err)
 			os.Exit(1)
+		}
+
+		net, err := fetchNetwork(ipfs)
+		if err != nil {
+			log.Fatalln("fetch network:", err)
 		}
 
 		apiAddressURL, err = url.Parse(apiAddress)
@@ -55,7 +55,7 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 		api := eos.New(apiAddressURL, net.ChainID())
 		api.SetSigner(eos.NewKeyBag())
 
-		b := bios.NewBIOS(net, api, ipfs)
+		b := bios.NewBIOS(net, api)
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)

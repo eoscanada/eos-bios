@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"os"
 
-	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/spf13/cobra"
 )
 
@@ -26,16 +25,7 @@ var discoveryCmd = &cobra.Command{
 	Short: "Publish the discovery file specified by `--my-discovery` to IPFS.",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfsClient := shell.NewShell(ipfsAPIAddress)
-
-		fmt.Printf("Pinging ipfs node... ")
-		info, err := ipfsClient.ID()
-		if err != nil {
-			fmt.Println("failed")
-			fmt.Fprintf(os.Stderr, "error reaching ipfs api: %s\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("ok")
+		info, ipfs := ipfsClient()
 
 		fmt.Printf("Reading discovery file... ")
 		fl, err := os.Open(myDiscoveryFile)
@@ -48,7 +38,7 @@ var discoveryCmd = &cobra.Command{
 		fmt.Println("ok")
 
 		fmt.Printf("Publishing discovery file... ")
-		newObj, err := ipfsClient.Add(fl)
+		newObj, err := ipfs.Add(fl)
 		if err != nil {
 			fmt.Println("failed")
 			fmt.Fprintln(os.Stderr, "error adding content to ipfs:", err)
@@ -57,7 +47,7 @@ var discoveryCmd = &cobra.Command{
 		fmt.Println("/ipfs/" + newObj + " published")
 
 		fmt.Printf("Updating IPNS link /ipns/" + info.ID + " ... ")
-		if err = ipfsClient.Publish("", newObj); err != nil {
+		if err = ipfs.Publish("", newObj); err != nil {
 			fmt.Println("failed")
 			fmt.Fprintln(os.Stderr, "error publishing new ipns address:", err)
 			os.Exit(1)

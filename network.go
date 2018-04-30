@@ -1,7 +1,6 @@
 package bios
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -21,7 +20,7 @@ type Network struct {
 
 	MyPeer *Peer
 
-	IPFS *IPFS
+	ipfs *IPFS
 
 	cachePath       string
 	myDiscoveryFile string
@@ -32,6 +31,7 @@ type Network struct {
 
 func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS) *Network {
 	return &Network{
+		ipfs:            ipfs,
 		cachePath:       cachePath,
 		myDiscoveryFile: myDiscoveryFile,
 	}
@@ -50,6 +50,8 @@ func (c *Network) TraverseGraph() error {
 		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
+	fmt.Println("Cache ready")
+
 	// TODO: how do we handle when someone points to *us* ? We should
 	// have a way to find our canonical URL..
 	rawDisco, err := ioutil.ReadFile(c.myDiscoveryFile)
@@ -67,21 +69,7 @@ func (c *Network) TraverseGraph() error {
 
 	c.visitedFiles[ipfsRef] = true
 
-	return c.injectPeer(disco, IPNSRef("local "+c.myDiscoveryFile), ipfsRef)
-}
-
-func (c *Network) ValidateLocalFile(filename string) error {
-	// simulate DownloadDiscoveryURL with a local file, and run all
-	// the validation we have from `if disco.Testnet && disco.Mainnet`,
-	// etc..
-
-	return nil
-}
-
-func (c *Network) ChainID() []byte {
-	// TODO: compute based on all the hashes in the elected launchdata?
-	// have a value be voted for ?
-	return make([]byte, 32, 32)
+	return c.traversePeer(disco, IPNSRef("local "+c.myDiscoveryFile), ipfsRef)
 }
 
 func (c *Network) fetchOne(peerLink *PeerLink) error {
@@ -101,7 +89,7 @@ func (c *Network) fetchOne(peerLink *PeerLink) error {
 
 	peerLink.resolvedRef = ipfsRef
 
-	return c.injectPeer(disco, peerLink.DiscoveryLink, ipfsRef)
+	return c.traversePeer(disco, peerLink.DiscoveryLink, ipfsRef)
 }
 
 func toMultihash(cnt []byte) IPFSRef {
@@ -109,7 +97,8 @@ func toMultihash(cnt []byte) IPFSRef {
 	return IPFSRef(fmt.Sprintf("/ipfs/%s", hash.B58String()))
 }
 
-func (c *Network) injectPeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
+func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
+	fmt.Println("Traversing peer:", ipnsRef)
 	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
 		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
 	}
@@ -169,11 +158,11 @@ func (c *Network) DownloadIPFSRef(ref IPFSRef) error {
 	}
 
 	if c.isInCache(ref) {
-		// fmt.Printf("Discovery: %q in cache\n", hu.Hash)
+		fmt.Printf("ipfs ref: %q in cache\n", ref)
 		return nil
 	}
 
-	cnt, err := c.IPFS.Get(ref)
+	cnt, err := c.ipfs.Get(ref)
 	if err != nil {
 		return err
 	}
@@ -218,6 +207,20 @@ func (c *Network) LoadCache(initialDiscoveryURL string) error {
 	// TODO: start with initialDiscoveryURL
 	// read from disk all the BPs, verify the hash data, etc.. ?
 	return nil
+}
+
+func (c *Network) ValidateLocalFile(filename string) error {
+	// simulate DownloadDiscoveryURL with a local file, and run all
+	// the validation we have from `if disco.Testnet && disco.Mainnet`,
+	// etc..
+
+	return nil
+}
+
+func (c *Network) ChainID() []byte {
+	// TODO: compute based on all the hashes in the elected launchdata?
+	// have a value be voted for ?
+	return make([]byte, 32, 32)
 }
 
 func (c *Network) CalculateWeights() error {
@@ -280,11 +283,9 @@ func (c *Network) VerifyGraph() error {
 }
 
 func (c *Network) FetchDiscoveryLink(discoveryLink IPNSRef) (out *Discovery, rawDiscovery []byte, err error) {
-	var buf bytes.Buffer
-
 	// Resolve recursive the discoveryLink (through /ipns, then /ipfs/Qm.../path to /ipfs/Qmcontent)
 	fmt.Println("Discovery: downloading link", discoveryLink)
-	rawDiscovery, err = c.IPFS.GetIPNS(discoveryLink)
+	rawDiscovery, err = c.ipfs.GetIPNS(discoveryLink)
 	if err != nil {
 		return
 	}

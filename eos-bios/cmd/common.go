@@ -2,10 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+
+	bios "github.com/eoscanada/eos-bios"
+	shell "github.com/ipfs/go-ipfs-api"
 )
 
-func fetchNetwork() (*Network, error) {
-	net := NewNetwork(cachePath, myDiscoveryFile)
+func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
+	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs)
 
 	net.ForceFetch = !noDiscovery
 
@@ -22,4 +27,25 @@ func fetchNetwork() (*Network, error) {
 	}
 
 	return net, nil
+}
+
+func ipfsClient() (*shell.IdOutput, *shell.Shell) {
+	apiFile, err := ioutil.ReadFile(ipfsAPIFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading ipfs api file: %s\n", err)
+		os.Exit(1)
+	}
+
+	ipfsClient := shell.NewShell(string(apiFile))
+
+	fmt.Printf("Pinging ipfs node... ")
+	info, err := ipfsClient.ID()
+	if err != nil {
+		fmt.Println("failed")
+		fmt.Fprintf(os.Stderr, "error reaching ipfs api: %s\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("ok")
+
+	return info, ipfsClient
 }
