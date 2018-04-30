@@ -1,4 +1,4 @@
-# Canonical reference for this file: https://github.com/eoscanada/eos-bios/blob/master/sample_config/my_discovery_file.yaml
+# Canonical reference: /ipns/QmbYGxmRcwvxiZDKUPhgMcktAhSaciorRKtAgL6i95mZas
 
 testnet: true  # REQUIRED, one or the other, not both.
 # mainnet: true

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	bios "github.com/eoscanada/eos-bios"
@@ -30,13 +29,7 @@ func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
 }
 
 func ipfsClient() (*shell.IdOutput, *shell.Shell) {
-	apiFile, err := ioutil.ReadFile(ipfsAPIFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading ipfs api file: %s\n", err)
-		os.Exit(1)
-	}
-
-	ipfsClient := shell.NewShell(string(apiFile))
+	ipfsClient := shell.NewShell(ipfsAPIAddress)
 
 	fmt.Printf("Pinging ipfs node... ")
 	info, err := ipfsClient.ID()

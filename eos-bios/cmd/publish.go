@@ -15,9 +15,9 @@ var publishCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(publishCmd)
-	publishCmd.PersistentFlags().StringVarP(&ipfsAPIFile, "ipfs-api-file", "", "./.ipfs-data/api", "Pointer to the `api` file in the IPFS_PATH once you started `ipfs daemon`.")
+	publishCmd.PersistentFlags().StringVarP(&ipfsAPIAddress, "ipfs-api-address", "", "/ip4/127.0.0.1/tcp/5001", "API Endpoint of the local IPFS node, to publish content. Make sure it matches your running `ipfs` instance.")
 
-	for _, flag := range []string{"ipfs-api-file"} {
+	for _, flag := range []string{"ipfs-api-address"} {
 		viper.BindPFlag(flag, publishCmd.Flags().Lookup(flag))
 	}
 }

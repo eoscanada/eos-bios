@@ -32,7 +32,7 @@ var myDiscoveryFile string
 var secretP2PAddress string
 var apiAddress string
 var apiAddressURL *url.URL
-var ipfsAPIFile string
+var ipfsAPIAddress string
 var ipfsGatewayAddress string
 var ipfsLocalGatewayAddress string
 
