@@ -1,10 +1,10 @@
-package discovery
+package bios
 
 type IPFSRef string
 type IPNSRef string
 
 type LaunchData struct {
-	Peers                []PeerLink              `json:"peers"`
+	Peers                []*PeerLink             `json:"peers"`
 	BootSequence         IPFSRef                 `json:"boot_sequence"`
 	Snapshot             IPFSRef                 `json:"snapshot"`
 	SnapshotUnregistered IPFSRef                 `json:"snapshot_unregistered"`
@@ -12,7 +12,8 @@ type LaunchData struct {
 }
 
 type PeerLink struct {
-	DiscoveryFile IPNSRef `json:"discovery_url"`
+	DiscoveryLink IPNSRef `json:"discovery_link"`
+	resolvedRef   IPFSRef `json:"-"`
 	Comment       string  `json:"comment"`
 	Weight        float64 `json:"weight"` // From 0.0 to 1.0
 }

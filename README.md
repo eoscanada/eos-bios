@@ -148,5 +148,17 @@ TODO
   * The pasted data would simply be added to the list of addresses
     passed to the `join_network` hook when the BIOS Boot is ready
     and we receive the Kickstart data.
-  * Both be a base64 encoded JSON, one with `type=kickstart`, the
-    other with `type=meshing` or something.
+  * Both be a base64 encoded JSON:
+    * `type=genesis` with the genesis JSON, which includes the public key, perhaps the pubkey on the side..
+    * `type=meshing` with the p2p IP/host to connect to
+    * `type=handoff` with the private key used to do everything.
+
+* No publishing of `secret-p2p-address`, only a remote control of
+  `/v1/net/connect` to some ABPs who have published and established
+  the network.
+  * hook_boot_network.sh
+  * hook_boot_publish_genesis.sh
+  * hook_boot_connect_mesh.sh
+  * hook_boot_publish_privkey.sh
+
+  * hook_join_network.sh  # add connect_count

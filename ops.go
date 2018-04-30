@@ -86,8 +86,8 @@ func (op *OpSetCode) ResetTestnetOptions() { return }
 func (op *OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
 	setCode, err := system.NewSetCodeTx(
 		op.Account,
-		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].Code.Hash),
-		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].ABI.Hash),
+		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].Code),
+		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].ABI),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("NewSetCodeTx %s: %s", op.ContractNameRef, err)
@@ -229,7 +229,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 		}
 
 		// TODO: stake 50% bandwidth, 50% cpu for all new accounts
-		// b.API.SignPushActions(system.Stake(AN("eosio"), destAccount, 999, 888, ""))
+		// b.EOSAPI.SignPushActions(system.Stake(AN("eosio"), destAccount, 999, 888, ""))
 	}
 
 	return

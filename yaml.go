@@ -3,7 +3,7 @@ package bios
 import (
 	"encoding/json"
 
-	"github.com/bronze1man/go-yaml2json"
+	yaml2json "github.com/bronze1man/go-yaml2json"
 )
 
 func yamlUnmarshal(cnt []byte, v interface{}) error {

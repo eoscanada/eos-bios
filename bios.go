@@ -9,16 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eoscanada/eos-bios/discovery"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 )
 
 type BIOS struct {
-	Network *discovery.Network
+	Network *Network
 
-	LaunchData   *discovery.LaunchData
-	API          *eos.API
+	LaunchData   *LaunchData
+	EOSAPI       *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
@@ -29,21 +28,21 @@ type BIOS struct {
 
 	// ShuffledProducers is an ordered list of producers according to
 	// the shuffled peers.
-	ShuffledProducers []*discovery.Peer
+	ShuffledProducers []*Peer
 
 	// MyPeers represent the peers my local node will handle. It is
 	// plural because when launching a 3-node network, your peer will
 	// be cloned a few time to have a full schedule of 21 producers.
-	MyPeers []*discovery.Peer
+	MyPeers []*Peer
 
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
-func NewBIOS(network *discovery.Network, api *eos.API, ipfs *IPFS) *BIOS {
+func NewBIOS(network *Network, api *eos.API, ipfs *IPFS) *BIOS {
 	b := &BIOS{
 		IPFS:    ipfs,
 		Network: network,
-		API:     api,
+		EOSAPI:  api,
 	}
 	return b
 }
@@ -66,7 +65,7 @@ func (b *BIOS) Init() error {
 	// EOSIOABPSigningKey set.
 
 	// Load the boot sequence
-	rawBootSeq, err := b.Network.ReadFromCache(launchData.BootSequence.Hash)
+	rawBootSeq, err := b.Network.ReadFromCache(launchData.BootSequence)
 	if err != nil {
 		return fmt.Errorf("reading boot_sequence file: %s", err)
 	}
@@ -82,7 +81,7 @@ func (b *BIOS) Init() error {
 
 	// Load snapshot data
 	if launchData.Snapshot != "" {
-		rawSnapshot, err := b.Network.ReadFromCache(launchData.Snapshot.Hash)
+		rawSnapshot, err := b.Network.ReadFromCache(launchData.Snapshot)
 		if err != nil {
 			return fmt.Errorf("reading snapshot file: %s", err)
 		}
@@ -201,7 +200,7 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 
 	b.EphemeralPrivateKey = ephemeralPrivateKey
 
-	// b.API.Debug = true
+	// b.EOSAPI.Debug = true
 
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
@@ -209,11 +208,11 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 	fmt.Println("Generated ephemeral private keys:", pubKey, privKey)
 
 	// Store keys in wallet, to sign `SetCode` and friends..
-	if err := b.API.Signer.ImportPrivateKey(privKey); err != nil {
+	if err := b.EOSAPI.Signer.ImportPrivateKey(privKey); err != nil {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
-	keys, _ := b.API.Signer.(*eos.KeyBag).AvailableKeys()
+	keys, _ := b.EOSAPI.Signer.(*eos.KeyBag).AvailableKeys()
 	for _, key := range keys {
 		fmt.Println("Available key in the KeyBag:", key)
 	}
@@ -224,7 +223,7 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 		return fmt.Errorf("dispatch config_ready hook: %s", err)
 	}
 
-	fmt.Println(b.API.Signer.AvailableKeys())
+	fmt.Println(b.EOSAPI.Signer.AvailableKeys())
 
 	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
@@ -236,7 +235,7 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range chunkifyActions(acts, 400) { // transfers max out resources higher than ~400
-				_, err = b.API.SignPushActions(chunk...)
+				_, err = b.EOSAPI.SignPushActions(chunk...)
 				if err != nil {
 					return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 				}
@@ -305,7 +304,7 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
 		for {
 			time.Sleep(1 * time.Second)
-			acct, err := b.API.GetAccount(AN("eosio"))
+			acct, err := b.EOSAPI.GetAccount(AN("eosio"))
 			if err != nil {
 				fmt.Printf("e")
 				continue
@@ -418,7 +417,7 @@ func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	cnt, _ := json.Marshal(&GenesisJSON{
 		InitialTimestamp: time.Now().UTC().Format("2006-01-02T15:04:05"), // TODO: becomes the bitcoin block if we use that as a seed for randomization? just the current time/date ?
 		InitialKey:       pubKey,
-		InitialChainID:   hex.EncodeToString(b.API.ChainID),
+		InitialChainID:   hex.EncodeToString(b.EOSAPI.ChainID),
 	})
 	return string(cnt)
 }
@@ -441,7 +440,7 @@ func (b *BIOS) shuffleProducers() error {
 				fromPeer := b.ShuffledProducers[1+count%cloneCount]
 				count++
 
-				clonedProd := &discovery.Peer{
+				clonedProd := &Peer{
 					ClonedAccountName: accountVariation(fromPeer.AccountName(), count),
 					Discovery:         fromPeer.Discovery,
 				}
@@ -491,7 +490,7 @@ func (b *BIOS) AmIAppointedBlockProducer() bool {
 func (b *BIOS) setMyPeers() error {
 	myPeer := b.Network.MyPeer
 
-	out := []*discovery.Peer{myPeer}
+	out := []*Peer{myPeer}
 
 	for _, peer := range b.ShuffledProducers {
 		if peer.Discovery.EOSIOAccountName == myPeer.Discovery.EOSIOAccountName {

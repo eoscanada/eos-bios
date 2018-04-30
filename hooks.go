@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/eoscanada/eos-bios/discovery"
 )
 
 var ConfiguredHooks = []HookDef{
@@ -34,7 +32,7 @@ func (b *BIOS) DispatchBootNetwork(genesisJSON, publicKey, privateKey string) er
 	}, nil)
 }
 
-func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*discovery.Peer) error {
+func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*Peer) error {
 	var names []string
 	for _, peer := range peerDefs {
 		names = append(names, peer.AccountName())

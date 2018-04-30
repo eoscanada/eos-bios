@@ -1,4 +1,4 @@
-package discovery
+package bios
 
 import (
 	"net/url"

@@ -2,16 +2,14 @@ package cmd
 
 import (
 	"fmt"
-
-	"github.com/eoscanada/eos-bios/discovery"
 )
 
-func fetchNetwork() (*discovery.Network, error) {
-	net := discovery.NewNetwork(cachePath, myDiscoveryFile)
+func fetchNetwork() (*Network, error) {
+	net := NewNetwork(cachePath, myDiscoveryFile)
 
 	net.ForceFetch = !noDiscovery
 
-	if err := net.FetchAll(); err != nil {
+	if err := net.TraverseGraph(); err != nil {
 		return nil, fmt.Errorf("fetch-all error: %s", err)
 	}
 

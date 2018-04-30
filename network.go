@@ -1,4 +1,4 @@
-package discovery
+package bios
 
 import (
 	"bytes"
@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+
+	multihash "github.com/multiformats/go-multihash"
 )
 
 type Network struct {
@@ -19,19 +21,19 @@ type Network struct {
 
 	MyPeer *Peer
 
-	cachePath        string
-	seedDiscoveryURL string
-	visitedURLs      map[string]bool
-	discoveredPeers  map[string]*Peer
-	orderedPeers     []*Peer
+	IPFS *IPFS
+
+	cachePath       string
+	myDiscoveryFile string
+	visitedFiles    map[IPFSRef]bool
+	discoveredPeers map[IPFSRef]*Peer
+	orderedPeers    []*Peer
 }
 
-func NewNetwork(cachePath string, seedDiscoveryURL string) *Network {
+func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS) *Network {
 	return &Network{
-		cachePath:        cachePath,
-		visitedURLs:      map[string]bool{},
-		discoveredPeers:  map[string]*Peer{},
-		seedDiscoveryURL: seedDiscoveryURL,
+		cachePath:       cachePath,
+		myDiscoveryFile: myDiscoveryFile,
 	}
 }
 
@@ -39,20 +41,33 @@ func (c *Network) ensureExists() error {
 	return os.MkdirAll(c.cachePath, 0777)
 }
 
-func (c *Network) FetchAll() error {
-	c.visitedURLs = map[string]bool{}
-	c.discoveredPeers = map[string]*Peer{}
+func (c *Network) TraverseGraph() error {
+	c.visitedFiles = map[IPFSRef]bool{}
+	c.discoveredPeers = map[IPFSRef]*Peer{}
 
 	err := c.ensureExists()
 	if err != nil {
 		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
-	if err := c.FetchOne(c.seedDiscoveryURL); err != nil {
-		return fmt.Errorf("fetching %q: %s", c.seedDiscoveryURL, err)
+	// TODO: how do we handle when someone points to *us* ? We should
+	// have a way to find our canonical URL..
+	rawDisco, err := ioutil.ReadFile(c.myDiscoveryFile)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	var disco *Discovery
+	err = yamlUnmarshal(rawDisco, &disco)
+	if err != nil {
+		return err
+	}
+
+	ipfsRef := toMultihash(rawDisco)
+
+	c.visitedFiles[ipfsRef] = true
+
+	return c.injectPeer(disco, IPNSRef("local "+c.myDiscoveryFile), ipfsRef)
 }
 
 func (c *Network) ValidateLocalFile(filename string) error {
@@ -69,18 +84,32 @@ func (c *Network) ChainID() []byte {
 	return make([]byte, 32, 32)
 }
 
-func (c *Network) FetchOne(discoveryURL string) error {
-	if c.visitedURLs[discoveryURL] {
-		return nil
-	}
+func (c *Network) fetchOne(peerLink *PeerLink) error {
+	// FIXME: what's the use of this then if we're not caching anything ?
+	// if c.visitedFiles[discoveryLink] {
+	// 	return nil
+	// }
 
-	c.visitedURLs[discoveryURL] = true
-
-	disco, rawDisco, err := c.DownloadDiscoveryURL(discoveryURL)
+	disco, rawDisco, err := c.FetchDiscoveryLink(peerLink.DiscoveryLink)
 	if err != nil {
 		return fmt.Errorf("couldn't download discovery URL: %s", err)
 	}
 
+	ipfsRef := toMultihash(rawDisco)
+
+	//c.visitedFiles[ipfsRef] = true
+
+	peerLink.resolvedRef = ipfsRef
+
+	return c.injectPeer(disco, peerLink.DiscoveryLink, ipfsRef)
+}
+
+func toMultihash(cnt []byte) IPFSRef {
+	hash, _ := multihash.Sum(cnt, multihash.SHA2_256, 32)
+	return IPFSRef(fmt.Sprintf("/ipfs/%s", hash.B58String()))
+}
+
+func (c *Network) injectPeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
 	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
 		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
 	}
@@ -92,106 +121,77 @@ func (c *Network) FetchOne(discoveryURL string) error {
 	launchData := disco.LaunchData
 
 	// Go through all the things we can download from there
-	if err := c.DownloadHashURL(discoveryURL, launchData.BootSequence); err != nil {
+	if err := c.DownloadIPFSRef(launchData.BootSequence); err != nil {
 		return fmt.Errorf("boot_sequence: %s", err)
 	}
-	if err := c.DownloadHashURL(discoveryURL, launchData.Snapshot); err != nil {
+	if err := c.DownloadIPFSRef(launchData.Snapshot); err != nil {
 		return fmt.Errorf("snapshot: %s", err)
 	}
 	// if err := c.DownloadHashURL(discoveryURL, launchData.SnapshotUnregistered); err != nil {
 	// 	return fmt.Errorf("snapshot_unregistered: %s", err)
 	// }
 	for name, contract := range launchData.Contracts {
-		if err := c.DownloadHashURL(discoveryURL, contract.ABI); err != nil {
+		if err := c.DownloadIPFSRef(contract.ABI); err != nil {
 			return fmt.Errorf("contract %q ABI: %s", name, err)
 		}
-		if err := c.DownloadHashURL(discoveryURL, contract.Code); err != nil {
+		if err := c.DownloadIPFSRef(contract.Code); err != nil {
 			return fmt.Errorf("contract %q Code: %s", name, err)
 		}
 	}
 
-	c.discoveredPeers[discoveryURL] = &Peer{
-		DiscoveryURL: discoveryURL,
-		Discovery:    disco,
-	}
-
-	// Save the content of the disco file in here
-	fsFile := replaceAllWeirdities(discoveryURL)
-	// fmt.Printf("Discovery: writing %q to cache\n", fsFile)
-	err = c.writeToCache(fsFile, rawDisco)
-	if err != nil {
-		return fmt.Errorf("writing discovery data to %q: %s", fsFile, err)
+	c.discoveredPeers[ipfsRef] = &Peer{
+		DiscoveryFile: ipfsRef,
+		DiscoveryLink: ipnsRef,
+		Discovery:     disco,
 	}
 
 	fmt.Printf("Discovery: traversing %d peers\n", len(launchData.Peers))
 	for _, peerLink := range launchData.Peers {
 		if peerLink.Weight > 1.0 || peerLink.Weight < 0.0 {
-			return fmt.Errorf("weight for peers should be between 0.0 and 1.0, %f invalid", peerLink.Weight)
+			fmt.Printf("WARN: peer %q weight not between 0.0 and 1.0, not including in graph\n", peerLink.DiscoveryLink)
+			continue
 		}
-		absDiscoURL, err := absoluteURL(discoveryURL, peerLink.DiscoveryURL)
-		if err != nil {
-			return err
-		}
-		if err := c.FetchOne(absDiscoURL); err != nil {
-			return fmt.Errorf("fetching %q: %s", absDiscoURL, err)
+
+		if err := c.fetchOne(peerLink); err != nil {
+			return fmt.Errorf("fetching %q: %s", peerLink.DiscoveryLink, err)
 		}
 	}
 
 	return nil
 }
 
-func (c *Network) DownloadHashURL(discoveryURL string, hu HashURL) error {
-
-	if hu.Hash == "" {
+func (c *Network) DownloadIPFSRef(ref IPFSRef) error {
+	if ref == "" {
 		return errors.New("no hash provided")
 	}
-	if hu.URL == "" {
-		return errors.New("no url provided")
+	if !strings.HasPrefix(string(ref), "/ipfs/") {
+		return fmt.Errorf("ipfs ref should start with'/ipfs/': %q", ref)
 	}
 
-	fileName := hu.Hash
-	if c.isInCache(fileName) {
+	if c.isInCache(ref) {
 		// fmt.Printf("Discovery: %q in cache\n", hu.Hash)
 		return nil
 	}
 
-	destURL, err := absoluteURL(discoveryURL, hu.URL)
+	cnt, err := c.IPFS.Get(ref)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Discovery: downloading %q from %q\n", hu.Hash, destURL)
-	resp, err := http.Get(destURL)
-	if err != nil {
+	if err := c.writeToCache(ref, cnt); err != nil {
 		return err
-	}
-	defer resp.Body.Close()
-
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	hash := sha2(buf.Bytes())
-
-	if hash != hu.Hash {
-		return fmt.Errorf("content downloaded from %q does not hash to %q as expected, but hashes to %q", destURL, hu.Hash, hash)
-	}
-
-	if err := c.writeToCache(fileName, buf.Bytes()); err != nil {
-		return fmt.Errorf("writing %q: %s", fileName, err)
 	}
 
 	return nil
 }
 
-func (c *Network) writeToCache(fileName string, content []byte) error {
+func (c *Network) writeToCache(ref IPFSRef, content []byte) error {
+	fileName := replaceAllWeirdities(string(ref))
 	return ioutil.WriteFile(filepath.Join(c.cachePath, fileName), content, 0666)
 }
 
-func (c *Network) isInCache(file string) bool {
-	fileName := filepath.Join(c.cachePath, file)
+func (c *Network) isInCache(ref IPFSRef) bool {
+	fileName := filepath.Join(c.cachePath, replaceAllWeirdities(string(ref)))
 
 	if _, err := os.Stat(fileName); err == nil {
 		return true
@@ -199,15 +199,18 @@ func (c *Network) isInCache(file string) bool {
 	return false
 }
 
-func (c *Network) ReadFromCache(fileName string) ([]byte, error) {
+func (c *Network) ReadFromCache(ref IPFSRef) ([]byte, error) {
+	fileName := replaceAllWeirdities(string(ref))
 	return ioutil.ReadFile(filepath.Join(c.cachePath, fileName))
 }
 
-func (c *Network) ReaderFromCache(fileName string) (io.ReadCloser, error) {
+func (c *Network) ReaderFromCache(ref IPFSRef) (io.ReadCloser, error) {
+	fileName := replaceAllWeirdities(string(ref))
 	return os.Open(filepath.Join(c.cachePath, fileName))
 }
 
-func (c *Network) FileNameFromCache(fileName string) string {
+func (c *Network) FileNameFromCache(ref IPFSRef) string {
+	fileName := replaceAllWeirdities(string(ref))
 	return filepath.Join(c.cachePath, fileName)
 }
 
@@ -222,19 +225,20 @@ func (c *Network) CalculateWeights() error {
 	var allPeers []*Peer
 	for _, peer := range c.discoveredPeers {
 		for _, peerLink := range peer.Discovery.LaunchData.Peers {
-			absDiscoURL, err := absoluteURL(peer.DiscoveryURL, peerLink.DiscoveryURL)
-			if err != nil {
-				return err
-			}
-
-			if peer.DiscoveryURL == absDiscoURL {
+			// TODO: double-check this.. wuuut
+			if peer.DiscoveryFile == peerLink.resolvedRef {
 				// Can't vouch for yourself
 				continue
 			}
 
-			peerLinkDisco, found := c.discoveredPeers[absDiscoURL]
+			peerLinkDisco, found := c.discoveredPeers[peerLink.resolvedRef]
 			if !found {
-				return fmt.Errorf("couldn't find %q in list of peers", absDiscoURL)
+				return fmt.Errorf("couldn't find %q (resolved peer ref) in list of peers", peerLink.resolvedRef)
+			}
+
+			if peer.Discovery.EOSIOAccountName == peerLinkDisco.Discovery.EOSIOAccountName {
+				// hmm.. don't count weight on your own account..
+				continue
 			}
 
 			addWeight := 1.0
@@ -250,7 +254,7 @@ func (c *Network) CalculateWeights() error {
 	// Sort the `orderedPeers`
 	sort.Slice(allPeers, func(i, j int) bool {
 		if allPeers[i].TotalWeight == allPeers[j].TotalWeight {
-			return allPeers[i].DiscoveryURL < allPeers[j].DiscoveryURL
+			return allPeers[i].DiscoveryFile < allPeers[j].DiscoveryFile
 		}
 		return allPeers[i].TotalWeight > allPeers[j].TotalWeight
 	})
@@ -269,38 +273,21 @@ func (c *Network) VerifyGraph() error {
 	seen := map[string]string{}
 	for _, peer := range c.discoveredPeers {
 		if discoURL := seen[peer.Discovery.EOSIOAccountName]; discoURL != "" {
-			return fmt.Errorf("two peers claim the eosio_account_name %q: %q and %q", peer.Discovery.EOSIOAccountName, discoURL, peer.DiscoveryURL)
+			return fmt.Errorf("two peers claim the eosio_account_name %q: %q and %q", peer.Discovery.EOSIOAccountName, discoURL, peer.DiscoveryFile)
 		}
 	}
 	return nil
 }
 
-func (c *Network) DownloadDiscoveryURL(discoveryURL string) (out *Discovery, rawDiscovery []byte, err error) {
+func (c *Network) FetchDiscoveryLink(discoveryLink IPNSRef) (out *Discovery, rawDiscovery []byte, err error) {
 	var buf bytes.Buffer
 
-	fsFile := replaceAllWeirdities(discoveryURL)
-	if c.ForceFetch || !c.isInCache(fsFile) {
-		fmt.Println("Discovery: downloading discovery_url", discoveryURL)
-		resp, err := http.Get(discoveryURL)
-		if err != nil {
-			return out, nil, err
-		}
-		defer resp.Body.Close()
-
-		_, err = io.Copy(&buf, resp.Body)
-		if err != nil {
-			return out, nil, err
-		}
-	} else {
-		cnt, err := c.ReadFromCache(fsFile)
-		if err != nil {
-			return out, cnt, err
-		}
-
-		_, _ = buf.Write(cnt)
+	// Resolve recursive the discoveryLink (through /ipns, then /ipfs/Qm.../path to /ipfs/Qmcontent)
+	fmt.Println("Discovery: downloading link", discoveryLink)
+	rawDiscovery, err = c.IPFS.GetIPNS(discoveryLink)
+	if err != nil {
+		return
 	}
-
-	rawDiscovery = buf.Bytes()
 
 	err = yamlUnmarshal(rawDiscovery, &out)
 	return

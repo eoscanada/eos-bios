@@ -84,18 +84,18 @@ launch_data:
   # distributed graph.  `eos-bios` will be able to traverse this graph
   # and create a full portrait of the community, with all information
   # necessary to automate the steps of network boot.
-  peers: []
-  # peers:
-  # - discovery_file: /ipns/Qm................................
-  #   comment: "EOS Antarctica. Met in Berlin, they're really solid."
-  #   weight: 1.0  # from 0.0 to 1.0, floating point number
-  # - discovery_file: /ipns/Qm................................
-  #   weight: 0.8
-  # - discovery_file: /ipns/Qm................................
-  #   weight: 0.2
-  # - discovery_file: /ipns/Qm................................
-  #   comment: "He just learned was 'ls' was.. but he'll ramp up fast, I'm sure"
-  #   weight: 0.0  # Link him on the network, but not vouching for them.
+  #peers:  []
+  peers:
+  - discovery_file: /ipns/QmEOSCANADA.........................
+    comment: "EOS Antarctica. Met in Berlin, they're really solid."
+    weight: 1.0  # from 0.0 to 1.0, floating point number
+  - discovery_file: /ipns/QmEOSLAUTRE..........................
+    weight: 0.8
+  - discovery_file: /ipns/Qm................................
+    weight: 0.2
+  - discovery_file: /ipns/Qm................................
+    comment: "He just learned what 'ls' was.. but he'll ramp up fast, I'm sure"
+    weight: 0.0  # Link him on the network, but not vouching for them.
 
   # Takes into consideration the snapshot, msig, token, system and bios contracts.
   boot_sequence: /ipfs/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH
@@ -122,6 +122,7 @@ launch_data:
     eosio.token:
       abi: /ipfs/QmZpmcrfWAEUU4KG6hRPrBRTJ2X63sTrQsBRogiKZA7aP6
       code: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
+
     # eosio.unregd:
     #   abi: /ipfs/Qm...
     #   code: /ipfs/Qm...

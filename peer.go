@@ -1,12 +1,13 @@
-package discovery
+package bios
 
 import (
 	"fmt"
 )
 
 type Peer struct {
-	DiscoveryURL string
-	Discovery    *Discovery
+	DiscoveryFile IPFSRef
+	DiscoveryLink IPNSRef // for ref
+	Discovery *Discovery
 
 	TotalWeight float64
 
