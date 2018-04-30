@@ -8,7 +8,7 @@ for local development.
 Table of contents:
 
 * `config.yaml` is a **local** configuration file, read by `eos-bios` to know about its environment.
-* `my_discovery_file.yaml` is the file you will publish to a public URL and give that URL to people. It includes the votes (`wingmen`) to other BPs you wish to launch the network with.
+* `my_discovery_file.yaml` is the file you will publish to a public URL and give that URL to people. It includes the votes (`peers`) to other BPs you wish to launch the network with.
 * `publish_discovery_file.sh` is a script you tweak to publish the `my_discovery_file.yaml` to a location of your choice.
 * `hook_*` are the hooks used by `eos-bios` to automate your infrastructure configuration. The sample files start a Docker instance locally.
   * When running `boot`, these are executed in order: `hook_init`, `hook_boot_network`, `hook_publish_kickstart_data` and `hook_done`.

@@ -20,6 +20,7 @@ import (
 
 	bios "github.com/eoscanada/eos-bios"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var verifyFlag bool
@@ -36,7 +37,7 @@ var joinCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		b := bios.NewBIOS(net, biosConfig, nil)
+		b := bios.NewBIOS(net, nil)
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
@@ -51,4 +52,9 @@ func init() {
 	RootCmd.AddCommand(joinCmd)
 
 	joinCmd.Flags().BoolVarP(&verifyFlag, "verify", "v", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
+	joinCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
+
+	for _, flag := range []string{"verify", "api-address"} {
+		viper.BindPFlag(flag, joinCmd.Flags().Lookup(flag))
+	}
 }

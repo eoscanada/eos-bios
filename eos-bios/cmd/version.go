@@ -19,14 +19,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version string
-
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show the program version (hint hint, it's " + version + ")",
+	Short: "Show the program version (hint hint, it's " + Version + ")",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("eos-bios version", version, "- https://github.com/eoscanada/eos-bios")
+		fmt.Println("eos-bios version", Version, "- https://github.com/eoscanada/eos-bios")
 	},
 }
 

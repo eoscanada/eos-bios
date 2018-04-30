@@ -36,7 +36,7 @@ clone 代码, 进入 `sample_config/docker` 文件夹，并执行如下命令：
 
 这个节点提供了一个部署有全部系统合约的全功能的开发环境，其功能和即将于 6 月份上线的主网基本一致。
 
-示例配置只会启动一个节点，不会和其他的 BP 节点组成网络（通过 `wingmen` 参数可以进行配置）。
+示例配置只会启动一个节点，不会和其他的 BP 节点组成网络（通过 `peers` 参数可以进行配置）。
 
 
 启动本地网络
@@ -60,9 +60,9 @@ _Kickstart Data_ 字符串。其他节点在执行 `join` 命令的时候，可�
 加入网络
 ------------------------
 
-To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `wingmen`.
+To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `peers`.
 
-想要加入已有的网络，需要配置 `config.yaml` 和 `discovery` 文件，并将该文件的链接告知其他节点。`discovery` 中需要将其他节点配置在 `wingmen` 参数中。
+想要加入已有的网络，需要配置 `config.yaml` 和 `discovery` 文件，并将该文件的链接告知其他节点。`discovery` 中需要将其他节点配置在 `peers` 参数中。
 
 * [config.yaml 示例配置](sample_config/config.yaml)
 * [discovery 示例配置](https://github.com/eoscanada/network-discovery)

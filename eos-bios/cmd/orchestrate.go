@@ -15,10 +15,12 @@ package cmd
 
 import (
 	"log"
+	"net/url"
 
 	bios "github.com/eoscanada/eos-bios"
 	eos "github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // orchestrateCmd represents the orchestrate command
@@ -32,21 +34,21 @@ var orchestrateCmd = &cobra.Command{
 			log.Fatalln("fetch network:", err)
 		}
 
-		if biosConfig.Peer.APIAddressURL == nil {
-			log.Fatalln("peer.api_address not found")
+		apiAddressURL, err = url.Parse(apiAddress)
+		if err != nil {
+			log.Fatalln("error parsing --api-address:", err)
 		}
 
-		api := eos.New(biosConfig.Peer.APIAddressURL, net.ChainID())
+		api := eos.New(apiAddressURL, net.ChainID())
 		api.SetSigner(eos.NewKeyBag())
 
-		// Start BIOS
-		bios := bios.NewBIOS(net, biosConfig, api)
+		b := bios.NewBIOS(net, api)
 
-		if err := bios.Init(); err != nil {
+		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := bios.StartOrchestrate(); err != nil {
+		if err := b.StartOrchestrate(secretP2PAddress); err != nil {
 			log.Fatalf("error orchestrating: %s", err)
 		}
 
@@ -55,4 +57,11 @@ var orchestrateCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(orchestrateCmd)
+
+	orchestrateCmd.Flags().StringVarP(&secretP2PAddress, "secret-p2p-address", "", "localhost:9876", "Address to publish once boot is complete. In an orchestrated boot, you would want to keep this one secret to avoid being DDoS'd.")
+	orchestrateCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
+
+	for _, flag := range []string{"secret-p2p-address", "api-address"} {
+		viper.BindPFlag(flag, orchestrateCmd.Flags().Lookup(flag))
+	}
 }

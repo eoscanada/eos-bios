@@ -1,7 +1,7 @@
 # Canonical reference for this file: https://github.com/eoscanada/eos-bios/blob/master/sample_config/my_discovery_file.yaml
 
-mainnet: true  # REQUIRED, one or the other, not both.
-# testnet: true
+testnet: true  # REQUIRED, one or the other, not both.
+# mainnet: true
 # Marking mainnet=true means we automatically disabling all the TESTNET features in the boot_sequence
 
 email_support: support@example.com
@@ -79,11 +79,11 @@ launch_data:
   # with, you've discussed and think they are competent to 1) not
   # screw up a launch and, 2) run the network and take good decisions.
   #
-  # By tagging along wingmen, we are effectively creating a
+  # By tagging along peers, we are effectively creating a
   # distributed graph.  `eos-bios` will be able to traverse this graph
   # and create a full portrait of the community, with all information
   # necessary to automate the steps of network boot.
-  wingmen:
+  peers:
   - discovery_url: https://github.com/eosexample1/network-discovery/raw/master/mainnet.yaml
     comment: "I met the guy, really solid..."  # optional field
     weight: 1.0  # from 0.0 to 1.0, floating point number

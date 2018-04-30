@@ -40,16 +40,14 @@ func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*discove
 		names = append(names, peer.AccountName())
 	}
 
-	privKey := ""
-	if b.Config.Peer.BlockSigningPrivateKey != nil {
-		privKey = b.Config.Peer.BlockSigningPrivateKey.String()
-	}
+	// Eventually, we might want to join a network and mesh directly with a few peers.
+	// The hook won't have to change then..
+	peerAddresses := []string{kickstart.BIOSP2PAddress}
 
 	return b.dispatch("join_network", []string{
-		"p2p_address", kickstart.BIOSP2PAddress,
-		"public_key", peerDefs[0].Discovery.EOSIOABPSigningKey.String(),
-		"private_key", privKey,
 		"genesis_json", kickstart.GenesisJSON,
+		"p2p_address_statements", "p2p-peer-address = " + strings.Join(peerAddresses, "\np2p-peer-address = "),
+		"p2p_addresses", strings.Join(peerAddresses, ","),
 		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
 		"producer_names", strings.Join(names, ","),
 	}, nil)

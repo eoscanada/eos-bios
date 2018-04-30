@@ -1,12 +1,15 @@
 #!/bin/bash
 
 # `join_network` hook:
-# $1 = p2p_address
-# $2 = public key for this node (the one you published in your discovery file)
-# $3 = private key for this node (loaded from `block_signing_private_key_path`)
-# $4 = genesis_json
-# $5 = producer-name list (in case you've been cloned), like: "producer-name = hello\nproducer-name = hello.a"
-# $6 = producer-name you should handle, split by comma
+# $1 = genesis_json
+# $2 = p2p_address_statements like "p2p-peer-address = 1.2.3.4\np2p-peer-address=2.3.4.5"
+# $3 = p2p_addresses to connect to, split by comma
+# $4 = producer-name statements, like: "producer-name = hello\nproducer-name = hello.a"
+#      You will have many only when joining a net with less than 21 producers.
+# $5 = producer-name you should handle, split by comma
+
+PUBKEY=EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+PRIVKEY=`cat privkey-GDW5CV.key`
 
 echo "Killing running nodes"
 killall nodeos
@@ -15,14 +18,15 @@ echo "Removing old nodeos data (you might be asked for your sudo password)..."
 sudo rm -rf /tmp/nodeos-data
 
 echo "Writing genesis.json"
-echo $4 > genesis.json
+echo $1 > genesis.json
 
+# Your base_config.ini shouldn't contain any `producer-name` nor `private-key`
+# nor `enable-stale-production` statements.
 echo "Copying base config"
-# Your base_config.ini shouldn't contain any `producer-name` nor `private-key` nor `enable-stale-production` statements.
 cp base_config.ini config.ini
-echo "p2p-peer-address = $1" >> config.ini
-echo "$5" >> config.ini
-echo "private-key = [\"$2\",\"$3\"]" >> config.ini
+echo "$2" >> config.ini
+echo "$4" >> config.ini
+echo "private-key = [\"$PUBKEY\",\"$PRIVKEY\"]" >> config.ini
 
 echo "Running 'nodeos' through Docker."
 docker run -ti --rm --detach --name nodeos-bios \

@@ -1,17 +1,22 @@
 package discovery
 
 type LaunchData struct {
-	Wingmen              []Wingman               `json:"wingmen"`
+	Peers                []PeerLink              `json:"peers"`
 	BootSequence         HashURL                 `json:"boot_sequence"`
 	Snapshot             HashURL                 `json:"snapshot"`
 	SnapshotUnregistered HashURL                 `json:"snapshot_unregistered"`
 	Contracts            map[string]ContractHash `json:"contracts"`
 }
 
-type Wingman struct {
+type PeerLink struct {
 	DiscoveryURL string  `json:"discovery_url"`
 	Comment      string  `json:"comment"`
 	Weight       float64 `json:"weight"` // From 0.0 to 1.0
+}
+
+type ContractHash struct {
+	ABI  HashURL `json:"abi"`
+	Code HashURL `json:"code"`
 }
 
 type HashURL struct {
@@ -25,9 +30,4 @@ type HashURL struct {
 	// produced, who did it, when, based on what revision of which
 	// source code, and whatnot.
 	Comment string `json:"comment"`
-}
-
-type ContractHash struct {
-	ABI  HashURL `json:"abi"`
-	Code HashURL `json:"code"`
 }

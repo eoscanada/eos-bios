@@ -60,7 +60,7 @@ func (o *OperationType) UnmarshalJSON(data []byte) error {
 
 type Operation interface {
 	Actions(b *BIOS) ([]*eos.Action, error)
-	ResetTestnetOptions()
+	ResetTestnetOptions() // TODO: implement the DISABLING of all testnet options when `mainnet` is voted in the `discovery`.
 }
 
 var operationsRegistry = map[string]Operation{

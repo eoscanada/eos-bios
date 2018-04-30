@@ -17,6 +17,8 @@ import (
 type Network struct {
 	ForceFetch bool
 
+	MyPeer *Peer
+
 	cachePath        string
 	seedDiscoveryURL string
 	visitedURLs      map[string]bool
@@ -121,12 +123,12 @@ func (c *Network) FetchOne(discoveryURL string) error {
 		return fmt.Errorf("writing discovery data to %q: %s", fsFile, err)
 	}
 
-	fmt.Printf("Discovery: traversing %d wingmen\n", len(launchData.Wingmen))
-	for _, wingman := range launchData.Wingmen {
-		if wingman.Weight > 1.0 || wingman.Weight < 0.0 {
-			return fmt.Errorf("weight for wingmen should be between 0.0 and 1.0, %f invalid", wingman.Weight)
+	fmt.Printf("Discovery: traversing %d peers\n", len(launchData.Peers))
+	for _, peerLink := range launchData.Peers {
+		if peerLink.Weight > 1.0 || peerLink.Weight < 0.0 {
+			return fmt.Errorf("weight for peers should be between 0.0 and 1.0, %f invalid", peerLink.Weight)
 		}
-		absDiscoURL, err := absoluteURL(discoveryURL, wingman.DiscoveryURL)
+		absDiscoURL, err := absoluteURL(discoveryURL, peerLink.DiscoveryURL)
 		if err != nil {
 			return err
 		}
@@ -219,8 +221,8 @@ func (c *Network) CalculateWeights() error {
 	// build a second map with discoveryURLs alongside account_names...
 	var allPeers []*Peer
 	for _, peer := range c.discoveredPeers {
-		for _, wingman := range peer.Discovery.LaunchData.Wingmen {
-			absDiscoURL, err := absoluteURL(peer.DiscoveryURL, wingman.DiscoveryURL)
+		for _, peerLink := range peer.Discovery.LaunchData.Peers {
+			absDiscoURL, err := absoluteURL(peer.DiscoveryURL, peerLink.DiscoveryURL)
 			if err != nil {
 				return err
 			}
@@ -230,16 +232,16 @@ func (c *Network) CalculateWeights() error {
 				continue
 			}
 
-			wingmanDisco, found := c.discoveredPeers[absDiscoURL]
+			peerLinkDisco, found := c.discoveredPeers[absDiscoURL]
 			if !found {
 				return fmt.Errorf("couldn't find %q in list of peers", absDiscoURL)
 			}
 
 			addWeight := 1.0
-			if wingman.Weight != 0 {
-				addWeight = wingman.Weight
+			if peerLink.Weight != 0 {
+				addWeight = peerLink.Weight
 			}
-			wingmanDisco.TotalWeight += addWeight
+			peerLinkDisco.TotalWeight += addWeight
 		}
 
 		allPeers = append(allPeers, peer)

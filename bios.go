@@ -18,7 +18,6 @@ type BIOS struct {
 	Network *discovery.Network
 
 	LaunchData   *discovery.LaunchData
-	Config       *Config
 	API          *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
@@ -37,10 +36,9 @@ type BIOS struct {
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
-func NewBIOS(network *discovery.Network, config *Config, api *eos.API) *BIOS {
+func NewBIOS(network *discovery.Network, api *eos.API) *BIOS {
 	b := &BIOS{
 		Network: network,
-		Config:  config,
 		API:     api,
 	}
 	return b
@@ -101,7 +99,7 @@ func (b *BIOS) Init() error {
 	return nil
 }
 
-func (b *BIOS) StartOrchestrate() error {
+func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
 	fmt.Println("Starting Orchestraion process", time.Now())
 
 	b.Network.PrintOrderedPeers()
@@ -112,7 +110,7 @@ func (b *BIOS) StartOrchestrate() error {
 
 	switch b.MyRole() {
 	case RoleBootNode:
-		if err := b.RunBootSequence(); err != nil {
+		if err := b.RunBootSequence(secretP2PAddress); err != nil {
 			return fmt.Errorf("orchestrate boot: %s", err)
 		}
 	case RoleABP:
@@ -144,7 +142,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 	return b.DispatchDone()
 }
 
-func (b *BIOS) StartBoot() error {
+func (b *BIOS) StartBoot(secretP2PAddress string) error {
 	fmt.Println("Starting network join process", time.Now())
 
 	b.Network.PrintOrderedPeers()
@@ -153,7 +151,7 @@ func (b *BIOS) StartBoot() error {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
-	if err := b.RunBootSequence(); err != nil {
+	if err := b.RunBootSequence(secretP2PAddress); err != nil {
 		return fmt.Errorf("join network: %s", err)
 	}
 
@@ -187,7 +185,7 @@ func (b *BIOS) PrintOrderedPeers() {
 	fmt.Println("")
 }
 
-func (b *BIOS) RunBootSequence() error {
+func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 	fmt.Println("START BOOT SEQUENCE...")
 
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
@@ -243,7 +241,7 @@ func (b *BIOS) RunBootSequence() error {
 	fmt.Println("Preparing kickstart data")
 
 	kickstartData := &KickstartData{
-		BIOSP2PAddress: b.Config.Peer.SecretP2PAddress,
+		BIOSP2PAddress: secretP2PAddress,
 		PublicKeyUsed:  pubKey,
 		PrivateKeyUsed: privKey,
 		GenesisJSON:    genesisData,
@@ -454,7 +452,7 @@ func (b *BIOS) IsBootNode(account string) bool {
 }
 
 func (b *BIOS) AmIBootNode() bool {
-	return b.IsBootNode(b.Config.Peer.MyAccount)
+	return b.IsBootNode(b.Network.MyPeer.Discovery.EOSIOAccountName)
 }
 
 func (b *BIOS) MyRole() Role {
@@ -476,16 +474,7 @@ func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 }
 
 func (b *BIOS) AmIAppointedBlockProducer() bool {
-	return b.IsAppointedBlockProducer(b.Config.Peer.MyAccount)
-}
-
-func (b *BIOS) MyPeer() (*discovery.Peer, error) {
-	for _, peer := range b.Network.OrderedPeers() {
-		if b.Config.Peer.MyAccount == peer.Discovery.EOSIOAccountName {
-			return peer, nil
-		}
-	}
-	return nil, fmt.Errorf("no peer config found (peer.my_account doesn't match any discovery file's `eosio_account_name`)")
+	return b.IsAppointedBlockProducer(b.Network.MyPeer.Discovery.EOSIOAccountName)
 }
 
 // MyProducerDefs will provide more than one producer def ONLY when
@@ -494,10 +483,7 @@ func (b *BIOS) MyPeer() (*discovery.Peer, error) {
 // account names and have the network function. Your producer will
 // simply produce more blocks, under different names.
 func (b *BIOS) setMyPeers() error {
-	myPeer, err := b.MyPeer()
-	if err != nil {
-		return err
-	}
+	myPeer := b.Network.MyPeer
 
 	out := []*discovery.Peer{myPeer}
 

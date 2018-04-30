@@ -41,7 +41,7 @@ with all system contracts, very similar to what you will get on the
 main network once launched.
 
 The sample configuration sets up a single node, as it doesn't point to
-other block producer candidates (through the `wingmen` property).
+other block producer candidates (through the `peers` property).
 
 
 Boot a network
@@ -69,7 +69,7 @@ URL to your friends.
 Join an existing network
 ------------------------
 
-To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `wingmen`.
+To join a network, tweak your discovery file to point to the network you're trying to join and publish it. Make sure other participants in the network link to your discovery file as their `peers`.
 
 * Read the [annotated sample configuration file](sample_config/config.yaml).
 * Read [sample discovery file here](https://github.com/eoscanada/network-discovery)
@@ -142,3 +142,11 @@ TODO
 * Do we auto-publish the `my_discovery_file.yaml` ? Make it a hook?
 * canonical_url ?
 * convention regarding URLs, which pieces we want to see in there (the name of the organization, `testnet-[network_name])
+
+* Allow ABPs to publish their `secret-p2p-address` (called Meshing
+  data ?) while the BIOS Boot node is doing its job.
+  * The pasted data would simply be added to the list of addresses
+    passed to the `join_network` hook when the BIOS Boot is ready
+    and we receive the Kickstart data.
+  * Both be a base64 encoded JSON, one with `type=kickstart`, the
+    other with `type=meshing` or something.

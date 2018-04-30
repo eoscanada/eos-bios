@@ -1,7 +1,7 @@
 testnet: true
 eosio_account_name: bp2
 launch_data:
-  wingmen:
+  peers:
   - discovery_url: bp3.yaml
     weight: 1.0
 

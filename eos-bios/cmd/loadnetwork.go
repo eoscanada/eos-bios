@@ -8,16 +8,12 @@ import (
 )
 
 func fetchNetwork() (*discovery.Network, error) {
-	cachePath := viper.GetString("network.cache_path")
-	if cachePath == "" {
-		return nil, fmt.Errorf("`network.cache_path` config not specified")
-	}
-
 	seedURL := viper.GetString("network.seed_discovery_url")
-	if cachePath == "" {
+	if seedURL == "" {
 		return nil, fmt.Errorf("`network.seed_discovery_url` config not specified")
 	}
 
+	// TODO: use `myDiscoveryFile` instead of a URL
 	net := discovery.NewNetwork(cachePath, seedURL)
 
 	net.ForceFetch = !useCache

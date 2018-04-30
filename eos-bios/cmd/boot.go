@@ -15,42 +15,45 @@ package cmd
 
 import (
 	"log"
+	"net/url"
 
 	bios "github.com/eoscanada/eos-bios"
 	eos "github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // bootCmd represents the boot command
 var bootCmd = &cobra.Command{
 	Use:   "boot",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Triggers hooks to boot a new network or node",
+	Long: `This will run the "boot_network" hook with data generated locally for a new network.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+The "publish_kickstart_data" will also be run, giving you the opportunity to disseminate what is required for people to join your network.
+
+Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		net, err := fetchNetwork()
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
 
-		if biosConfig.Peer.APIAddressURL == nil {
-			log.Fatalln("peer.api_address not found")
+		apiAddressURL, err = url.Parse(apiAddress)
+		if err != nil {
+			log.Fatalln("error parsing --api-address:", err)
 		}
 
-		api := eos.New(biosConfig.Peer.APIAddressURL, net.ChainID())
+		api := eos.New(apiAddressURL, net.ChainID())
 		api.SetSigner(eos.NewKeyBag())
 
-		b := bios.NewBIOS(net, biosConfig, api)
+		b := bios.NewBIOS(net, api)
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartBoot(); err != nil {
+		if err := b.StartBoot(secretP2PAddress); err != nil {
 			log.Fatalf("error booting network: %s", err)
 		}
 	},
@@ -58,4 +61,11 @@ to quickly create a Cobra application.`,
 
 func init() {
 	RootCmd.AddCommand(bootCmd)
+
+	bootCmd.Flags().StringVarP(&secretP2PAddress, "secret-p2p-address", "", "localhost:9876", "Address to publish once boot is complete. In an orchestrated boot, you would want to keep this one secret to avoid being DDoS'd.")
+	bootCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
+
+	for _, flag := range []string{"secret-p2p-address", "api-address"} {
+		viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag))
+	}
 }
