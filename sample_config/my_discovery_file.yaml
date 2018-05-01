@@ -100,6 +100,11 @@ launch_data:
   # Takes into consideration the snapshot, msig, token, system and bios contracts.
   boot_sequence: /ipfs/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH
 
+  # This one skips the step to set the appointd block producers,
+  #leaving `eosio` to produce all the time.  This is great for local
+  #development.
+  #boot_sequence: /ipfs/QmVoz3u3N6hYTktit2npTMdXkzWey5gknY9MWoeNB8tSrj
+
   # Built by Robert on that infrastructure, in this context, etc...
   snapshot: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
 
