@@ -1,4 +1,4 @@
-# Canonical reference: /ipns/[insert your ipfs IPNS ref]
+# Canonical reference: /ipns/Qm......[insert your ipfs IPNS ref]
 
 testnet: true  # REQUIRED, one or the other, not both.
 # mainnet: true
@@ -84,11 +84,11 @@ launch_data:
   # distributed graph.  `eos-bios` will be able to traverse this graph
   # and create a full portrait of the community, with all information
   # necessary to automate the steps of network boot.
-  # peers:  []
-  peers:
-  - discovery_link: /ipns/QmR9MJrNRWpiY3gsTt3brP5FskvmEkt2DzkXQSGDdMRVzX
-    comment: "EOS Canada joinme network."
-    weight: 1.0  # from 0.0 to 1.0, floating point number
+  peers:  []
+  # peers:
+  # - discovery_link: /ipns/Qm...
+  #   comment: "EOS Antarctica's Igloo testnet"
+  #   weight: 1.0  # from 0.0 to 1.0, floating point number
   # - discovery_link: /ipns/QmEOSLAUTRE..........................
   #   weight: 0.8
   # - discovery_link: /ipns/Qm................................
