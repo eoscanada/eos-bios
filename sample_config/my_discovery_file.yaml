@@ -1,4 +1,4 @@
-# Canonical reference: /ipns/QmbYGxmRcwvxiZDKUPhgMcktAhSaciorRKtAgL6i95mZas
+# Canonical reference: /ipns/[insert your ipfs IPNS ref]
 
 testnet: true  # REQUIRED, one or the other, not both.
 # mainnet: true
