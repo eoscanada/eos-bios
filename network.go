@@ -69,6 +69,10 @@ func (c *Network) TraverseGraph() error {
 
 	c.visitedFiles[ipfsRef] = true
 
+	c.MyPeer = &Peer{
+		Discovery: disco,
+	}
+
 	return c.traversePeer(disco, IPNSRef("local "+c.myDiscoveryFile), ipfsRef)
 }
 

@@ -9,14 +9,4 @@ if [ ! -f ./ipfs ]; then
     exit 1
 fi
 
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-# ./ipfs config swarm.preseed.addres /ip4/1.2.3.4/tcp/4001/
-
 ./ipfs daemon --init

@@ -201,7 +201,7 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
 
-	fmt.Println("Generated ephemeral private keys:", pubKey, privKey)
+	fmt.Printf("Generated ephemeral keys: pub=%s priv=%s..%s\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.EOSAPI.Signer.ImportPrivateKey(privKey); err != nil {
