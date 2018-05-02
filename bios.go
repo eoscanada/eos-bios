@@ -545,12 +545,16 @@ func accountVariation(name string, variation int) string {
 
 func GetMeshList(count, myPos int) map[int]bool {
 	list := map[int]bool{}
-	firstNeighbour := myPos + 2
+	firstNeighbour := myPos + 1
+	if firstNeighbour >= count {
+		firstNeighbour = 1
+	}
+
 	list[firstNeighbour] = true
 
 	for i := 0; i < connectionsRequired(count); i++ {
 		nextNeighbour := int(math.Pow(2.0, float64(i+2))) + myPos
-		if nextNeighbour > count {
+		if nextNeighbour >= count {
 			nextNeighbour = (nextNeighbour) % count
 		}
 		list[nextNeighbour] = true
