@@ -32,20 +32,16 @@ func (b *BIOS) DispatchBootNetwork(genesisJSON, publicKey, privateKey string) er
 	}, nil)
 }
 
-func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*Peer) error {
+func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*Peer, otherPeers []string) error {
 	var names []string
 	for _, peer := range peerDefs {
 		names = append(names, peer.AccountName())
 	}
 
-	// Eventually, we might want to join a network and mesh directly with a few peers.
-	// The hook won't have to change then..
-	peerAddresses := []string{kickstart.BIOSP2PAddress}
-
 	return b.dispatch("join_network", []string{
 		"genesis_json", kickstart.GenesisJSON,
-		"p2p_address_statements", "p2p-peer-address = " + strings.Join(peerAddresses, "\np2p-peer-address = "),
-		"p2p_addresses", strings.Join(peerAddresses, ","),
+		"p2p_address_statements", "p2p-peer-address = " + strings.Join(otherPeers, "\np2p-peer-address = "),
+		"p2p_addresses", strings.Join(otherPeers, ","),
 		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
 		"producer_names", strings.Join(names, ","),
 	}, nil)

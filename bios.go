@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -271,9 +272,30 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 			return err
 		}
 		b.KickstartData = &kickstart
+
+	}
+	//get peers to connect to
+	otherPeers := []string{}
+	if len(b.MyPeers) > 0 {
+		myFirstPeer := b.MyPeers[0]
+		myPosition := -1
+		peerIDs := map[int]bool{}
+		for idx, peer := range b.ShuffledProducers {
+			if myFirstPeer.AccountName() == peer.AccountName() {
+				myPosition = idx
+			}
+		}
+		if myPosition != -1 {
+			peerIDs = GetMeshList(len(b.ShuffledProducers), myPosition)
+			for idx, peer := range b.ShuffledProducers {
+				if peerIDs[idx] {
+					otherPeers = append(otherPeers, peer.AccountName())
+				}
+			}
+		}
 	}
 
-	if err := b.DispatchJoinNetwork(b.KickstartData, b.MyPeers); err != nil {
+	if err := b.DispatchJoinNetwork(b.KickstartData, b.MyPeers, otherPeers); err != nil {
 		return err
 	}
 
@@ -519,4 +541,31 @@ func accountVariation(name string, variation int) string {
 		name = name[:10]
 	}
 	return name + "." + string([]byte{'a' + byte(variation-1)})
+}
+
+func GetMeshList(count, myPos int) map[int]bool {
+	list := map[int]bool{}
+	firstNeighbour := myPos + 2
+	list[firstNeighbour] = true
+
+	for i := 0; i < connectionsRequired(count); i++ {
+		nextNeighbour := int(math.Pow(2.0, float64(i+2))) + myPos
+		if nextNeighbour > count {
+			nextNeighbour = (nextNeighbour) % count
+		}
+		list[nextNeighbour] = true
+	}
+	return list
+}
+
+func connectionsRequired(numberOfNodes int) int {
+	return int(math.Ceil(math.Sqrt(float64(numberOfNodes))))
+}
+
+func makeRange(min, max int) []int {
+	a := make([]int, max-min+1)
+	for i := range a {
+		a[i] = min + i
+	}
+	return a
 }
