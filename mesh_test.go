@@ -28,7 +28,7 @@ func TestGetMeshList(t *testing.T) {
 	out := ""
 
 	for idx := range ints {
-		list := getMeshList(len(ints), idx)
+		list := getPeerIndexesToMeshWith(len(ints), idx)
 
 		head += fmt.Sprintf("%03d|", idx)
 		res := ""
@@ -60,7 +60,7 @@ func TestGetMeshListToJson(t *testing.T) {
 		allNodes := []*node{}
 
 		for idx := range ints {
-			list := getMeshList(len(ints), idx)
+			list := getPeerIndexesToMeshWith(len(ints), idx)
 			peers := []string{}
 			for index := range list {
 				peers = append(peers, fmt.Sprintf("%d", index))
