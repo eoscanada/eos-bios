@@ -51,6 +51,27 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
 
+
+var queryString = window.location.search.substring(1);
+
+var parseQueryString = function( queryString ) {
+    var params = {}, queries, temp, i, l;
+    // Split into key/value pairs
+    queries = queryString.split("&");
+    // Convert the array of strings into an object
+    for ( i = 0, l = queries.length; i < l; i++ ) {
+        temp = queries[i].split('=');
+        params[temp[0]] = temp[1];
+    }
+    return params;
+};
+
+var params = parseQueryString(queryString);
+var count = 3;
+if (params.count) {
+  count = params.count;
+}
+
 var diameter = 960,
     radius = diameter / 2,
     innerRadius = radius - 120;
@@ -72,7 +93,7 @@ var svg = d3.select("body").append("svg")
 var link = svg.append("g").selectAll(".link"),
     node = svg.append("g").selectAll(".node");
 
-d3.json("flare.json", function(error, classes) {
+d3.json("flare_"+count+".json", function(error, classes) {
   if (error) throw error;
 
   var root = packageHierarchy(classes)
@@ -98,6 +119,10 @@ d3.json("flare.json", function(error, classes) {
       .on("mouseover", mouseovered)
       .on("mouseout", mouseouted);
 });
+
+
+
+
 
 function mouseovered(d) {
   node

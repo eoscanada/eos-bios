@@ -286,7 +286,7 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 			}
 		}
 		if myPosition != -1 {
-			peerIDs = GetMeshList(len(b.ShuffledProducers), myPosition)
+			peerIDs = getMeshList(len(b.ShuffledProducers), myPosition)
 			for idx, peer := range b.ShuffledProducers {
 				if peerIDs[idx] {
 					otherPeers = append(otherPeers, peer.AccountName())
@@ -543,12 +543,9 @@ func accountVariation(name string, variation int) string {
 	return name + "." + string([]byte{'a' + byte(variation-1)})
 }
 
-func GetMeshList(count, myPos int) map[int]bool {
+func getMeshList(count, myPos int) map[int]bool {
 	list := map[int]bool{}
-	firstNeighbour := myPos + 1
-	if firstNeighbour >= count {
-		firstNeighbour = 1
-	}
+	firstNeighbour := (myPos + 1) % count
 
 	list[firstNeighbour] = true
 
@@ -564,12 +561,4 @@ func GetMeshList(count, myPos int) map[int]bool {
 
 func connectionsRequired(numberOfNodes int) int {
 	return int(math.Ceil(math.Sqrt(float64(numberOfNodes))))
-}
-
-func makeRange(min, max int) []int {
-	a := make([]int, max-min+1)
-	for i := range a {
-		a[i] = min + i
-	}
-	return a
 }
