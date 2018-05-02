@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/crc64"
+	"math"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -26,6 +29,7 @@ type BIOS struct {
 	// ShuffledProducers is an ordered list of producers according to
 	// the shuffled peers.
 	ShuffledProducers []*Peer
+	RandSource        rand.Source
 
 	// MyPeers represent the peers my local node will handle. It is
 	// plural because when launching a 3-node network, your peer will
@@ -89,7 +93,7 @@ func (b *BIOS) Init() error {
 		b.Snapshot = snapshotData
 	}
 
-	if err := b.shuffleProducers(); err != nil {
+	if err := b.setProducers(); err != nil {
 		return err
 	}
 
@@ -103,9 +107,24 @@ func (b *BIOS) Init() error {
 func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
 	fmt.Println("Starting Orchestraion process", time.Now())
 
+	fmt.Println("Showing pre-randomized network discovered:")
 	b.Network.PrintOrderedPeers()
 
-	if err := b.DispatchInit(); err != nil {
+	b.RandSource = b.waitBitcoinBlock()
+
+	// Once we have it, we can discover the net again (unless it's been discovered VERY recently)
+	// and we b.Init() again.. so load the latest version of the LaunchData according to this
+	// potentially new discovery network.
+	fmt.Println("Bitcoin block used to seed randomization, updating graph one last time...")
+
+	if err := b.Network.UpdateGraph(); err != nil {
+		return fmt.Errorf("orchestrate: update graph: %s", err)
+	}
+
+	fmt.Println("Network used for launch:")
+	b.Network.PrintOrderedPeers()
+
+	if err := b.DispatchInit("orchestrate"); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
@@ -132,7 +151,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 
 	b.Network.PrintOrderedPeers()
 
-	if err := b.DispatchInit(); err != nil {
+	if err := b.DispatchInit("join"); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
@@ -148,7 +167,7 @@ func (b *BIOS) StartBoot(secretP2PAddress string) error {
 
 	b.Network.PrintOrderedPeers()
 
-	if err := b.DispatchInit(); err != nil {
+	if err := b.DispatchInit("boot"); err != nil {
 		return fmt.Errorf("failed init hook: %s", err)
 	}
 
@@ -331,6 +350,30 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	return nil
 }
 
+func (b *BIOS) waitBitcoinBlock() rand.Source {
+	for {
+		hash, err := PollBitcoinClock(b.LaunchData.LaunchBitcoinBlock)
+		if err != nil {
+			fmt.Println("couldn't fetch bitcoin block:", err)
+		} else {
+
+			if hash == "" {
+				fmt.Println("block", b.LaunchData.LaunchBitcoinBlock, "not produced yet..")
+			} else {
+				bytes, err := hex.DecodeString(hash)
+				if err != nil {
+					fmt.Printf("bitcoin service returned invalid hex %q\n", hash)
+				} else {
+					chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
+					return rand.NewSource(int64(chksum))
+				}
+			}
+		}
+
+		time.Sleep(2 * time.Second)
+	}
+}
+
 func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
 	fmt.Println("")
 	fmt.Println("The BIOS node will publish the Kickstart Data through their social media.")
@@ -418,10 +461,13 @@ func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	return string(cnt)
 }
 
-func (b *BIOS) shuffleProducers() error {
-	fmt.Println("Shuffling producers listed in the launch file [NOT IMPLEMENTED]")
+func (b *BIOS) setProducers() error {
 
 	b.ShuffledProducers = b.Network.OrderedPeers()
+
+	if b.RandSource != nil {
+		b.shuffleProducers()
+	}
 
 	// We'll multiply the other producers as to have a full schedule
 	if len(b.ShuffledProducers) > 1 {
@@ -446,6 +492,28 @@ func (b *BIOS) shuffleProducers() error {
 	}
 
 	return nil
+}
+
+func (b *BIOS) shuffleProducers() {
+	fmt.Println("Shuffling producers listed in the launch file")
+	r := rand.New(b.RandSource)
+	// shuffle top 25%, capped to 5
+	shuffleHowMany := int64(math.Min(math.Ceil(float64(len(b.ShuffledProducers))*0.25), 5))
+	if shuffleHowMany > 1 {
+		fmt.Println("- Shuffling top", shuffleHowMany)
+		for round := 0; round < 100; round++ {
+			from := r.Int63() % shuffleHowMany
+			to := r.Int63() % shuffleHowMany
+			if from == to {
+				continue
+			}
+
+			//fmt.Println("Swapping from", from, "to", to)
+			b.ShuffledProducers[from], b.ShuffledProducers[to] = b.ShuffledProducers[to], b.ShuffledProducers[from]
+		}
+	} else {
+		fmt.Println("- No shuffling, network too small")
+	}
 }
 
 func (b *BIOS) IsBootNode(account string) bool {

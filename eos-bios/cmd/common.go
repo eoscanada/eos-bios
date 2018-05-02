@@ -13,16 +13,8 @@ func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
 
 	net.ForceFetch = !noDiscovery
 
-	if err := net.TraverseGraph(); err != nil {
-		return nil, fmt.Errorf("fetch-all error: %s", err)
-	}
-
-	if err := net.VerifyGraph(); err != nil {
-		return nil, fmt.Errorf("graph inconsistent: %s", err)
-	}
-
-	if err := net.CalculateWeights(); err != nil {
-		return nil, fmt.Errorf("error calculating weights: %s", err)
+	if err := net.UpdateGraph(); err != nil {
+		return nil, fmt.Errorf("updating graph: %s", err)
 	}
 
 	return net, nil

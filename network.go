@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	multihash "github.com/multiformats/go-multihash"
 )
@@ -27,6 +28,8 @@ type Network struct {
 	visitedFiles    map[IPFSRef]bool
 	discoveredPeers map[IPFSRef]*Peer
 	orderedPeers    []*Peer
+
+	lastFetch time.Time
 }
 
 func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS) *Network {
@@ -41,7 +44,27 @@ func (c *Network) ensureExists() error {
 	return os.MkdirAll(c.cachePath, 0777)
 }
 
-func (c *Network) TraverseGraph() error {
+func (net *Network) UpdateGraph() error {
+	if time.Now().Before(net.lastFetch.Add(2 * time.Minute)) {
+		return nil
+	}
+
+	if err := net.traverseGraph(); err != nil {
+		return fmt.Errorf("traversing graph: %s", err)
+	}
+
+	if err := net.verifyGraph(); err != nil {
+		return fmt.Errorf("verifying graph: %s", err)
+	}
+
+	if err := net.calculateWeights(); err != nil {
+		return fmt.Errorf("calculating weights: %s", err)
+	}
+
+	return nil
+}
+
+func (c *Network) traverseGraph() error {
 	c.visitedFiles = map[IPFSRef]bool{}
 	c.discoveredPeers = map[IPFSRef]*Peer{}
 
@@ -227,7 +250,7 @@ func (c *Network) ChainID() []byte {
 	return make([]byte, 32, 32)
 }
 
-func (c *Network) CalculateWeights() error {
+func (c *Network) calculateWeights() error {
 	// build a second map with discoveryURLs alongside account_names...
 	var allPeers []*Peer
 	for _, peer := range c.discoveredPeers {
@@ -275,7 +298,7 @@ func (c *Network) OrderedPeers() []*Peer {
 	return c.orderedPeers
 }
 
-func (c *Network) VerifyGraph() error {
+func (c *Network) verifyGraph() error {
 	// Make sure we don't have 2 entities named the same on chain.. EOSIOACcountName being equal.
 	seen := map[string]string{}
 	for _, peer := range c.discoveredPeers {

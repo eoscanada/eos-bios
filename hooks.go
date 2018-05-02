@@ -7,28 +7,17 @@ import (
 	"strings"
 )
 
-var ConfiguredHooks = []HookDef{
-	HookDef{"init", "Dispatch when we start the program."},
-	HookDef{"boot_network", "Dispatched when we are BIOS Node, and our keys and node config is ready. Should trigger a config update and a restart."},
-	HookDef{"publish_kickstart_data", "Dispatched with the contents of the (usually encrypted) Kickstart data, to be published to your social / web properties."},
-	HookDef{"join_network", "Dispatched anyone joining the network. Could be as an Appointed Block Producer, or simply someone wanting to join the network after boot. It provides at least one p2p_address to connect to."},
-	HookDef{"done", "When your process it done"},
-}
-
-type HookDef struct {
-	Key  string
-	Desc string
-}
-
-func (b *BIOS) DispatchInit() error {
-	return b.dispatch("init", []string{}, nil)
+func (b *BIOS) DispatchInit(operation string) error {
+	return b.dispatch("init", []string{
+		operation,
+	}, nil)
 }
 
 func (b *BIOS) DispatchBootNetwork(genesisJSON, publicKey, privateKey string) error {
 	return b.dispatch("boot_network", []string{
-		"genesis_json", genesisJSON,
-		"public_key", publicKey,
-		"private_key", privateKey,
+		genesisJSON,
+		publicKey,
+		privateKey,
 	}, nil)
 }
 
@@ -43,17 +32,17 @@ func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*Peer) e
 	peerAddresses := []string{kickstart.BIOSP2PAddress}
 
 	return b.dispatch("join_network", []string{
-		"genesis_json", kickstart.GenesisJSON,
-		"p2p_address_statements", "p2p-peer-address = " + strings.Join(peerAddresses, "\np2p-peer-address = "),
-		"p2p_addresses", strings.Join(peerAddresses, ","),
-		"producer_name_statements", "producer-name = " + strings.Join(names, "\nproducer-name = "),
-		"producer_names", strings.Join(names, ","),
+		kickstart.GenesisJSON,
+		"p2p-peer-address = " + strings.Join(peerAddresses, "\np2p-peer-address = "),
+		strings.Join(peerAddresses, ","),
+		"producer-name = " + strings.Join(names, "\nproducer-name = "),
+		strings.Join(names, ","),
 	}, nil)
 }
 
 func (b *BIOS) DispatchPublishKickstartData(kickstartData string) error {
 	return b.dispatch("publish_kickstart_data", []string{
-		"data", kickstartData,
+		kickstartData,
 	}, nil)
 }
 
@@ -62,12 +51,8 @@ func (b *BIOS) DispatchDone() error {
 }
 
 // dispatch to both exec calls, and remote web hooks.
-func (b *BIOS) dispatch(hookName string, data []string, f func() error) error {
+func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
 	fmt.Printf("---- BEGIN HOOK %q ----\n", hookName)
-
-	if len(data)%2 != 0 {
-		return fmt.Errorf("data should be pairs of key and values, cannot have %d elements", len(data))
-	}
 
 	// check if `hook_[hookName]` exists or `hook_[hookName].sh` exists, and use that as a command,
 	// otherwise, print that the hook is not present.
@@ -85,12 +70,6 @@ func (b *BIOS) dispatch(hookName string, data []string, f func() error) error {
 	if executable == "" {
 		fmt.Printf("  - Hook not found (searched %q)\n", filePaths)
 		return nil
-	}
-
-	args := []string{}
-	for i := 0; i < len(data); i += 2 {
-		v := data[i+1]
-		args = append(args, v)
 	}
 
 	cmd := exec.Command(executable, args...)

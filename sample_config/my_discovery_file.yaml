@@ -1,8 +1,5 @@
 # Canonical reference: /ipns/Qm......[insert your ipfs IPNS ref]
-
-testnet: true  # REQUIRED, one or the other, not both.
-# mainnet: true
-# Marking mainnet=true means we automatically disabling all the TESTNET features in the boot_sequence
+# Provide your canonical reference to other BPs
 
 email_support: support@example.com
 email_abuse: abuse@example.com
@@ -21,13 +18,35 @@ social_keybase: https://keybase.io/exampleuser  # Potentially used for cryptogra
                                                 # operations. Please provide this one
                                                 # if using `eos-bios`
 
-eosio_account_name: example  # The account you go by on the network
+website: "https://example.com"  # Your main website
 
-eosio_p2p: peering.example.com:9876  # This could be hidden until
-                                     # after launch.  You will have it
-                                     # in your local configuration.
+introduction_post_url: "https://steemit.com/something/"  # Like your BP candidacy proposal.
+
+organization_name: EOS Example  # Used in different interface to say who you are.
+
+organization_tagline: The example in the EOS space  # For websites that feed from these files.
+
+logo_url_1024: "https://example.com/logo_1024x1024.jpg"
+logo_url_256: "https://example.com/logo_256x256.png"
+
+timezone: Africa/Abidjan  # From https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones, only non-deprecated ones.
+
+latitude: 27.98785      # For websites displaying maps
+longitude: 86.9250261
+
+##################### REQUIRED SECTION FOR LAUNCH #####################
+
+testnet: true  # REQUIRED, one or the other, not both.
+# mainnet: true
+# Marking mainnet=true means we automatically disabling all the TESTNET features in the boot_sequence
+
+eosio_account_name: example  # The account you go by on the network
 eosio_http: http://http.example.com:8888
 eosio_https: https://http.example.com
+eosio_p2p: peering.example.com:9876  # This is required, public and
+                                     # will be used by the discovered
+                                     # network to mesh together before
+                                     # receiving the first blocks.
 eosio_initial_authority:  # To be injected in a newly created network where you participate.
   owner:
     threshold: 1
@@ -52,30 +71,19 @@ eosio_initial_authority:  # To be injected in a newly created network where you 
 # in the launch)
 eosio_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
-website: "https://example.com"  # Your main website
-
-introduction_post_url: "https://steemit.com/something/"  # Like your BP candidacy proposal.
-
-organization_name: EOS Example  # Used in different interface to say who you are.
-
-organization_tagline: The example in the EOS space  # For websites that feed from these files.
-
-logo_url_1024: "https://example.com/logo_1024x1024.jpg"
-logo_url_256: "https://example.com/logo_256x256.png"
-
-timezone: Africa/Abidjan  # From https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones, only non-deprecated ones.
-
-latitude: 27.98785      # For websites displaying maps
-longitude: 86.9250261
-
-# This section is required for an `eos-bios` launch.  It can be
-# omitted by nodes that do not participate in the launch, but still
-# want to have their BP be discoverable.
+# This section is required for an `eos-bios` launch.
 launch_data:
+  # --- WHEN ---
+  # The bitcoin block is the seed data we're waiting to launch the
+  # `orchestrate` step.  When you start `eos-bios orchestrate`, it
+  # first fetches the Bitcoin block's merkle root, and uses it for
+  # randomly selected the BIOS Boot node.
+  launch_bitcoin_block: 520781  # Past block, for testing
+  #launch_bitcoin_block: 525273  # Approx June 2st 2018, 0100 UTC, 2 hours after snapshot freeze
 
-  # IMPORTANT:
+  # --- WITH WHO ---
   #
-  # other BPs' discovery_link, with whom you're comfortable launching
+  # Other BPs' discovery_link, with whom you're comfortable launching
   # the network with, you've discussed and think they are competent to
   # 1) not screw up a launch and, 2) run the network and take good
   # decisions.
@@ -84,7 +92,7 @@ launch_data:
   # distributed graph.  `eos-bios` will be able to traverse this graph
   # and create a full portrait of the community, with all information
   # necessary to automate the steps of network boot.
-  peers:  []
+  peers: []
   # peers:
   # - discovery_link: /ipns/Qm...
   #   comment: "EOS Antarctica's Igloo testnet"
@@ -96,6 +104,8 @@ launch_data:
   # - discovery_link: /ipns/Qm................................
   #   comment: "He just learned what 'ls' was.. but he'll ramp up fast, I'm sure"
   #   weight: 0.0  # Link him on the network, but not vouching for them.
+
+  # --- WHAT ---
 
   # Takes into consideration the snapshot, msig, token, system and bios contracts.
   boot_sequence: /ipfs/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH

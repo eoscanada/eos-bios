@@ -18,6 +18,9 @@ type Discovery struct {
 	Mainnet bool `json:"mainnet"`
 
 	EOSIOAccountName      string        `json:"eosio_account_name"`
+	EOSIOP2P              string        `json:"eosio_p2p"`
+	EOSIOHTTP             string        `json:"eosio_http"`
+	EOSIOHTTPS            string        `json:"eosio_https"`
 	EOSIOABPSigningKey    ecc.PublicKey `json:"eosio_appointed_block_producer_signing_key"`
 	EOSIOInitialAuthority struct {
 		Owner    eos.Authority `json:"owner"`

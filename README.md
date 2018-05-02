@@ -136,8 +136,13 @@ TODO
 ----
 
 * Shuffling of the top 5 for Boot selection
-* Wait on Bitcoin Block
-  * Add bitcoin_block_height in LaunchData
+* Upon `orchestrate`, wait on Bitcoin Block
+  * TODO: Add bitcoin_block_height in LaunchData
+  * Sync on most popular Bitcoin block.
+  * Mark in discovery file that "eosio_p2p_address", make it REQUIRED.
+  * WAIT for the BTC block, then REDISCOVER the network (everyone together, to get a final version, sync'd).
+    * Then GO orchestrate.
+
 * In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
 * Do we auto-publish the `my_discovery_file.yaml` ? Make it a hook?
 * canonical_url ?
@@ -153,6 +158,9 @@ TODO
     * `type=meshing` with the p2p IP/host to connect to
     * `type=handoff` with the private key used to do everything.
 
+* output.log -> output EVERYTHING to a file, hook a Tee on `os.Stderr`
+  and `os.Stdout`.
+
 * No publishing of `secret-p2p-address`, only a remote control of
   `/v1/net/connect` to some ABPs who have published and established
   the network.
@@ -162,3 +170,4 @@ TODO
   * hook_boot_publish_privkey.sh
 
   * hook_join_network.sh  # add connect_count
+  * hook_done.sh [role]
