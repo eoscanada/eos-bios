@@ -143,7 +143,7 @@ func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
 		}
 	}
 
-	return b.DispatchDone()
+	return b.DispatchDone("orchestrate")
 }
 
 func (b *BIOS) StartJoin(verify bool) error {
@@ -159,7 +159,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 		return fmt.Errorf("boot network: %s", err)
 	}
 
-	return b.DispatchDone()
+	return b.DispatchDone("join")
 }
 
 func (b *BIOS) StartBoot(secretP2PAddress string) error {
@@ -175,7 +175,7 @@ func (b *BIOS) StartBoot(secretP2PAddress string) error {
 		return fmt.Errorf("join network: %s", err)
 	}
 
-	return b.DispatchDone()
+	return b.DispatchDone("boot")
 }
 
 func (b *BIOS) PrintOrderedPeers() {

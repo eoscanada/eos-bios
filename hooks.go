@@ -9,7 +9,7 @@ import (
 
 func (b *BIOS) DispatchInit(operation string) error {
 	return b.dispatch("init", []string{
-		operation,
+		operation, // "join", "orchestrate", "boot"
 	}, nil)
 }
 
@@ -42,8 +42,10 @@ func (b *BIOS) DispatchPublishKickstartData(kickstartData string) error {
 	}, nil)
 }
 
-func (b *BIOS) DispatchDone() error {
-	return b.dispatch("done", []string{}, nil)
+func (b *BIOS) DispatchDone(operation string) error {
+	return b.dispatch("done", []string{
+		operation, // "join", "orchestrate", "boot"
+	}, nil)
 }
 
 // dispatch to both exec calls, and remote web hooks.

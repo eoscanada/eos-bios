@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # `done` hook
-# no parameters
+# $1 = operation ("join", "boot" or "orchestrate")
 
-echo "All done, anything else you want to do ? Call regproducer somehow?"
+echo "All done, anything else you want to do ? Call regproducer?"
 echo ""
 echo "Don't forget to view your logs with:"
 echo "   docker logs -f nodeos-bios"
