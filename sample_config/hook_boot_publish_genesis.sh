@@ -17,4 +17,5 @@ echo ""
 # and publish the resulting URL
 #
 
+echo "Hit ENTER when done (or skip if launching a local node only)"
 read
