@@ -261,6 +261,11 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 		}
 	}
 
+	otherPeers := b.someTopmostPeersAddresses()
+	if err = b.DispatchBootConnectMesh(otherPeers); err != nil {
+		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
+	}
+
 	if err = b.DispatchBootPublishHandoff(); err != nil {
 		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
 	}
@@ -447,6 +452,8 @@ func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
 
 			privKey = string(cnt)
 		}
+
+		privKey = strings.TrimSpace(privKey)
 
 		key, err := ecc.NewPrivateKey(privKey)
 		if err != nil {

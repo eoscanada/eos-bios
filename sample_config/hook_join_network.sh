@@ -29,7 +29,7 @@ echo "$4" >> config.ini
 echo "private-key = [\"$PUBKEY\",\"$PRIVKEY\"]" >> config.ini
 
 echo "Running 'nodeos' through Docker."
-docker run -ti --rm --detach --name nodeos-bios \
+docker run -ti --detach --name nodeos-bios \
        -v `pwd`:/etc/nodeos -v /tmp/nodeos-data:/data \
        -p 8888:8888 -p 9876:9876 \
        eosio/eos:dawn3x \
