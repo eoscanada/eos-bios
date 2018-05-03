@@ -28,6 +28,11 @@ func ScanLinesUntilBlank() (out string, err error) {
 	}
 }
 
+func ScanSingleLine() (out string, err error) {
+	reader := bufio.NewReader(os.Stdin)
+	return reader.ReadString('\n')
+}
+
 // AN is a shortcut to create an AccountName
 var AN = eos.AN
 

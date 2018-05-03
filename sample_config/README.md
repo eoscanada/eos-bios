@@ -18,7 +18,7 @@ Table of contents:
   instance locally.
 
   * When running `boot`, these are executed in order: `hook_init`,
-    `hook_boot_network`, `hook_publish_kickstart_data` and
+    `hook_boot_node`, `hook_boot_publish_genesis` and TODO ADD OTHERS HERE
     `hook_done`.
 
   * When running `join`, these are executed in order: `hook_init`,

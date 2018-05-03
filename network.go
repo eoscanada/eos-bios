@@ -21,7 +21,7 @@ type Network struct {
 
 	MyPeer *Peer
 
-	ipfs *IPFS
+	IPFS *IPFS
 
 	cachePath       string
 	myDiscoveryFile string
@@ -34,7 +34,7 @@ type Network struct {
 
 func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS) *Network {
 	return &Network{
-		ipfs:            ipfs,
+		IPFS:            ipfs,
 		cachePath:       cachePath,
 		myDiscoveryFile: myDiscoveryFile,
 	}
@@ -189,7 +189,7 @@ func (c *Network) DownloadIPFSRef(ref IPFSRef) error {
 		return nil
 	}
 
-	cnt, err := c.ipfs.Get(ref)
+	cnt, err := c.IPFS.Get(ref)
 	if err != nil {
 		return err
 	}
@@ -312,7 +312,7 @@ func (c *Network) verifyGraph() error {
 func (c *Network) FetchDiscoveryLink(discoveryLink IPNSRef) (out *Discovery, rawDiscovery []byte, err error) {
 	// Resolve recursive the discoveryLink (through /ipns, then /ipfs/Qm.../path to /ipfs/Qmcontent)
 	fmt.Println("Discovery: downloading link", discoveryLink)
-	rawDiscovery, err = c.ipfs.GetIPNS(discoveryLink)
+	rawDiscovery, err = c.IPFS.GetIPNS(discoveryLink)
 	if err != nil {
 		return
 	}

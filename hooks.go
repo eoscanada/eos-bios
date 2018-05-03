@@ -1,6 +1,8 @@
 package bios
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,22 +15,43 @@ func (b *BIOS) DispatchInit(operation string) error {
 	}, nil)
 }
 
-func (b *BIOS) DispatchBootNetwork(genesisJSON, publicKey, privateKey string) error {
-	return b.dispatch("boot_network", []string{
+func (b *BIOS) DispatchBootPublishGenesis(genesisJSON string) error {
+	encodedGenesis := base64.RawStdEncoding.EncodeToString([]byte(genesisJSON))
+
+	return b.dispatch("boot_publish_genesis", []string{
+		encodedGenesis,
+		genesisJSON,
+	}, nil)
+}
+
+func (b *BIOS) DispatchBootNode(genesisJSON, publicKey, privateKey string) error {
+	return b.dispatch("boot_node", []string{
 		genesisJSON,
 		publicKey,
 		privateKey,
 	}, nil)
 }
 
-func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*Peer, otherPeers []string) error {
+func (b *BIOS) DispatchBootConnectMesh(otherPeers []string) error {
+	return b.dispatch("boot_connect_mesh", []string{
+		"p2p-peer-address = " + strings.Join(otherPeers, "\np2p-peer-address = "),
+		strings.Join(otherPeers, ","),
+	}, nil)
+}
+
+func (b *BIOS) DispatchJoinNetwork(genesis *GenesisJSON, peerDefs []*Peer, otherPeers []string) error {
 	var names []string
 	for _, peer := range peerDefs {
 		names = append(names, peer.AccountName())
 	}
 
+	cnt, err := json.Marshal(genesis)
+	if err != nil {
+		return err
+	}
+
 	return b.dispatch("join_network", []string{
-		kickstart.GenesisJSON,
+		string(cnt),
 		"p2p-peer-address = " + strings.Join(otherPeers, "\np2p-peer-address = "),
 		strings.Join(otherPeers, ","),
 		"producer-name = " + strings.Join(names, "\nproducer-name = "),
@@ -36,9 +59,10 @@ func (b *BIOS) DispatchJoinNetwork(kickstart *KickstartData, peerDefs []*Peer, o
 	}, nil)
 }
 
-func (b *BIOS) DispatchPublishKickstartData(kickstartData string) error {
-	return b.dispatch("publish_kickstart_data", []string{
-		kickstartData,
+func (b *BIOS) DispatchBootPublishHandoff() error {
+	return b.dispatch("boot_publish_handoff", []string{
+		b.EphemeralPrivateKey.PublicKey().String(),
+		b.EphemeralPrivateKey.String(),
 	}, nil)
 }
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# `boot_network` hook
+# `boot_node` hook
 # $1 genesis JSON
 # $2 ephemeral public key
 # $3 ephemeral private key
@@ -33,5 +33,4 @@ echo ""
 echo "   View logs with: docker logs -f nodeos-bios"
 echo ""
 
-echo "Waiting for nodeos to launch through Docker"
-sleep 3
+echo "Waiting 3 secs for nodeos to launch through Docker"

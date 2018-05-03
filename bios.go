@@ -1,7 +1,6 @@
 package bios
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -24,7 +23,7 @@ type BIOS struct {
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
-	KickstartData *KickstartData
+	Genesis *GenesisJSON
 
 	// ShuffledProducers is an ordered list of producers according to
 	// the shuffled peers.
@@ -47,8 +46,8 @@ func NewBIOS(network *Network, api *eos.API) *BIOS {
 	return b
 }
 
-func (b *BIOS) SetKickstartData(ks *KickstartData) {
-	b.KickstartData = ks
+func (b *BIOS) SetGenesis(gen *GenesisJSON) {
+	b.Genesis = gen
 }
 
 func (b *BIOS) Init() error {
@@ -110,12 +109,12 @@ func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
 	fmt.Println("Showing pre-randomized network discovered:")
 	b.Network.PrintOrderedPeers()
 
-	b.RandSource = b.waitBitcoinBlock()
+	b.RandSource = b.waitEthereumBlock()
 
 	// Once we have it, we can discover the net again (unless it's been discovered VERY recently)
 	// and we b.Init() again.. so load the latest version of the LaunchData according to this
 	// potentially new discovery network.
-	fmt.Println("Bitcoin block used to seed randomization, updating graph one last time...")
+	fmt.Println("Ethereum block used to seed randomization, updating graph one last time...")
 
 	if err := b.Network.UpdateGraph(); err != nil {
 		return fmt.Errorf("orchestrate: update graph: %s", err)
@@ -125,7 +124,7 @@ func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
 	b.Network.PrintOrderedPeers()
 
 	if err := b.DispatchInit("orchestrate"); err != nil {
-		return fmt.Errorf("failed init hook: %s", err)
+		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
 	switch b.MyRole() {
@@ -152,7 +151,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 	b.Network.PrintOrderedPeers()
 
 	if err := b.DispatchInit("join"); err != nil {
-		return fmt.Errorf("failed init hook: %s", err)
+		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
 	if err := b.RunJoinNetwork(verify, false); err != nil {
@@ -168,7 +167,7 @@ func (b *BIOS) StartBoot(secretP2PAddress string) error {
 	b.Network.PrintOrderedPeers()
 
 	if err := b.DispatchInit("boot"); err != nil {
-		return fmt.Errorf("failed init hook: %s", err)
+		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
 	if err := b.RunBootSequence(secretP2PAddress); err != nil {
@@ -234,8 +233,12 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	if err = b.DispatchBootNetwork(genesisData, pubKey, privKey); err != nil {
-		return fmt.Errorf("dispatch config_ready hook: %s", err)
+	if err = b.DispatchBootPublishGenesis(genesisData); err != nil {
+		return fmt.Errorf("dispatch boot_publish_genesis hook: %s", err)
+	}
+
+	if err = b.DispatchBootNode(genesisData, pubKey, privKey); err != nil {
+		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
 	fmt.Println(b.EOSAPI.Signer.AvailableKeys())
@@ -258,49 +261,24 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 		}
 	}
 
-	fmt.Println("Preparing kickstart data")
-
-	kickstartData := &KickstartData{
-		BIOSP2PAddress: secretP2PAddress,
-		PublicKeyUsed:  pubKey,
-		PrivateKeyUsed: privKey,
-		GenesisJSON:    genesisData,
-	}
-	kd, _ := json.Marshal(kickstartData)
-	ksdata := base64.RawStdEncoding.EncodeToString(kd)
-
-	// TODO: encrypt it for those who need it
-
-	fmt.Println("PUBLISH THIS KICKSTART DATA:")
-	fmt.Println("")
-	fmt.Println(ksdata)
-	fmt.Println("")
-
-	if err = b.DispatchPublishKickstartData(ksdata); err != nil {
-		return fmt.Errorf("dispatch publish_kickstart_data: %s", err)
+	if err = b.DispatchBootPublishHandoff(); err != nil {
+		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
 	}
 
 	return nil
 }
 
 func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
-	if b.KickstartData == nil {
-		kickstart, err := b.waitOnKickstartData()
-		if err != nil {
-			return err
-		}
-		b.KickstartData = &kickstart
-
+	if b.Genesis == nil {
+		b.Genesis = b.waitOnGenesisData()
 	}
 
 	// Create mesh network
 	otherPeers := b.computeMyMeshP2PAddresses()
 
-	if err := b.DispatchJoinNetwork(b.KickstartData, b.MyPeers, otherPeers); err != nil {
-		return err
+	if err := b.DispatchJoinNetwork(b.Genesis, b.MyPeers, otherPeers); err != nil {
+		return fmt.Errorf("dispatch join_network hook: %s", err)
 	}
-
-	fmt.Println("Not doing any validation, the ABPs have done it")
 
 	if verify {
 		fmt.Println("###############################################################################################")
@@ -342,6 +320,15 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		}
 
 		fmt.Println("Chain sync'd!")
+
+		// IMPLEMENT THE BOOT SEQUENCE VERIFICATION.
+		fmt.Println("")
+		fmt.Println("All good! Chain verificaiton succeeded!")
+		fmt.Println("")
+	} else {
+		fmt.Println("")
+		fmt.Println("Not doing validation, the Appointed Block Producer will have done it.")
+		fmt.Println("")
 	}
 
 	// TODO: loop operations, check all actions against blocks that you can fetch from here.
@@ -350,23 +337,28 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	//  - anything fails, SABOTAGE
 	// Publish a PGP Signed message with your local IP.. push to properties
 	// Dispatch webhook PublishKickstartPublic (with a Kickstart Data object)
+	fmt.Println("Awaiting for private key, for handoff verification.")
+	fmt.Println("* This is the last step, and is done for the BIOS Boot node to prove it kept nothing to itself.")
+	fmt.Println("")
+
+	b.waitOnHandoff(b.Genesis)
 
 	return nil
 }
 
-func (b *BIOS) waitBitcoinBlock() rand.Source {
+func (b *BIOS) waitEthereumBlock() rand.Source {
 	for {
-		hash, err := PollBitcoinClock(b.LaunchData.LaunchBitcoinBlock)
+		hash, err := PollEthereumClock(b.LaunchData.LaunchEthereumBlock)
 		if err != nil {
-			fmt.Println("couldn't fetch bitcoin block:", err)
+			fmt.Println("couldn't fetch ethereum block:", err)
 		} else {
 
 			if hash == "" {
-				fmt.Println("block", b.LaunchData.LaunchBitcoinBlock, "not produced yet..")
+				fmt.Println("block", b.LaunchData.LaunchEthereumBlock, "not produced yet..")
 			} else {
 				bytes, err := hex.DecodeString(hash)
 				if err != nil {
-					fmt.Printf("bitcoin service returned invalid hex %q\n", hash)
+					fmt.Printf("ethereum service returned invalid hex %q\n", hash)
 				} else {
 					chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
 					return rand.NewSource(int64(chksum))
@@ -378,9 +370,9 @@ func (b *BIOS) waitBitcoinBlock() rand.Source {
 	}
 }
 
-func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
+func (b *BIOS) waitOnGenesisData() (genesis *GenesisJSON) {
 	fmt.Println("")
-	fmt.Println("The BIOS node will publish the Kickstart Data through their social media.")
+	fmt.Println("The BIOS node will publish the Genesis data through their social media.")
 	bootNode := b.ShuffledProducers[0]
 	disco := bootNode.Discovery
 	if disco.Website != "" {
@@ -416,39 +408,63 @@ func (b *BIOS) waitOnKickstartData() (kickstart KickstartData, err error) {
 	if disco.SocialGitHub != "" {
 		fmt.Println("  GitHub:", disco.SocialGitHub)
 	}
-	// TODO: print the social media properties of the BP..
-	fmt.Println("Paste it here and finish with two blank lines (ENTER twice):")
 	fmt.Println("")
+	// TODO: print the social media properties of the BP..
+	fmt.Println("Genesis data can be base64-encoded JSON, raw JSON or an `/ipfs/Qm...` link pointing to genesis.json")
 
-	// Wait on stdin for kickstart data (will we have some other polling / subscription mechanisms?)
-	//    Accept any base64, unpadded, multi-line until we receive a blank line, concat and decode.
-	// FIXME: this is a quick hack to just pass the p2p address
-	lines, err := ScanLinesUntilBlank()
-	if err != nil {
-		return
+	for {
+		fmt.Printf("Paste genesis here: ")
+		text, err := ScanSingleLine()
+		if err != nil {
+			fmt.Println("error reading line:", err)
+			continue
+		}
+
+		genesis, err := readGenesisData(text, b.Network.IPFS)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		return genesis
 	}
+}
 
-	rawKickstartData, err := base64.RawStdEncoding.DecodeString(strings.Replace(strings.TrimSpace(lines), "\n", "", -1))
-	if err != nil {
-		return kickstart, fmt.Errorf("kickstart base64 decode: %s", err)
+func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
+	for {
+		fmt.Printf("Please paste the private key (or ipfs link): ")
+		privKey, err := ScanSingleLine()
+		if err != nil {
+			fmt.Println("Error reading line:", err)
+			continue
+		}
+
+		if strings.Contains(privKey, "/ipfs") {
+			cnt, err := b.Network.IPFS.Get(IPFSRef(privKey))
+			if err != nil {
+				fmt.Println("error fetching ipfs content:", err)
+				continue
+			}
+
+			privKey = string(cnt)
+		}
+
+		key, err := ecc.NewPrivateKey(privKey)
+		if err != nil {
+			fmt.Println("Invalid private key pasted:", err)
+			continue
+		}
+
+		if key.PublicKey().String() == genesis.InitialKey {
+			fmt.Println("")
+			fmt.Println("   HANDOFF VERIFIED! EOS CHAIN IS ALIVE !")
+			fmt.Println("")
+			return
+		} else {
+			fmt.Println("")
+			fmt.Println("   WARNING: private key provided does NOT match the genesis data")
+			fmt.Println("")
+		}
 	}
-
-	err = json.Unmarshal(rawKickstartData, &kickstart)
-	if err != nil {
-		return kickstart, fmt.Errorf("unmarshal kickstart data: %s", err)
-	}
-
-	privKey, err := ecc.NewPrivateKey(kickstart.PrivateKeyUsed)
-	if err != nil {
-		return kickstart, fmt.Errorf("unable to load private key %q: %s", kickstart.PrivateKeyUsed, err)
-	}
-
-	b.EphemeralPrivateKey = privKey
-
-	// TODO: check if the privKey corresponds to the public key sent, if not, we should
-	// drop that kickstart data.. and listen to another one..
-
-	return
 }
 
 func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
@@ -458,7 +474,7 @@ func (b *BIOS) GenerateEphemeralPrivKey() (*ecc.PrivateKey, error) {
 func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	// known not to fail
 	cnt, _ := json.Marshal(&GenesisJSON{
-		InitialTimestamp: time.Now().UTC().Format("2006-01-02T15:04:05"), // TODO: becomes the bitcoin block if we use that as a seed for randomization? just the current time/date ?
+		InitialTimestamp: time.Now().UTC().Format("2006-01-02T15:04:05"),
 		InitialKey:       pubKey,
 		InitialChainID:   hex.EncodeToString(b.EOSAPI.ChainID),
 	})

@@ -74,12 +74,12 @@ eosio_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8
 # This section is required for an `eos-bios` launch.
 launch_data:
   # --- WHEN ---
-  # The bitcoin block is the seed data we're waiting to launch the
+  # The Ethereum block is the seed data we're waiting to launch the
   # `orchestrate` step.  When you start `eos-bios orchestrate`, it
-  # first fetches the Bitcoin block's merkle root, and uses it for
+  # first fetches the Ethereum block's hash, and uses it for
   # randomly selected the BIOS Boot node.
-  launch_bitcoin_block: 520781  # Past block, for testing
-  #launch_bitcoin_block: 525273  # Approx June 2st 2018, 0100 UTC, 2 hours after snapshot freeze
+  launch_ethereum_block: 5544732  # Past block, for testing
+  #launch_ethereum_block: 5716358  # Approx June 2st 2018, 0100 UTC, 2 hours after snapshot freeze
 
   # --- WITH WHO ---
   #

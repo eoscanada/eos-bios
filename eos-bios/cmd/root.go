@@ -63,7 +63,7 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVarP(&cachePath, "cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
 
-	for _, flag := range []string{"no-discovery", "cache-path", "my-discovery", "ipfs-api-address", "ipfs-gateway-address"} {
+	for _, flag := range []string{"no-discovery", "cache-path", "my-discovery", "ipfs-local-gateway-address", "ipfs-gateway-address"} {
 		viper.BindPFlag(flag, RootCmd.Flags().Lookup(flag))
 	}
 }

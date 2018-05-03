@@ -41,5 +41,5 @@ echo ""
 echo "   View logs with: docker logs -f nodeos-bios"
 echo ""
 
-echo "Waiting for nodeos to launch through Docker"
+echo "Waiting 3 secs for nodeos to launch through Docker"
 sleep 3

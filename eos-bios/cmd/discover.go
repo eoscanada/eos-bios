@@ -27,7 +27,7 @@ var discoverCmd = &cobra.Command{
 	Short: "Discover and update info about all peers in the network, based on an initial discovery URL",
 	Long:  `This uses the "network.seed_discovery_url" key in your configuration to start discovery.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfs, err := bios.NewIPFS(ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
 		if err != nil {
 			fmt.Println("ipfs client error:", err)
 			os.Exit(1)

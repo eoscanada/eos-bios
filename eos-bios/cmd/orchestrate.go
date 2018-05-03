@@ -31,7 +31,7 @@ var orchestrateCmd = &cobra.Command{
 	Short: "Automate all the operations to launch a new network, by collaborating with other in the launch.",
 	Long:  `This operation will auto-select the roles, based on a discovered Network shared amongst participants.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfs, err := bios.NewIPFS(ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
 		if err != nil {
 			fmt.Println("ipfs client error:", err)
 			os.Exit(1)
