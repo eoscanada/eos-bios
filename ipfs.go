@@ -54,6 +54,7 @@ func (i *IPFS) Get(ref IPFSRef) ([]byte, error) {
 			return nil, errors.New("download attempts failed")
 		}
 	}
+	fmt.Println(" got it")
 	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)

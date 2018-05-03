@@ -25,7 +25,7 @@ type Network struct {
 
 	cachePath       string
 	myDiscoveryFile string
-	visitedFiles    map[IPFSRef]bool
+	discoveredIPNS  map[IPNSRef]bool
 	discoveredPeers map[IPFSRef]*Peer
 	orderedPeers    []*Peer
 
@@ -65,7 +65,7 @@ func (net *Network) UpdateGraph() error {
 }
 
 func (c *Network) traverseGraph() error {
-	c.visitedFiles = map[IPFSRef]bool{}
+	c.discoveredIPNS = map[IPNSRef]bool{}
 	c.discoveredPeers = map[IPFSRef]*Peer{}
 
 	err := c.ensureExists()
@@ -73,7 +73,7 @@ func (c *Network) traverseGraph() error {
 		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
-	fmt.Println("Cache ready")
+	//fmt.Println("Cache ready")
 
 	// TODO: how do we handle when someone points to *us* ? We should
 	// have a way to find our canonical URL..
@@ -90,8 +90,6 @@ func (c *Network) traverseGraph() error {
 
 	ipfsRef := toMultihash(rawDisco)
 
-	c.visitedFiles[ipfsRef] = true
-
 	c.MyPeer = &Peer{
 		Discovery: disco,
 	}
@@ -100,19 +98,25 @@ func (c *Network) traverseGraph() error {
 }
 
 func (c *Network) fetchOne(peerLink *PeerLink) error {
-	// FIXME: what's the use of this then if we're not caching anything ?
-	// if c.visitedFiles[discoveryLink] {
-	// 	return nil
-	// }
+	if c.discoveredIPNS[peerLink.DiscoveryLink] {
+		fmt.Printf("    - traversed already!\n")
+		return nil
+	}
 
-	disco, rawDisco, err := c.FetchDiscoveryLink(peerLink.DiscoveryLink)
+	disco, rawDisco, err := c.FetchDiscoveryLink(peerLink)
 	if err != nil {
 		return fmt.Errorf("couldn't download discovery URL: %s", err)
 	}
 
+	if disco.EOSIOAccountName == c.MyPeer.Discovery.EOSIOAccountName {
+		fmt.Printf("    - was myself!\n")
+		return nil
+	}
+	fmt.Printf("    - %q (%q)\n", disco.EOSIOAccountName, disco.OrganizationName)
+
 	ipfsRef := toMultihash(rawDisco)
 
-	//c.visitedFiles[ipfsRef] = true
+	c.discoveredIPNS[peerLink.DiscoveryLink] = true
 
 	peerLink.resolvedRef = ipfsRef
 
@@ -125,7 +129,7 @@ func toMultihash(cnt []byte) IPFSRef {
 }
 
 func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
-	fmt.Println("Traversing peer:", ipnsRef)
+	fmt.Printf("Loading launch data from %q (%q, %s)...\n", disco.EOSIOAccountName, disco.OrganizationName, ipnsRef)
 	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
 		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
 	}
@@ -161,7 +165,8 @@ func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRe
 		Discovery:     disco,
 	}
 
-	fmt.Printf("Discovery: traversing %d peers\n", len(launchData.Peers))
+	fmt.Printf("- has %d peer(s)\n", len(launchData.Peers))
+
 	for _, peerLink := range launchData.Peers {
 		if peerLink.Weight > 1.0 || peerLink.Weight < 0.0 {
 			fmt.Printf("WARN: peer %q weight not between 0.0 and 1.0, not including in graph\n", peerLink.DiscoveryLink)
@@ -176,6 +181,19 @@ func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRe
 	return nil
 }
 
+func (c *Network) FetchDiscoveryLink(peerLink *PeerLink) (out *Discovery, rawDiscovery []byte, err error) {
+	// Resolve recursive the discoveryLink (through /ipns, then /ipfs/Qm.../path to /ipfs/Qmcontent)
+
+	fmt.Printf("  - peer %s comment=%q, weight=%.2f\n", peerLink.DiscoveryLink, peerLink.Comment, peerLink.Weight)
+	rawDiscovery, err = c.IPFS.GetIPNS(peerLink.DiscoveryLink)
+	if err != nil {
+		return
+	}
+
+	err = yamlUnmarshal(rawDiscovery, &out)
+	return
+}
+
 func (c *Network) DownloadIPFSRef(ref IPFSRef) error {
 	if ref == "" {
 		return errors.New("no hash provided")
@@ -185,7 +203,7 @@ func (c *Network) DownloadIPFSRef(ref IPFSRef) error {
 	}
 
 	if c.isInCache(ref) {
-		fmt.Printf("ipfs ref: %q in cache\n", ref)
+		//fmt.Printf("ipfs ref: %q in cache\n", ref)
 		return nil
 	}
 
@@ -307,18 +325,6 @@ func (c *Network) verifyGraph() error {
 		}
 	}
 	return nil
-}
-
-func (c *Network) FetchDiscoveryLink(discoveryLink IPNSRef) (out *Discovery, rawDiscovery []byte, err error) {
-	// Resolve recursive the discoveryLink (through /ipns, then /ipfs/Qm.../path to /ipfs/Qmcontent)
-	fmt.Println("Discovery: downloading link", discoveryLink)
-	rawDiscovery, err = c.IPFS.GetIPNS(discoveryLink)
-	if err != nil {
-		return
-	}
-
-	err = yamlUnmarshal(rawDiscovery, &out)
-	return
 }
 
 func sha2(input []byte) string {
