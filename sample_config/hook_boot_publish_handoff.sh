@@ -15,4 +15,5 @@ echo ""
 # echo "Network boot handoff of ephemeral keys: $1 $2" | ./ipfs add
 #
 
+echo "Hit ENTER when done (or skip if you're a single node net)"
 read
