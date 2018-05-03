@@ -64,7 +64,7 @@ func (b *BIOS) Init() error {
 	// EOSIOABPSigningKey set.
 
 	// Load the boot sequence
-	rawBootSeq, err := b.Network.ReadFromCache(launchData.BootSequence)
+	rawBootSeq, err := b.Network.ReadFromCache(string(launchData.BootSequence))
 	if err != nil {
 		return fmt.Errorf("reading boot_sequence file: %s", err)
 	}
@@ -80,7 +80,7 @@ func (b *BIOS) Init() error {
 
 	// Load snapshot data
 	if launchData.Snapshot != "" {
-		rawSnapshot, err := b.Network.ReadFromCache(launchData.Snapshot)
+		rawSnapshot, err := b.Network.ReadFromCache(string(launchData.Snapshot))
 		if err != nil {
 			return fmt.Errorf("reading snapshot file: %s", err)
 		}

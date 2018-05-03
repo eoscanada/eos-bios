@@ -11,7 +11,7 @@ import (
 func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
 	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs)
 
-	net.ForceFetch = !noDiscovery
+	net.UseCache = noDiscovery
 
 	if err := net.UpdateGraph(); err != nil {
 		return nil, fmt.Errorf("updating graph: %s", err)

@@ -187,3 +187,7 @@ TODO
 
   * hook_join_network.sh  # add connect_count
   * hook_done.sh [role]
+
+* Find out what we do for the chain_id.. do we vote for it too ?
+  Top 20% must agree on the chain_id ?
+  Top 20% must agree on the constitution ?

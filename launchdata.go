@@ -14,7 +14,6 @@ type LaunchData struct {
 
 type PeerLink struct {
 	DiscoveryLink IPNSRef `json:"discovery_link"`
-	resolvedRef   IPFSRef `json:"-"`
 	Comment       string  `json:"comment"`
 	Weight        float64 `json:"weight"` // From 0.0 to 1.0
 }

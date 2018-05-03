@@ -7,7 +7,7 @@ import (
 type Peer struct {
 	DiscoveryFile IPFSRef
 	DiscoveryLink IPNSRef // for ref
-	Discovery *Discovery
+	Discovery     *Discovery
 
 	TotalWeight float64
 
@@ -23,4 +23,8 @@ func (p *Peer) AccountName() string {
 
 func (p *Peer) String() string {
 	return fmt.Sprintf("Account: % 15s   Org: % 30s   Weight: % 2.2f", p.AccountName(), p.Discovery.OrganizationName, p.TotalWeight)
+}
+
+func (p *Peer) Columns() string {
+	return fmt.Sprintf("%s | %s | %s | %.2f | %s", p.DiscoveryLink, p.AccountName(), p.Discovery.OrganizationName, p.TotalWeight, p.DiscoveryFile)
 }
