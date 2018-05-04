@@ -16,7 +16,6 @@ echo "$1" >> config.ini
 
 echo "Restarting boot node"
 
-docker stop nodeos-bios
-docker start nodeos-bios
+docker restart nodeos-bios
 
 sleep 2
