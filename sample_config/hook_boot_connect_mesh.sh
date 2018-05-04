@@ -11,7 +11,7 @@
 
 echo "Adding p2p-peer-address'es to config.ini"
 
-echo $1 >> config.ini
+echo "$1" >> config.ini
 
 
 echo "Restarting boot node"

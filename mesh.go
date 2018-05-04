@@ -46,3 +46,16 @@ func (b *BIOS) computeMyMeshP2PAddresses() []string {
 	}
 	return otherPeers
 }
+
+func (b *BIOS) someTopmostPeersAddresses() []string {
+	// TODO: refine this algo..
+	// connect to some randomly, but more of the top-most
+	otherPeers := []string{}
+	for idx, peer := range b.ShuffledProducers {
+		if idx > 5 {
+			return otherPeers
+		}
+		otherPeers = append(otherPeers, peer.Discovery.EOSIOP2P)
+	}
+	return otherPeers
+}
