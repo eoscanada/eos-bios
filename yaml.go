@@ -2,7 +2,9 @@ package bios
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"strings"
 
 	yaml2json "github.com/bronze1man/go-yaml2json"
 )
@@ -26,6 +28,15 @@ func ValidateDiscoveryFile(filename string) error {
 	err = yamlUnmarshal(cnt, &disco)
 	if err != nil {
 		return err
+	}
+
+	for _, peer := range disco.LaunchData.Peers {
+		if !strings.HasPrefix(string(peer.DiscoveryLink), "/ipns/") {
+			return fmt.Errorf("peer link %q invalid, should start with '/ipns/'", peer.DiscoveryLink)
+		}
+		if peer.Weight > 1.0 {
+			return fmt.Errorf("peer %q weight must be between 0.0 and 1.0", peer.DiscoveryLink)
+		}
 	}
 
 	return nil
