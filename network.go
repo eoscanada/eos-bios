@@ -103,12 +103,8 @@ func (c *Network) traverseGraph() error {
 
 func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
 	fmt.Printf("Loading launch data from %q (%q, %s)...\n", disco.EOSIOAccountName, disco.OrganizationName, ipnsRef)
-	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
-		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
-	}
-
-	if disco.EOSIOAccountName == "" {
-		return errors.New("eosio_account_name is missing")
+	if err := ValidateDiscovery(disco); err != nil {
+		return err
 	}
 
 	launchData := disco.LaunchData

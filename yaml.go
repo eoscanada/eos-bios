@@ -2,6 +2,7 @@ package bios
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -30,6 +31,10 @@ func ValidateDiscoveryFile(filename string) error {
 		return err
 	}
 
+	return ValidateDiscovery(disco)
+}
+
+func ValidateDiscovery(disco *Discovery) error {
 	for _, peer := range disco.LaunchData.Peers {
 		if !strings.HasPrefix(string(peer.DiscoveryLink), "/ipns/") {
 			return fmt.Errorf("peer link %q invalid, should start with '/ipns/'", peer.DiscoveryLink)
@@ -37,6 +42,14 @@ func ValidateDiscoveryFile(filename string) error {
 		if peer.Weight > 1.0 {
 			return fmt.Errorf("peer %q weight must be between 0.0 and 1.0", peer.DiscoveryLink)
 		}
+	}
+
+	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
+		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
+	}
+
+	if disco.EOSIOAccountName == "" {
+		return errors.New("eosio_account_name is missing")
 	}
 
 	return nil
