@@ -190,6 +190,9 @@ func (c *Network) fetchPeer(peerLink *PeerLink) error {
 	var disco *Discovery
 	err = yamlUnmarshal(rawDisco, &disco)
 	if err != nil {
+		fmt.Println("BROKEN DISCOVERY FILE. Wrote to `broken_discovery.yaml`. Please inspect!")
+		ioutil.WriteFile("broken_discovery.yaml", rawDisco, 0666)
+
 		return fmt.Errorf("couldn't download discovery URL: %s", err)
 	}
 
