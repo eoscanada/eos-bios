@@ -11,13 +11,13 @@ seed_network_launch_block: 5544732  # Past block, for testing
 
 urls:
 - https://website.com
-gmt_offset: -5
+gmt_offset: -0700  # in HourMinutes format
 
-target_network_type: test # or "main"
+target_network_is_test: 0  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
 target_chain_id: 000000000000000000000000000000000000000000000000000000.eos.stage1
 target_p2p_address: 192.168.1.111:9876
-target_account_name: eoscanada
+target_account_name: eoscanadacom
 target_appointed_block_producer_signing_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
 target_initial_authority:
   owner:
