@@ -56,7 +56,7 @@ var orchestrateCmd = &cobra.Command{
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartOrchestrate(secretP2PAddress); err != nil {
+		if err := b.StartOrchestrate(); err != nil {
 			log.Fatalf("error orchestrating: %s", err)
 		}
 
@@ -66,10 +66,9 @@ var orchestrateCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(orchestrateCmd)
 
-	orchestrateCmd.Flags().StringVarP(&secretP2PAddress, "secret-p2p-address", "", "localhost:9876", "Address to publish once boot is complete. In an orchestrated boot, you would want to keep this one secret to avoid being DDoS'd.")
 	orchestrateCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
 
-	for _, flag := range []string{"secret-p2p-address", "api-address"} {
+	for _, flag := range []string{"api-address"} {
 		viper.BindPFlag(flag, orchestrateCmd.Flags().Lookup(flag))
 	}
 }

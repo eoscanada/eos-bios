@@ -52,6 +52,8 @@ func ValidateDiscovery(disco *Discovery) error {
 		return errors.New("eosio_account_name is missing")
 	}
 
+	// IMPORTANT for USEABILITY:
+
 	// TODO: Validate the `eosio_p2p` is the right format, with a port.
 	// Prevent `127.0.0.1`, `localhost`, and `192.168` and local stuff ?
 
@@ -59,8 +61,6 @@ func ValidateDiscovery(disco *Discovery) error {
 
 	// TODO: check that `eosio_http` has `http://` prefix, not necessarily a port if standard.
 	// TODO: check that `eosio_https` has `https://` prefix.
-
-	// Validate the EOSIO initial authority, make sure its valid..
 
 	// launch ethereum block present.. within reasonable boundaries
 	//

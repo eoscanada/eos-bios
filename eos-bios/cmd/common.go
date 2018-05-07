@@ -10,7 +10,7 @@ import (
 )
 
 func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
-	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs)
+	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs, seedNetworkAPIAddress, seedNetworkContract)
 
 	net.UseCache = viper.GetBool("no-discovery")
 

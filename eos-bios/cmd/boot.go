@@ -61,7 +61,7 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartBoot(secretP2PAddress); err != nil {
+		if err := b.StartBoot(); err != nil {
 			log.Fatalf("error booting network: %s", err)
 		}
 	},
@@ -70,10 +70,9 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 func init() {
 	RootCmd.AddCommand(bootCmd)
 
-	bootCmd.Flags().StringVarP(&secretP2PAddress, "secret-p2p-address", "", "localhost:9876", "Address to publish once boot is complete. In an orchestrated boot, you would want to keep this one secret to avoid being DDoS'd.")
 	bootCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
 
-	for _, flag := range []string{"secret-p2p-address", "api-address"} {
+	for _, flag := range []string{"api-address"} {
 		viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag))
 	}
 }

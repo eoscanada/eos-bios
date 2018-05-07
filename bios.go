@@ -103,7 +103,7 @@ func (b *BIOS) Init() error {
 	return nil
 }
 
-func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
+func (b *BIOS) StartOrchestrate() error {
 	fmt.Println("Starting Orchestraion process", time.Now())
 
 	fmt.Println("Showing pre-randomized network discovered:")
@@ -129,7 +129,7 @@ func (b *BIOS) StartOrchestrate(secretP2PAddress string) error {
 
 	switch b.MyRole() {
 	case RoleBootNode:
-		if err := b.RunBootSequence(secretP2PAddress); err != nil {
+		if err := b.RunBootSequence(); err != nil {
 			return fmt.Errorf("orchestrate boot: %s", err)
 		}
 	case RoleABP:
@@ -161,7 +161,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 	return b.DispatchDone("join")
 }
 
-func (b *BIOS) StartBoot(secretP2PAddress string) error {
+func (b *BIOS) StartBoot() error {
 	fmt.Println("Starting network join process", time.Now())
 
 	b.Network.PrintOrderedPeers()
@@ -170,7 +170,7 @@ func (b *BIOS) StartBoot(secretP2PAddress string) error {
 		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
-	if err := b.RunBootSequence(secretP2PAddress); err != nil {
+	if err := b.RunBootSequence(); err != nil {
 		return fmt.Errorf("join network: %s", err)
 	}
 
@@ -204,7 +204,7 @@ func (b *BIOS) PrintOrderedPeers() {
 	fmt.Println("")
 }
 
-func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
+func (b *BIOS) RunBootSequence() error {
 	fmt.Println("START BOOT SEQUENCE...")
 
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
@@ -226,13 +226,18 @@ func (b *BIOS) RunBootSequence(secretP2PAddress string) error {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
-	keys, _ := b.EOSAPI.Signer.(*eos.KeyBag).AvailableKeys()
-	for _, key := range keys {
-		fmt.Println("Available key in the KeyBag:", key)
-	}
+	// keys, _ := b.EOSAPI.Signer.(*eos.KeyBag).AvailableKeys()
+	// for _, key := range keys {
+	// 	fmt.Println("Available key in the KeyBag:", key)
+	// }
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
+	// TODO: seedNetAPI.SignPushActions(
+	//     disco.NewUpdateGenesis(genesisData, initialP2PAddresses)
+	//)
+
+	// DEPRECATED, we have a way to publish that data now..
 	if err = b.DispatchBootPublishGenesis(genesisData); err != nil {
 		return fmt.Errorf("dispatch boot_publish_genesis hook: %s", err)
 	}
@@ -377,58 +382,18 @@ func (b *BIOS) waitEthereumBlock() rand.Source {
 
 func (b *BIOS) waitOnGenesisData() (genesis *GenesisJSON) {
 	fmt.Println("")
-	fmt.Println("The BIOS node will publish the Genesis data through their social media.")
+	fmt.Println("Waiting for the BIOS Boot node to publish the genesis data to the seed network contract..")
+
 	bootNode := b.ShuffledProducers[0]
 	disco := bootNode.Discovery
-	if disco.Website != "" {
-		fmt.Println("  Main website:", disco.Website)
-	}
-	if disco.SocialTwitter != "" {
-		fmt.Println("  Twitter:", disco.SocialTwitter)
-	}
-	if disco.SocialFacebook != "" {
-		fmt.Println("  Facebook:", disco.SocialFacebook)
-	}
-	if disco.SocialTelegram != "" {
-		fmt.Println("  Telegram:", disco.SocialTelegram)
-	}
-	if disco.SocialSlack != "" {
-		fmt.Println("  Slack:", disco.SocialSlack)
-	}
-	if disco.SocialSteem != "" {
-		fmt.Println("  Steem:", disco.SocialSteem)
-	}
-	if disco.SocialSteemIt != "" {
-		fmt.Println("  SteemIt:", disco.SocialSteemIt)
-	}
-	if disco.SocialKeybase != "" {
-		fmt.Println("  Keybase:", disco.SocialKeybase)
-	}
-	if disco.SocialWeChat != "" {
-		fmt.Println("  WeChat:", disco.SocialWeChat)
-	}
-	if disco.SocialYouTube != "" {
-		fmt.Println("  YouTube:", disco.SocialYouTube)
-	}
-	if disco.SocialGitHub != "" {
-		fmt.Println("  GitHub:", disco.SocialGitHub)
-	}
-	fmt.Println("")
 	// TODO: print the social media properties of the BP..
-	fmt.Println("Genesis data can be base64-encoded JSON, raw JSON or an `/ipfs/Qm...` link pointing to genesis.json")
 
+	fmt.Printf("Polling..")
 	for {
-		fmt.Printf("Paste genesis here: ")
-		text, err := ScanSingleLine()
-		if err != nil {
-			fmt.Println("error reading line:", err)
-			continue
-		}
-
-		genesis, err := readGenesisData(text, b.Network.IPFS)
-		if err != nil {
-			fmt.Println(err)
-		}
+		time.Sleep(500 * time.Millisecond)
+		fmt.Printf(".")
+		// TODO: poll seedNetAPI.GetTableRows(seedContractName, "genesis.tbl")
+		// quand on l'a, on le retourne..
 
 		return genesis
 	}

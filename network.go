@@ -33,11 +33,12 @@ type Network struct {
 	lastFetch time.Time
 }
 
-func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS) *Network {
+func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS, seedNetAPI string, seedNetContract string) *Network {
 	return &Network{
-		IPFS:            ipfs,
-		cachePath:       cachePath,
-		myDiscoveryFile: myDiscoveryFile,
+		IPFS:               ipfs,
+		cachePath:          cachePath,
+		myDiscoveryFile:    myDiscoveryFile,
+		SeedNetworkAddress: seedNetAPI,
 	}
 }
 
@@ -46,9 +47,16 @@ func (c *Network) ensureExists() error {
 }
 
 func (net *Network) UpdateGraph() error {
-	if time.Now().Before(net.lastFetch.Add(2 * time.Minute)) {
-		return nil
-	}
+	// TODO: read myDiscoveryFile (done in traverseGraph already)
+	// TODO: take the `seed_network_chain_id`
+	// TODO: instantiate an eos.API with that chain_id and the net.seedNetworkAddress
+	// TODO: with that seedNetAPI.GetTableRows(seedNetworkContract)
+	// TODO: navigate and traverse the graph in memory.. no need to fetch from IPNS.. although we
+	// want to download any new references to ipfs.
+
+	// if time.Now().Before(net.lastFetch.Add(2 * time.Minute)) {
+	// 	return nil
+	// }
 
 	if err := net.traverseGraph(); err != nil {
 		return fmt.Errorf("traversing graph: %s", err)
@@ -66,6 +74,7 @@ func (net *Network) UpdateGraph() error {
 }
 
 func (c *Network) traverseGraph() error {
+	// get from seed network
 	c.discoveredIPNS = map[IPNSRef]IPFSRef{}
 	c.discoveredPeers = map[IPFSRef]*Peer{}
 
