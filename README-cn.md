@@ -112,17 +112,3 @@ To join a network, tweak your discovery file to point to the network you're tryi
 
 加入我们的 telegram 讨论组:
 https://t.me/joinchat/GSUv1UaI5QIuifHZs8k_eA (EOSIO BIOS Boot channel)
-
-
-
-
-TODO
-----
-
-* Shuffling of the top 5 for Boot selection
-* Wait on Bitcoin Block
-  * Add bitcoin_block_height in LaunchData
-* In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
-* Do we auto-publish the `my_discovery_file.yaml` ? Make it a hook?
-* canonical_url ?
-* convention regarding URLs, which pieces we want to see in there (the name of the organization, `testnet-[network_name])

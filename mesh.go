@@ -3,6 +3,7 @@ package bios
 import (
 	"math"
 	"math/rand"
+	"time"
 )
 
 func getPeerIndexesToMeshWith(total, myPos int) map[int]bool {
@@ -79,4 +80,13 @@ func shuffle(slice []*Peer, count int, r rand.Source) []*Peer {
 		slice = append(slice[:randIndex], slice[randIndex+1:]...)
 	}
 	return ret
+}
+
+func (b *BIOS) someTopmostPeersAddresses() []string {
+	listOfPeers := b.getPeersForBootNode(rand.NewSource(time.Now().UTC().UnixNano()))
+	otherPeers := []string{}
+	for _, peer := range listOfPeers {
+		otherPeers = append(otherPeers, peer.Discovery.EOSIOP2P)
+	}
+	return otherPeers
 }

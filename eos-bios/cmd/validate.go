@@ -15,16 +15,28 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	bios "github.com/eoscanada/eos-bios"
 	"github.com/spf13/cobra"
 )
 
 // validateCmd represents the validate command
 var validateCmd = &cobra.Command{
-	Use:   "validate",
-	Short: "Validate check for the integrity of a local discovery file, before you put it out.",
+	Use:   "validate [some_file.yaml]",
+	Short: "Validate check for the integrity of a local discovery file by default, or another file.",
+	Long:  "Check your files before you put them out, as to not break the network being crafted.",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Not implemented.  Validate will check the integrity of a discovery file.")
+		filename := myDiscoveryFile
+		if len(args) == 1 {
+			filename = args[0]
+		}
+		if err := bios.ValidateDiscoveryFile(filename); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+		fmt.Println("File valid:", filename)
 	},
 }
 

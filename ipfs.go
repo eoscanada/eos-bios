@@ -1,11 +1,11 @@
 package bios
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 )
 
 type IPFS struct {
@@ -43,19 +43,18 @@ func (i *IPFS) Get(ref IPFSRef) ([]byte, error) {
 		return nil, err
 	}
 
-	reqs := []*http.Request{req1, req2}
-	var resp *http.Response
-	for _, req := range reqs {
-		fmt.Println("Fetching from:", req.URL.String())
-		resp, err = i.Client.Do(req)
+	fmt.Printf("Fetching %q from %q...", ref, i.GatewayAddressURL.String())
+	resp, err := i.Client.Do(req1)
+	if err != nil {
+		fmt.Printf(" failed (%s), trying %q...", err, i.FallbackGatewayAddressURL)
+
+		resp, err = i.Client.Do(req2)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "NOTE: %q unavailable (%s), trying fallback\n", req.URL.String(), err)
-			continue
+			fmt.Println(" failed")
+			return nil, errors.New("download attempts failed")
 		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("gateway reqs failed: %s", err)
-	}
+	fmt.Println(" got it")
 	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)

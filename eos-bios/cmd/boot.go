@@ -29,14 +29,14 @@ import (
 var bootCmd = &cobra.Command{
 	Use:   "boot",
 	Short: "Triggers hooks to boot a new network or node",
-	Long: `This will run the "boot_network" hook with data generated locally for a new network.
+	Long: `This will run the "boot_node" hook with data generated locally for a new network.
 
 The "publish_kickstart_data" will also be run, giving you the opportunity to disseminate what is required for people to join your network.
 
 Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfs, err := bios.NewIPFS(ipfsGatewayAddress, ipfsLocalGatewayAddress)
+		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
 		if err != nil {
 			fmt.Println("ipfs client error:", err)
 			os.Exit(1)

@@ -4,7 +4,7 @@ type IPFSRef string
 type IPNSRef string
 
 type LaunchData struct {
-	LaunchBitcoinBlock   int                     `json:"launch_bitcoin_block"`
+	LaunchEthereumBlock  int                     `json:"launch_ethereum_block"`
 	Peers                []*PeerLink             `json:"peers"`
 	BootSequence         IPFSRef                 `json:"boot_sequence"`
 	Snapshot             IPFSRef                 `json:"snapshot"`
@@ -14,7 +14,6 @@ type LaunchData struct {
 
 type PeerLink struct {
 	DiscoveryLink IPNSRef `json:"discovery_link"`
-	resolvedRef   IPFSRef `json:"-"`
 	Comment       string  `json:"comment"`
 	Weight        float64 `json:"weight"` // From 0.0 to 1.0
 }

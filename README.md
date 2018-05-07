@@ -89,17 +89,50 @@ When the time comes to orchestrate a launch, *everyone* will run:
     eos-bios orchestrate
 
 According to an algorithm, and using the network discovery data, each
-team will be assigned a role deterministically.
+team will be assigned a role deterministically:
 
-You then fall in one of these three categories:
-
-1. The BIOS Boot node, which will, alone, execute the equivalent of `eos-bios boot`.
-2. An Appointed Block Producer, which executes the equivalent of `eos-bios join --verify`
-3. An other participant, which executes the equivalent of `eos-bios join`
+1. The _BIOS Boot node_, which will, alone, execute the equivalent of `eos-bios boot`.
+2. An _Appointed Block Producer_, which executes the equivalent of `eos-bios join --verify`
+3. An _other participant_, which executes the equivalent of `eos-bios join`
 
 The same hooks are used in `boot`, `join` and `orchestrate`, so get
 them right and practice.
 
+
+Example flow and interventions in the orchestrated launch
+---------------------------------------------------------
+
+1. Everyone runs `eos-bios orchestrate`.
+1. `eos-bios` downloads the network topology pointed to by your `my_discovery_file.yaml`, as does everyone.
+1. The network topology is sorted by weight according to how people voted in their `peers` section.
+1. The `launch_ethereum_block` is taken from the top 20% in the topology: if they all agree, with continue with that number. Otherwise, we wait until they do (and periodically retraverse the network graph)
+
+
+
+Network Discovery Protocol
+--------------------------
+
+The Network Discovery Protocol starts with a simple file (see
+`my_discovery_file.yaml` in the `sample_config` dir), which is
+published to IPFS, and linked through IPNS (like a DNS on IPFS). This
+provides a reference that points to your `my_discovery_file.yaml` from
+anyone connected to the IPFS network. It looks like:
+`/ipns/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH`. The last part
+is a hash of the public key of the `ipfs` instance running on
+someone's computer (which holds the corresponding private key).
+
+In the `my_discovery_file.yaml`, there is (under `launch_data`) a
+`peers` key. This allow you to point to other block producer's
+published `/ipns/Qm...` link. You can also `weight` the link.
+
+By traversing these links, we can build an in-memory graph of all the
+peers connected to one another. Everyone is free to publish when they
+want. No need for centralized spreadsheet.
+
+The graph that is created this way can be sorted according to who was
+voted for the most. It is public (so don't try to screw anyone), and a
+public commitment of whom you're willing to launch with. It is a
+decentralized way to vouch for other Block Producers.
 
 
 Install / Download
@@ -135,28 +168,11 @@ See the previous proposition in this repo in README.v0.md
 TODO
 ----
 
-* Shuffling of the top 5 for Boot selection
-* Upon `orchestrate`, wait on Bitcoin Block
-  * TODO: Add bitcoin_block_height in LaunchData
-  * Sync on most popular Bitcoin block.
-  * Mark in discovery file that "eosio_p2p_address", make it REQUIRED.
-  * WAIT for the BTC block, then REDISCOVER the network (everyone together, to get a final version, sync'd).
-    * Then GO orchestrate.
-
 * In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
-* Do we auto-publish the `my_discovery_file.yaml` ? Make it a hook?
-* canonical_url ?
-* convention regarding URLs, which pieces we want to see in there (the name of the organization, `testnet-[network_name])
 
-* Allow ABPs to publish their `secret-p2p-address` (called Meshing
-  data ?) while the BIOS Boot node is doing its job.
-  * The pasted data would simply be added to the list of addresses
-    passed to the `join_network` hook when the BIOS Boot is ready
-    and we receive the Kickstart data.
-  * Both be a base64 encoded JSON:
-    * `type=genesis` with the genesis JSON, which includes the public key, perhaps the pubkey on the side..
-    * `type=meshing` with the p2p IP/host to connect to
-    * `type=handoff` with the private key used to do everything.
+* Implement more ethereum sources, so we're not blocked by DDoS of those websites.
+  * Could we RPC directly to a swarm of nodes ?
+  * We could also load some from the disk, like `ethereum_swarm.txt`
 
 * output.log -> output EVERYTHING to a file, hook a Tee on `os.Stderr`
   and `os.Stdout`.
@@ -164,10 +180,22 @@ TODO
 * No publishing of `secret-p2p-address`, only a remote control of
   `/v1/net/connect` to some ABPs who have published and established
   the network.
-  * hook_boot_network.sh
   * hook_boot_publish_genesis.sh
+  * hook_boot_node.sh
   * hook_boot_connect_mesh.sh
   * hook_boot_publish_privkey.sh
 
   * hook_join_network.sh  # add connect_count
   * hook_done.sh [role]
+
+* Find out what we do for the chain_id.. do we vote for it too ?
+  Top 20% must agree on the chain_id ?
+  Top 20% must agree on the constitution ?
+
+* boot_connect_mesh: Make sure we don't mesh with the first BIOS boot..
+  it's most probably not running..
+
+* Do connectivity checks when doing `discovery`.. and get a report upon orchestration
+  that the peers are up ?
+
+* Make sure `setprods` is called properly... and does affect the producer schedule.

@@ -6,12 +6,13 @@ import (
 
 	bios "github.com/eoscanada/eos-bios"
 	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/spf13/viper"
 )
 
 func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
 	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs)
 
-	net.ForceFetch = !noDiscovery
+	net.UseCache = viper.GetBool("no-discovery")
 
 	if err := net.UpdateGraph(); err != nil {
 		return nil, fmt.Errorf("updating graph: %s", err)

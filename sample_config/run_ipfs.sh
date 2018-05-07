@@ -22,4 +22,4 @@ fi
 #     export EOS_BIOS_IPFS_API_ADDRESS=/ip4/127.0.0.1/tcp/5002
 #
 
-./ipfs daemon --init
+./ipfs daemon --init --enable-namesys-pubsub

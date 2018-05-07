@@ -9,7 +9,7 @@ import (
 	"regexp"
 )
 
-func PollBitcoinClock(blockheight int) (blockhash string, err error) {
+func PollEthereumClock(blockheight int) (blockhash string, err error) {
 	// TODO: implement more sources, so we are distributed..  add the
 	// possibility to paste the blockhash in case all sites are down?
 	// do a direct connection to the Bitcoin blockchain using a swarm
@@ -20,11 +20,44 @@ func PollBitcoinClock(blockheight int) (blockhash string, err error) {
 	//useSite := 0
 	switch useSite {
 	case 0:
-		return bitcoinPollMethodBlockchainInfo(blockheight)
+		return etherscanPollMethod(blockheight)
 	case 1:
-		return bitcoinPollMethodBlockExplorer(blockheight)
+		return etherchainPollMethod(blockheight)
 	}
 	panic("hmm.. change the rand.Int modulo up here friend.. or the cases")
+}
+
+func etherscanPollMethod(height int) (blockhash string, err error) {
+	var cnt string
+	cnt, err = getURL(fmt.Sprintf("https://etherscan.io/block/%d", height))
+	if err != nil {
+		return
+	}
+
+	m := regexp.MustCompile(`>&nbsp;&nbsp;Hash:\n</td>\n<td>\n0x([0-9a-f]{64})\n`).FindStringSubmatch(cnt)
+	if m == nil {
+		// err = fmt.Errorf("regexp didn't match content on blockchain.info")
+		return
+	}
+
+	return m[1], nil
+}
+
+func etherchainPollMethod(height int) (blockhash string, err error) {
+	// TODO: Fix this
+	var cnt string
+	cnt, err = getURL(fmt.Sprintf("https://etherchain.io/block/%d", height))
+	if err != nil {
+		return
+	}
+
+	m := regexp.MustCompile(`>&nbsp;&nbsp;Hash:\n</td>\n<td>\n0x([0-9a-f]{64})\n`).FindStringSubmatch(cnt)
+	if m == nil {
+		// err = fmt.Errorf("regexp didn't match content on blockchain.info")
+		return
+	}
+
+	return m[1], nil
 }
 
 func bitcoinPollMethodBlockchainInfo(height int) (blockhash string, err error) {
