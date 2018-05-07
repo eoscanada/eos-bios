@@ -191,3 +191,11 @@ TODO
 * Find out what we do for the chain_id.. do we vote for it too ?
   Top 20% must agree on the chain_id ?
   Top 20% must agree on the constitution ?
+
+* boot_connect_mesh: Make sure we don't mesh with the first BIOS boot..
+  it's most probably not running..
+
+* Do connectivity checks when doing `discovery`.. and get a report upon orchestration
+  that the peers are up ?
+
+* Make sure `setprods` is called properly... and does affect the producer schedule.
