@@ -59,6 +59,7 @@ func (net *Network) UpdateGraph() error {
 	}
 
 	if !net.SingleOnly {
+		fmt.Println("Updating network graph")
 		rowsJSON, err := net.SeedNetAPI.GetTableRows(
 			eos.GetTableRowsRequest{
 				JSON:     true,
@@ -157,6 +158,7 @@ func (net *Network) DownloadIPFSRef(ref string) error {
 		return nil
 	}
 
+	fmt.Printf("Downloading and caching content from IPFS: %q\n", ref)
 	cnt, err := net.ipfs.Get(ref)
 	if err != nil {
 		return err
