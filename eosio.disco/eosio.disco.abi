@@ -17,9 +17,6 @@
         },{
           "name": "initial_p2p_addresses",
           "type": "string[]"
-        },{
-          "name": "updated_at",
-          "type": "time"
         }
       ]
     },{
