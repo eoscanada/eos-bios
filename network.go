@@ -122,7 +122,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 	fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
 
 	for _, peerLink := range discoFile.SeedNetworkPeers {
-		fmt.Printf("  - peer %s comment=%q, weight=%.2f\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
+		fmt.Printf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
 
 		peerDisco, found := net.candidates[string(peerLink.Account)]
 		if !found {
