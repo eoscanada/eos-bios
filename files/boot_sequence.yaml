@@ -1,0 +1,86 @@
+boot_sequence:
+- op: system.setcode
+  label: Setting eosio.bios code for account eosio
+  data:
+    account: eosio
+    contract_name_ref: eosio.bios  # References the `contract_hashes` up here, and the `contracts` section of the `local_config.yaml`
+
+- op: system.newaccount
+  label: Create account eosio.msig
+  data:
+    creator: eosio
+    new_account: eosio.msig
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.token
+  data:
+    creator: eosio
+    new_account: eosio.token
+    pubkey: ephemeral
+
+- op: system.setpriv
+  label: Setting privileged account for eosio and eosio.msig
+  data:
+    account: eosio
+
+- op: system.setpriv
+  label: Setting privileged account for eosio.msig
+  data:
+    account: eosio.msig
+
+- op: system.setcode
+  label: Setting eosio.msig code for account eosio.msig
+  data:
+    account: eosio.msig
+    contract_name_ref: eosio.msig
+
+- op: system.setcode
+  label: Setting eosio.token code for account eosio.token
+  data:
+    account: eosio.token
+    contract_name_ref: eosio.token
+
+- op: token.create
+  label: Creating the EOS currency symbol
+  data:
+    account: eosio
+    amount: 1000000000.0000 EOS
+    can_whitelist: false
+    can_freeze: false
+    can_recall: false
+
+- op: token.issue
+  label: Issuing initial EOS monetary base
+  data:
+    account: eosio
+    amount: 1000000000.0000 EOS
+    memo: "Initial issuance"
+
+- op: producers.create_accounts
+  label: Creating initial Block Producers accounts
+  data:
+    TESTNET_ENRICH_PRODUCERS: true
+
+- op: snapshot.inject
+  label: Injecting ERC-20 snapshot balances
+  data:
+    TESTNET_TRUNCATE_SNAPSHOT: 5000
+
+- op: system.setprods
+  label: Setting the initial Appointed Block Producer schedule
+
+- op: system.setcode
+  label: Replacing eosio account from eosio.bios contract to eosio.system
+  data:
+    account: eosio
+    contract_name_ref: eosio.system
+
+- op: system.destroy_accounts
+  label: Disabling authorization for system accounts
+  data:
+    accounts:
+    - eosio
+    - eosio.msig
+    - eosio.token
+    TESTNET_KEEP_ACCOUNTS: true

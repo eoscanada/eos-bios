@@ -2,3 +2,5 @@
 /dist/
 test-data/mesh/flare*.json
 /local2
+sample_config/eos-bios
+sample_config/cleos
