@@ -103,12 +103,8 @@ func (c *Network) traverseGraph() error {
 
 func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
 	fmt.Printf("Loading launch data from %q (%q, %s)...\n", disco.EOSIOAccountName, disco.OrganizationName, ipnsRef)
-	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
-		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
-	}
-
-	if disco.EOSIOAccountName == "" {
-		return errors.New("eosio_account_name is missing")
+	if err := ValidateDiscovery(disco); err != nil {
+		return err
 	}
 
 	launchData := disco.LaunchData
@@ -190,6 +186,9 @@ func (c *Network) fetchPeer(peerLink *PeerLink) error {
 	var disco *Discovery
 	err = yamlUnmarshal(rawDisco, &disco)
 	if err != nil {
+		fmt.Println("BROKEN DISCOVERY FILE. Wrote to `broken_discovery.yaml`. Please inspect!")
+		ioutil.WriteFile("broken_discovery.yaml", rawDisco, 0666)
+
 		return fmt.Errorf("couldn't download discovery URL: %s", err)
 	}
 

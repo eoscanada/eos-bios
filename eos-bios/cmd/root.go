@@ -72,4 +72,5 @@ func init() {
 func initConfig() {
 	viper.SetEnvPrefix("EOS_BIOS")
 	viper.AutomaticEnv() // read in environment variables that match
+	//viper.ReadInConfig()
 }

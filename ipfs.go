@@ -43,10 +43,10 @@ func (i *IPFS) Get(ref IPFSRef) ([]byte, error) {
 		return nil, err
 	}
 
-	fmt.Printf("Fetching %q from primary location (%q)...", ref, i.GatewayAddressURL.String())
+	fmt.Printf("Fetching %q from %q...", ref, i.GatewayAddressURL.String())
 	resp, err := i.Client.Do(req1)
 	if err != nil {
-		fmt.Printf(" failed (%s), trying fallback (%q)...", err, i.FallbackGatewayAddressURL)
+		fmt.Printf(" failed (%s), trying %q...", err, i.FallbackGatewayAddressURL)
 
 		resp, err = i.Client.Do(req2)
 		if err != nil {

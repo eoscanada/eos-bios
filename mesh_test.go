@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -78,4 +80,38 @@ func TestGetMeshListToJson(t *testing.T) {
 
 	}
 
+}
+
+func TestGetPeersForBootNode(t *testing.T) {
+	tests := []struct {
+		numPeers int
+		seed     int64
+		out      string
+	}{
+		{1, 1, "p0"},                                                                                             //1
+		{3, 1, "p0,p1,p2"},                                                                                       //3
+		{10, 1, "p0,p1,p2,p3,p4,p5,p6,p7,p8,p9"},                                                                 //10
+		{40, 1, "p10,p23,p3,p39,p6,p7,p20,p12,p0,p4,p33,p8,p14,p26,p18,p37,p17,p11,p24,p9,p30,p5,p27,p21,p31"},   //25
+		{40, 2, "p31,p3,p23,p5,p16,p0,p15,p35,p38,p21,p14,p19,p32,p17,p20,p11,p7,p6,p37,p25,p34,p18,p9,p30,p26"}, //25
+		{60, 1, "p10,p12,p9,p3,p1,p7,p6,p15,p16,p13,p8,p5,p18,p4,p19,p43,p28,p24,p32,p23,p53,p54,p58,p46,p47"},   //25
+	}
+
+	for _, test := range tests {
+		var peers []*Peer
+		for i := 0; i < test.numPeers; i++ {
+			peers = append(peers, &Peer{ClonedAccountName: fmt.Sprintf("p%d", i)})
+		}
+		b := &BIOS{
+			Network: &Network{
+				orderedPeers: peers,
+			},
+		}
+
+		listOfPeers := b.getPeersForBootNode(rand.NewSource(test.seed))
+		expectedPeers := strings.Split(test.out, ",")
+		for idx, el := range expectedPeers {
+			assert.Equal(t, el, listOfPeers[idx].AccountName())
+		}
+
+	}
 }
