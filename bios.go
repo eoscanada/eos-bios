@@ -7,10 +7,10 @@ import (
 	"hash/crc64"
 	"math"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/eoscanada/eos-bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 )
@@ -18,7 +18,7 @@ import (
 type BIOS struct {
 	Network *Network
 
-	LaunchData   *LaunchData
+	LaunchDisco  *disco.Discovery
 	EOSAPI       *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
@@ -52,45 +52,12 @@ func (b *BIOS) SetGenesis(gen *GenesisJSON) {
 
 func (b *BIOS) Init() error {
 	// Load launch data
-	launchData, err := b.Network.ConsensusLaunchData()
+	launchDisco, err := b.Network.ConsensusDiscovery()
 	if err != nil {
-		fmt.Println("couldn'get consensus on launch data:", err)
-		os.Exit(1)
+		return fmt.Errorf("couldn'get consensus on launch data: %s", err)
 	}
 
-	b.LaunchData = launchData
-
-	// TODO: check that nodes that are ABP or participants do have an
-	// EOSIOABPSigningKey set.
-
-	// Load the boot sequence
-	rawBootSeq, err := b.Network.ReadFromCache(string(launchData.BootSequence))
-	if err != nil {
-		return fmt.Errorf("reading boot_sequence file: %s", err)
-	}
-
-	var bootSeq struct {
-		BootSequence []*OperationType `json:"boot_sequence"`
-	}
-	if err := yamlUnmarshal(rawBootSeq, &bootSeq); err != nil {
-		return fmt.Errorf("loading boot sequence: %s", err)
-	}
-
-	b.BootSequence = bootSeq.BootSequence
-
-	// Load snapshot data
-	if launchData.Snapshot != "" {
-		rawSnapshot, err := b.Network.ReadFromCache(string(launchData.Snapshot))
-		if err != nil {
-			return fmt.Errorf("reading snapshot file: %s", err)
-		}
-
-		snapshotData, err := NewSnapshot(rawSnapshot)
-		if err != nil {
-			return fmt.Errorf("loading snapshot csv: %s", err)
-		}
-		b.Snapshot = snapshotData
-	}
+	b.LaunchDisco = launchDisco
 
 	if err := b.setProducers(); err != nil {
 		return err
@@ -109,12 +76,12 @@ func (b *BIOS) StartOrchestrate() error {
 	fmt.Println("Showing pre-randomized network discovered:")
 	b.Network.PrintOrderedPeers()
 
-	b.RandSource = b.waitEthereumBlock()
+	b.RandSource = b.waitLaunchBlock()
 
 	// Once we have it, we can discover the net again (unless it's been discovered VERY recently)
 	// and we b.Init() again.. so load the latest version of the LaunchData according to this
 	// potentially new discovery network.
-	fmt.Println("Ethereum block used to seed randomization, updating graph one last time...")
+	fmt.Println("Seed network block used to seed randomization, updating graph one last time...")
 
 	if err := b.Network.UpdateGraph(); err != nil {
 		return fmt.Errorf("orchestrate: update graph: %s", err)
@@ -233,13 +200,17 @@ func (b *BIOS) RunBootSequence() error {
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	// TODO: seedNetAPI.SignPushActions(
-	//     disco.NewUpdateGenesis(genesisData, initialP2PAddresses)
-	//)
+	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 {
+		_, err = b.Network.seedNetAPI.SignPushActions(
+			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
+		)
+		if err != nil {
+			return fmt.Errorf("updating genesis on seednet: %s", err)
+		}
 
-	// DEPRECATED, we have a way to publish that data now..
-	if err = b.DispatchBootPublishGenesis(genesisData); err != nil {
-		return fmt.Errorf("dispatch boot_publish_genesis hook: %s", err)
+		if err = b.DispatchBootPublishGenesis(genesisData); err != nil {
+			return fmt.Errorf("dispatch boot_publish_genesis hook: %s", err)
+		}
 	}
 
 	if err = b.DispatchBootNode(genesisData, pubKey, privKey); err != nil {
@@ -248,7 +219,26 @@ func (b *BIOS) RunBootSequence() error {
 
 	fmt.Println(b.EOSAPI.Signer.AvailableKeys())
 
-	for _, step := range b.BootSequence {
+	// Load Boot Sequence...
+
+	bootseqFile, err := b.GetContentsCacheRef("boot_sequence.yaml")
+	if err != nil {
+		return err
+	}
+
+	rawBootSeq, err := b.Network.ReadFromCache(bootseqFile)
+	if err != nil {
+		return fmt.Errorf("reading boot_sequence file: %s", err)
+	}
+
+	var bootSeq struct {
+		BootSequence []*OperationType `json:"boot_sequence"`
+	}
+	if err := yamlUnmarshal(rawBootSeq, &bootSeq); err != nil {
+		return fmt.Errorf("loading boot sequence: %s", err)
+	}
+
+	for _, step := range bootSeq.BootSequence {
 		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
 		acts, err := step.Data.Actions(b)
@@ -342,11 +332,9 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	}
 
 	// TODO: loop operations, check all actions against blocks that you can fetch from here.
-	// Do all the checks:
-	//  - all Producers are properly setup
-	//  - anything fails, SABOTAGE
-	// Publish a PGP Signed message with your local IP.. push to properties
-	// Dispatch webhook PublishKickstartPublic (with a Kickstart Data object)
+	// Check ALL actions, should match the orchestrated launch data:
+	// - otherwise, sabotage
+
 	fmt.Println("Awaiting for private key, for handoff verification.")
 	fmt.Println("* This is the last step, and is done for the BIOS Boot node to prove it kept nothing to itself.")
 	fmt.Println("")
@@ -356,19 +344,19 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	return nil
 }
 
-func (b *BIOS) waitEthereumBlock() rand.Source {
+func (b *BIOS) waitLaunchBlock() rand.Source {
 	for {
-		hash, err := PollEthereumClock(b.LaunchData.LaunchEthereumBlock)
+		hash, err := b.Network.GetBlockHeight(b.LaunchDisco.SeedNetworkLaunchBlock)
 		if err != nil {
-			fmt.Println("couldn't fetch ethereum block:", err)
+			fmt.Println("couldn't fetch seed network block:", err)
 		} else {
 
 			if hash == "" {
-				fmt.Println("block", b.LaunchData.LaunchEthereumBlock, "not produced yet..")
+				fmt.Println("block", b.LaunchDisco.SeedNetworkLaunchBlock, "not produced yet..")
 			} else {
 				bytes, err := hex.DecodeString(hash)
 				if err != nil {
-					fmt.Printf("ethereum service returned invalid hex %q\n", hash)
+					fmt.Printf("block id is invalid hex: %q\n", hash)
 				} else {
 					chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
 					return rand.NewSource(int64(chksum))
@@ -392,6 +380,8 @@ func (b *BIOS) waitOnGenesisData() (genesis *GenesisJSON) {
 	for {
 		time.Sleep(500 * time.Millisecond)
 		fmt.Printf(".")
+
+		b.Network.seedNetAPI.GetTableRows()
 		// TODO: poll seedNetAPI.GetTableRows(seedContractName, "genesis.tbl")
 		// quand on l'a, on le retourne..
 
@@ -406,16 +396,6 @@ func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
 		if err != nil {
 			fmt.Println("Error reading line:", err)
 			continue
-		}
-
-		if strings.Contains(privKey, "/ipfs") {
-			cnt, err := b.Network.IPFS.Get(IPFSRef(privKey))
-			if err != nil {
-				fmt.Println("error fetching ipfs content:", err)
-				continue
-			}
-
-			privKey = string(cnt)
 		}
 
 		privKey = strings.TrimSpace(privKey)
@@ -451,6 +431,15 @@ func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 		InitialChainID:   hex.EncodeToString(b.EOSAPI.ChainID),
 	})
 	return string(cnt)
+}
+
+func (b *BIOS) GetContentsCacheRef(filename string) (string, error) {
+	for _, fl := range b.LaunchDisco.TargetContents {
+		if fl.Name == filename {
+			return fl.Ref, nil
+		}
+	}
+	return "", fmt.Errorf("%q not found in target contents", filename)
 }
 
 func (b *BIOS) setProducers() error {
@@ -513,7 +502,7 @@ func (b *BIOS) IsBootNode(account string) bool {
 }
 
 func (b *BIOS) AmIBootNode() bool {
-	return b.IsBootNode(b.Network.MyPeer.Discovery.EOSIOAccountName)
+	return b.IsBootNode(string(b.Network.MyPeer.Discovery.TargetAccountName))
 }
 
 func (b *BIOS) MyRole() Role {
@@ -527,7 +516,7 @@ func (b *BIOS) MyRole() Role {
 
 func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		if b.ShuffledProducers[i].Discovery.EOSIOAccountName == account {
+		if string(b.ShuffledProducers[i].Discovery.TargetAccountName) == account {
 			return true
 		}
 	}
@@ -535,7 +524,7 @@ func (b *BIOS) IsAppointedBlockProducer(account string) bool {
 }
 
 func (b *BIOS) AmIAppointedBlockProducer() bool {
-	return b.IsAppointedBlockProducer(b.Network.MyPeer.Discovery.EOSIOAccountName)
+	return b.IsAppointedBlockProducer(string(b.Network.MyPeer.Discovery.TargetAccountName))
 }
 
 // MyProducerDefs will provide more than one producer def ONLY when
@@ -549,7 +538,7 @@ func (b *BIOS) setMyPeers() error {
 	out := []*Peer{myPeer}
 
 	for _, peer := range b.ShuffledProducers {
-		if peer.Discovery.EOSIOAccountName == myPeer.Discovery.EOSIOAccountName {
+		if peer.Discovery.TargetAccountName == myPeer.Discovery.TargetAccountName {
 			out = append(out, peer)
 		}
 	}

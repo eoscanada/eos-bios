@@ -47,6 +47,19 @@ func (b *BIOS) computeMyMeshP2PAddresses() []string {
 	return otherPeers
 }
 
+func (b *BIOS) allExceptBootP2PAddresses() (out []string) {
+	for _, el := range b.Network.discoveredPeers {
+		if el.Discovery.SeedNetworkAccountName == b.Network.MyPeer.Discovery.SeedNetworkAccountName {
+			continue
+		}
+
+		// TODO: also skip boot node, as he wasn't participating in the launch
+
+		out = append(out, el.Discovery.TargetP2PAddress)
+	}
+	return
+}
+
 func (b *BIOS) someTopmostPeersAddresses() []string {
 	// TODO: refine this algo..
 	// connect to some randomly, but more of the top-most

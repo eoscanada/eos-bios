@@ -29,7 +29,7 @@ var discoverCmd = &cobra.Command{
 	Long:  `This uses the "network.seed_discovery_url" key in your configuration to start discovery.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
+		ipfs, err := bios.NewIPFS(ipfsGatewayAddress)
 		if err != nil {
 			fmt.Println("ipfs client error:", err)
 			os.Exit(1)

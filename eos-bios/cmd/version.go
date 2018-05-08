@@ -26,7 +26,6 @@ var versionCmd = &cobra.Command{
 	Short: "Show the program version (hint hint, it's " + Version + ")",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("eos-bios version", Version, "- https://github.com/eoscanada/eos-bios")
-		fmt.Println("no-discovery:", viper.GetBool("no-discovery"))
 	},
 }
 

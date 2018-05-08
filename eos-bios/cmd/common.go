@@ -10,11 +10,26 @@ import (
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork(api *eos.API, ipfs *bios.IPFS, contractName string) (*bios.Network, error) {
+func fetchNetwork(api *eos.API) (*bios.Network, error) {
+	discovery, err := bios.LoadDiscoveryFromFile(viper.GetString("my-discovery"))
+	if err != nil {
+		return nil, err
+	}
 
-	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs, contractName, api)
+	ipfs := bios.NewIPFS(viper.GetString("ipfs-gateway-address"))
 
-	net.UseCache = viper.GetBool("no-discovery")
+	seedNetAPI := eos.New(
+		viper.GetString("seednet-api"),
+		discovery.SeedNetworkChainID,
+	)
+
+	net := bios.NewNetwork(
+		viper.GetString("cache-path"),
+		discovery,
+		ipfs,
+		viper.GetString("seednet-contract"),
+		seedNetAPI,
+	)
 
 	if err := net.UpdateGraph(); err != nil {
 		return nil, fmt.Errorf("updating graph: %s", err)

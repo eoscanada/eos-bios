@@ -21,7 +21,6 @@ namespace eosiosystem {
     permission_level  permission;
     weight_type       weight;
 
-    // explicit serialization macro is not necessary, used here only to improve compilation time
     EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
   };
 
@@ -29,7 +28,6 @@ namespace eosiosystem {
     public_key   key;
     weight_type  weight;
 
-    // explicit serialization macro is not necessary, used here only to improve compilation time
     EOSLIB_SERIALIZE( key_weight, (key)(weight) )
   };
 
@@ -38,7 +36,6 @@ namespace eosiosystem {
     std::vector<key_weight>               keys;
     std::vector<permission_level_weight>  accounts;
 
-    // explicit serialization macro is not necessary, used here only to improve compilation time
     EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts) )
   };
 }

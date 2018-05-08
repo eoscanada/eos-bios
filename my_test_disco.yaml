@@ -1,4 +1,4 @@
-seed_network_chain_id: 0000000000000000000000000000000000000000000000.eos.stage0
+seed_network_chain_id: 0000000000000000000000000000000000000000000000000000000000000001
 seed_network_account_name: eoscanadacom
 seed_network_peers:
 - account: eosnation
@@ -15,7 +15,7 @@ gmt_offset: -0700  # in HourMinutes format
 
 target_network_is_test: 0  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
-target_chain_id: 000000000000000000000000000000000000000000000000000000.eos.stage1
+target_chain_id: 0000000000000000000000000000000000000000000000000000000000000002
 target_p2p_address: 192.168.1.111:9876
 target_account_name: eoscanadacom
 target_appointed_block_producer_signing_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
@@ -23,12 +23,12 @@ target_initial_authority:
   owner:
     threshold: 1
     keys:
-    - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+    - key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
       weight: 1
   active:
     threshold: 1
     keys:
-    - public_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
+    - key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
       weight: 1
   recovery:
     threshold: 1
@@ -41,10 +41,10 @@ target_initial_authority:
 target_contents:
   - name: boot_sequence.yaml
     ref: /ipfs/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH
-    comment: ""
+    comment: "Has test flags enabled."
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
-    comment: ""
+    comment: "Snapshot until period 290."
   #- name: snapshot_unregistered.csv
   #  ref: /ipfs/Qm...
   #  comment: ""
