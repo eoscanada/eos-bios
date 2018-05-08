@@ -19,6 +19,7 @@ import (
 
 	bios "github.com/eoscanada/eos-bios"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // validateCmd represents the validate command
@@ -28,7 +29,7 @@ var validateCmd = &cobra.Command{
 	Long:  "Check your files before you put them out, as to not break the network being crafted.",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		filename := myDiscoveryFile
+		filename := viper.GetString("my-discovery")
 		if len(args) == 1 {
 			filename = args[0]
 		}

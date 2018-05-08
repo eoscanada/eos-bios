@@ -11,51 +11,90 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
-	multihash "github.com/multiformats/go-multihash"
+	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-go"
 	"github.com/ryanuber/columnize"
 )
 
 type Network struct {
-	UseCache bool
+	LocalOnly bool
 
 	MyPeer *Peer
 
-	IPFS *IPFS
+	SeedNetAPI      *eos.API
+	seedNetContract string
 
+	ipfs            *IPFS
 	cachePath       string
-	myDiscoveryFile string
-	discoveredIPNS  map[IPNSRef]IPFSRef
-	discoveredPeers map[IPFSRef]*Peer
+	discoveredPeers map[eos.AccountName]*Peer
 	orderedPeers    []*Peer
-
-	lastFetch time.Time
+	candidates      map[string]*disco.Discovery
 }
 
-func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS) *Network {
+func NewNetwork(cachePath string, myDiscovery *disco.Discovery, ipfs *IPFS, seedNetContract string, seedNetAPI *eos.API) *Network {
 	return &Network{
-		IPFS:            ipfs,
+		SeedNetAPI:      seedNetAPI,
+		ipfs:            ipfs,
 		cachePath:       cachePath,
-		myDiscoveryFile: myDiscoveryFile,
+		seedNetContract: seedNetContract,
+		MyPeer: &Peer{
+			Discovery: myDiscovery,
+		},
 	}
 }
 
-func (c *Network) ensureExists() error {
-	return os.MkdirAll(c.cachePath, 0777)
+func (net *Network) ensureExists() error {
+	return os.MkdirAll(net.cachePath, 0777)
 }
 
 func (net *Network) UpdateGraph() error {
-	if time.Now().Before(net.lastFetch.Add(2 * time.Minute)) {
-		return nil
+	net.discoveredPeers = map[eos.AccountName]*Peer{}
+	net.candidates = make(map[string]*disco.Discovery)
+
+	var rows []struct {
+		ID            eos.AccountName  `json:"id"`
+		DiscoveryFile *disco.Discovery `json:"discovery_file"`
+		UpdatedAt     eos.JSONTime     `json:"updated_at"`
 	}
 
-	if err := net.traverseGraph(); err != nil {
+	fmt.Println("MAMA", net.LocalOnly)
+	if !net.LocalOnly {
+		rowsJSON, err := net.SeedNetAPI.GetTableRows(
+			eos.GetTableRowsRequest{
+				JSON:     true,
+				Scope:    net.seedNetContract,
+				Code:     net.seedNetContract,
+				Table:    "discovery",
+				TableKey: "id",
+				//LowerBound: "",
+				//UpperBound: "",
+				Limit: 1000,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("get discovery rows: %s", err)
+		}
+
+		if err := rowsJSON.JSONToStructs(&rows); err != nil {
+			return fmt.Errorf("reading discovery from table: %s", err)
+		}
+	}
+
+	for _, cand := range rows {
+		// TODO: verify their discovery file.. the values in there.. do we simply skip those with invalid weights for example ?? They're excluded from the graph?
+
+		cand.DiscoveryFile.UpdatedAt = cand.UpdatedAt
+		cand.DiscoveryFile.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
+		net.candidates[string(cand.ID)] = cand.DiscoveryFile
+	}
+
+	if err := net.ensureExists(); err != nil {
+		return fmt.Errorf("error creating cache path: %s", err)
+	}
+
+	if err := net.traversePeer(net.MyPeer.Discovery); err != nil {
 		return fmt.Errorf("traversing graph: %s", err)
-	}
-
-	if err := net.verifyGraph(); err != nil {
-		return fmt.Errorf("verifying graph: %s", err)
 	}
 
 	if err := net.calculateWeights(); err != nil {
@@ -65,182 +104,79 @@ func (net *Network) UpdateGraph() error {
 	return nil
 }
 
-func (c *Network) traverseGraph() error {
-	c.discoveredIPNS = map[IPNSRef]IPFSRef{}
-	c.discoveredPeers = map[IPFSRef]*Peer{}
-
-	err := c.ensureExists()
-	if err != nil {
-		return fmt.Errorf("error creating cache path: %s", err)
-	}
-
-	//fmt.Println("Cache ready")
-
-	// TODO: how do we handle when someone points to *us* ? We should
-	// have a way to find our canonical URL..
-	rawDisco, err := ioutil.ReadFile(c.myDiscoveryFile)
-	if err != nil {
+func (net *Network) traversePeer(discoFile *disco.Discovery) error {
+	// TODO: should we simply remove the peer if its discovery file is invalid ?
+	// flag it as such? and zero its weights everywhere ?
+	if err := ValidateDiscovery(discoFile); err != nil {
 		return err
 	}
 
-	var disco *Discovery
-	err = yamlUnmarshal(rawDisco, &disco)
-	if err != nil {
-		return err
-	}
+	net.discoveredPeers[discoFile.SeedNetworkAccountName] = &Peer{Discovery: discoFile}
 
-	ipfsRef := toMultihash(rawDisco)
-
-	c.MyPeer = &Peer{
-		Discovery:     disco,
-		DiscoveryLink: IPNSRef("local " + c.myDiscoveryFile),
-		DiscoveryFile: ipfsRef,
-	}
-	c.discoveredPeers[ipfsRef] = c.MyPeer
-
-	return c.traversePeer(disco, c.MyPeer.DiscoveryLink, ipfsRef)
-}
-
-func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
-	fmt.Printf("Loading launch data from %q (%q, %s)...\n", disco.EOSIOAccountName, disco.OrganizationName, ipnsRef)
-	if err := ValidateDiscovery(disco); err != nil {
-		return err
-	}
-
-	launchData := disco.LaunchData
-
-	// Go through all the things we can download from there
-	if err := c.DownloadIPFSRef(launchData.BootSequence); err != nil {
-		return fmt.Errorf("boot_sequence: %s", err)
-	}
-	if err := c.DownloadIPFSRef(launchData.Snapshot); err != nil {
-		return fmt.Errorf("snapshot: %s", err)
-	}
-	// if err := c.DownloadHashURL(discoveryURL, launchData.SnapshotUnregistered); err != nil {
-	// 	return fmt.Errorf("snapshot_unregistered: %s", err)
-	// }
-	for name, contract := range launchData.Contracts {
-		if err := c.DownloadIPFSRef(contract.ABI); err != nil {
-			return fmt.Errorf("contract %q ABI: %s", name, err)
-		}
-		if err := c.DownloadIPFSRef(contract.Code); err != nil {
-			return fmt.Errorf("contract %q Code: %s", name, err)
+	for _, contentRef := range discoFile.TargetContents {
+		if err := net.DownloadIPFSRef(contentRef.Ref); err != nil {
+			return fmt.Errorf("content %q: %s", contentRef.Name, err)
 		}
 	}
 
-	c.discoveredPeers[ipfsRef] = &Peer{
-		DiscoveryFile: ipfsRef,
-		DiscoveryLink: ipnsRef,
-		Discovery:     disco,
-	}
+	fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
 
-	fmt.Printf("- has %d peer(s)\n", len(launchData.Peers))
+	for _, peerLink := range discoFile.SeedNetworkPeers {
+		fmt.Printf("  - peer %s comment=%q, weight=%.2f\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
 
-	for _, peerLink := range launchData.Peers {
-		if err := c.fetchPeer(peerLink); err != nil {
-			return fmt.Errorf("fetching %q: %s", peerLink.DiscoveryLink, err)
+		peerDisco, found := net.candidates[string(peerLink.Account)]
+		if !found {
+			fmt.Println("    - peer not found, won't weight in")
+			continue
+		}
+
+		if net.discoveredPeers[peerDisco.SeedNetworkAccountName] != nil {
+			fmt.Printf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
+			return nil
+		}
+
+		fmt.Printf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
+
+		if err := net.traversePeer(peerDisco); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (c *Network) fetchPeer(peerLink *PeerLink) error {
-	fmt.Printf("  - peer %s comment=%q, weight=%.2f\n", peerLink.DiscoveryLink, peerLink.Comment, peerLink.Weight)
-
-	if peerLink.Weight > 1.0 || peerLink.Weight < 0.0 {
-		fmt.Printf("    - weight not between 0.0 and 1.0, not including in graph\n")
-		return nil
-	}
-
-	if c.discoveredIPNS[peerLink.DiscoveryLink] != "" {
-		fmt.Printf("    - traversed already!\n")
-		return nil
-	}
-
-	// TODO: CACHING of IPNS refs, when --no-discovery is passed..
-	var err error
-	var rawDisco []byte
-	if c.UseCache && c.isInCache(string(peerLink.DiscoveryLink)) {
-		ipfsRef, err := c.ReadFromCache(string(peerLink.DiscoveryLink))
-		if err != nil {
-			return err
-		}
-
-		rawDisco, err = c.ReadFromCache(string(ipfsRef))
-		if err != nil {
-			return err
-		}
-	} else {
-		rawDisco, err = c.IPFS.GetIPNS(peerLink.DiscoveryLink)
-		if err != nil {
-			return err
-		}
-	}
-
-	ipfsRef := toMultihash(rawDisco)
-
-	_ = c.writeToCache(string(ipfsRef), rawDisco)
-	_ = c.writeToCache(string(peerLink.DiscoveryLink), []byte(ipfsRef))
-
-	var disco *Discovery
-	err = yamlUnmarshal(rawDisco, &disco)
-	if err != nil {
-		fmt.Println("BROKEN DISCOVERY FILE. Wrote to `broken_discovery.yaml`. Please inspect!")
-		ioutil.WriteFile("broken_discovery.yaml", rawDisco, 0666)
-
-		return fmt.Errorf("couldn't download discovery URL: %s", err)
-	}
-
-	c.discoveredIPNS[peerLink.DiscoveryLink] = ipfsRef
-
-	if c.discoveredPeers[ipfsRef] != nil {
-		fmt.Printf("    - already added %q\n", disco.EOSIOAccountName)
-		return nil
-	}
-
-	fmt.Printf("    - adding %q (%q)\n", disco.EOSIOAccountName, disco.OrganizationName)
-
-	return c.traversePeer(disco, peerLink.DiscoveryLink, ipfsRef)
-}
-
-func (c *Network) DownloadIPFSRef(ref IPFSRef) error {
+func (net *Network) DownloadIPFSRef(ref string) error {
 	if ref == "" {
 		return errors.New("no hash provided")
 	}
-	if !strings.HasPrefix(string(ref), "/ipfs/") {
+	if !strings.HasPrefix(ref, "/ipfs/") {
 		return fmt.Errorf("ipfs ref should start with'/ipfs/': %q", ref)
 	}
 
-	if c.isInCache(string(ref)) {
+	if net.isInCache(string(ref)) {
 		//fmt.Printf("ipfs ref: %q in cache\n", ref)
 		return nil
 	}
 
-	cnt, err := c.IPFS.Get(ref)
+	cnt, err := net.ipfs.Get(ref)
 	if err != nil {
 		return err
 	}
 
-	if err := c.writeToCache(string(ref), cnt); err != nil {
+	if err := net.writeToCache(string(ref), cnt); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func toMultihash(cnt []byte) IPFSRef {
-	hash, _ := multihash.Sum(cnt, multihash.SHA2_256, 32)
-	return IPFSRef(fmt.Sprintf("/ipfs/%s", hash.B58String()))
-}
-
-func (c *Network) writeToCache(ref string, content []byte) error {
+func (net *Network) writeToCache(ref string, content []byte) error {
 	fileName := replaceAllWeirdities(ref)
-	return ioutil.WriteFile(filepath.Join(c.cachePath, fileName), content, 0666)
+	return ioutil.WriteFile(filepath.Join(net.cachePath, fileName), content, 0666)
 }
 
-func (c *Network) isInCache(ref string) bool {
-	fileName := filepath.Join(c.cachePath, replaceAllWeirdities(string(ref)))
+func (net *Network) isInCache(ref string) bool {
+	fileName := filepath.Join(net.cachePath, replaceAllWeirdities(string(ref)))
 
 	if _, err := os.Stat(fileName); err == nil {
 		return true
@@ -248,72 +184,48 @@ func (c *Network) isInCache(ref string) bool {
 	return false
 }
 
-func (c *Network) ReadFromCache(ref string) ([]byte, error) {
+func (net *Network) ReadFromCache(ref string) ([]byte, error) {
 	fileName := replaceAllWeirdities(ref)
-	return ioutil.ReadFile(filepath.Join(c.cachePath, fileName))
+	return ioutil.ReadFile(filepath.Join(net.cachePath, fileName))
 }
 
-func (c *Network) ReaderFromCache(ref IPFSRef) (io.ReadCloser, error) {
-	fileName := replaceAllWeirdities(string(ref))
-	return os.Open(filepath.Join(c.cachePath, fileName))
+func (net *Network) ReaderFromCache(ref string) (io.ReadCloser, error) {
+	fileName := replaceAllWeirdities(ref)
+	return os.Open(filepath.Join(net.cachePath, fileName))
 }
 
-func (c *Network) FileNameFromCache(ref IPFSRef) string {
-	fileName := replaceAllWeirdities(string(ref))
-	return filepath.Join(c.cachePath, fileName)
+func (net *Network) FileNameFromCache(ref string) string {
+	fileName := replaceAllWeirdities(ref)
+	return filepath.Join(net.cachePath, fileName)
 }
 
-func (c *Network) LoadCache(initialDiscoveryURL string) error {
-	// TODO: start with initialDiscoveryURL
-	// read from disk all the BPs, verify the hash data, etc.. ?
-	return nil
-}
-
-func (c *Network) ValidateLocalFile(filename string) error {
-	// simulate DownloadDiscoveryURL with a local file, and run all
-	// the validation we have from `if disco.Testnet && disco.Mainnet`,
-	// etc..
-
-	return nil
-}
-
-func (c *Network) ChainID() []byte {
+func (net *Network) ChainID() []byte {
 	// TODO: compute based on all the hashes in the elected launchdata?
 	// have a value be voted for ?
 	return make([]byte, 32, 32)
 }
 
-func (c *Network) calculateWeights() error {
+func (net *Network) calculateWeights() error {
 	// build a second map with discoveryURLs alongside account_names...
 	var allPeers []*Peer
-	for _, peer := range c.discoveredPeers {
-		fmt.Println("First level peer", peer.DiscoveryLink)
-		for _, peerLink := range peer.Discovery.LaunchData.Peers {
-			// TODO: double-check this.. wuuut
-			resolvedRef := c.discoveredIPNS[peerLink.DiscoveryLink]
+	for _, peer := range net.discoveredPeers {
 
-			fmt.Println("Comparing peer discofile:", peer.DiscoveryFile, "peerLink resolvedRef:", resolvedRef)
+		fmt.Println("First level peer", peer.AccountName())
+		for _, peerLink := range peer.Discovery.SeedNetworkPeers {
 
-			if peer.DiscoveryFile == resolvedRef {
-				// Can't vouch for yourself
+			if peer.Discovery.SeedNetworkAccountName == peerLink.Account {
+				// Can't vote for yourself
 				continue
 			}
 
-			peerLinkDisco, found := c.discoveredPeers[resolvedRef]
+			peerLinkPeer, found := net.discoveredPeers[peerLink.Account]
 			if !found {
-				return fmt.Errorf("couldn't find %q (resolved peer ref) in list of peers", resolvedRef)
-			}
-
-			fmt.Println("  - peer account:", peer.Discovery.EOSIOAccountName, "peerlink.account:", peerLinkDisco.Discovery.EOSIOAccountName)
-
-			if peer.Discovery.EOSIOAccountName == peerLinkDisco.Discovery.EOSIOAccountName {
-				// hmm.. don't count weight on your own account..
 				continue
 			}
 
-			fmt.Println("adding weight to", peerLinkDisco.AccountName())
+			fmt.Println("adding weight to", peerLink.Account)
 			// Weight defaults to 0.0
-			peerLinkDisco.TotalWeight += peerLink.Weight
+			peerLinkPeer.TotalWeight += peerLink.Weight
 		}
 
 		allPeers = append(allPeers, peer)
@@ -322,29 +234,66 @@ func (c *Network) calculateWeights() error {
 	// Sort the `orderedPeers`
 	sort.Slice(allPeers, func(i, j int) bool {
 		if allPeers[i].TotalWeight == allPeers[j].TotalWeight {
-			return allPeers[i].DiscoveryFile < allPeers[j].DiscoveryFile
+			return allPeers[i].AccountName() < allPeers[j].AccountName()
 		}
 		return allPeers[i].TotalWeight > allPeers[j].TotalWeight
 	})
 
-	c.orderedPeers = allPeers
+	net.orderedPeers = allPeers
 
 	return nil
 }
 
-func (c *Network) OrderedPeers() []*Peer {
-	return c.orderedPeers
+func (net *Network) OrderedPeers() []*Peer {
+	return net.orderedPeers
 }
 
-func (c *Network) verifyGraph() error {
-	// Make sure we don't have 2 entities named the same on chain.. EOSIOACcountName being equal.
-	seen := map[string]string{}
-	for _, peer := range c.discoveredPeers {
-		if discoURL := seen[peer.Discovery.EOSIOAccountName]; discoURL != "" {
-			return fmt.Errorf("two peers claim the eosio_account_name %q: %q and %q", peer.Discovery.EOSIOAccountName, discoURL, peer.DiscoveryFile)
-		}
+func (net *Network) GetBlockHeight(height uint64) (blockhash string, err error) {
+	resp, err := net.SeedNetAPI.GetBlockByNum(height)
+	if err != nil {
+		return "", err
 	}
-	return nil
+
+	return resp.ID, nil
+}
+
+func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err error) {
+	accountRaw, err := eos.MarshalBinary(account)
+	if err != nil {
+		return "", err
+	}
+	accountHex := hex.EncodeToString(accountRaw)
+	rowsJSON, err := net.SeedNetAPI.GetTableRows(
+		eos.GetTableRowsRequest{
+			JSON:       true,
+			Scope:      net.seedNetContract,
+			Code:       net.seedNetContract,
+			Table:      "genesis",
+			TableKey:   "id",
+			LowerBound: accountHex,
+			UpperBound: accountHex,
+			Limit:      1,
+		},
+	)
+	if err != nil {
+		return "", fmt.Errorf("get genesis rows: %s", err)
+	}
+
+	var rows []struct {
+		ID                  eos.AccountName `json:"id"`
+		GenesisJSON         string          `json:"genesis_json"`
+		InitialP2PAddresses []string        `json:"initial_p2p_addresses"`
+		UpdatedAt           eos.JSONTime    `json:"updated_at"`
+	}
+	if err := rowsJSON.JSONToStructs(&rows); err != nil {
+		return "", fmt.Errorf("reading discovery from table: %s", err)
+	}
+
+	if len(rows) != 1 {
+		return "", nil
+	}
+
+	return rows[0].GenesisJSON, nil
 }
 
 func sha2(input []byte) string {
@@ -353,21 +302,21 @@ func sha2(input []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (c *Network) PrintOrderedPeers() {
+func (net *Network) PrintOrderedPeers() {
 	fmt.Println("###############################################################################################")
 	fmt.Println("####################################    PEER NETWORK    #######################################")
 	fmt.Println("")
 
 	columns := []string{
-		"Role | IPNS Link | Account | Organization | Weight",
-		"---- | --------- | ------- | ------------ | ------",
+		"Role | Seed Account | Target Acct | Weight",
+		"---- | ------------ | ----------- | ------",
 	}
-	columns = append(columns, fmt.Sprintf("BIOS NODE | %s", c.orderedPeers[0].Columns()))
-	for i := 1; i < 22 && len(c.orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("ABP %02d | %s", i, c.orderedPeers[i].Columns()))
+	columns = append(columns, fmt.Sprintf("BIOS NODE | %s", net.orderedPeers[0].Columns()))
+	for i := 1; i < 22 && len(net.orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("ABP %02d | %s", i, net.orderedPeers[i].Columns()))
 	}
-	for i := 22; len(c.orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("Part. %02d | %s", i, c.orderedPeers[i].Columns()))
+	for i := 22; len(net.orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("Part. %02d | %s", i, net.orderedPeers[i].Columns()))
 	}
 	fmt.Println(columnize.SimpleFormat(columns))
 
@@ -379,19 +328,19 @@ func (c *Network) PrintOrderedPeers() {
 // ReachedConsensus reads all the hashes of the top-level peers and
 // returns true if we have reached an agreement on the content to
 // inject in the chain.
-func (c *Network) ReachedConsensus() bool {
+func (net *Network) ReachedConsensus() bool {
 	// TODO: Implement the logic that determines the consensus.. right
 	// now it's just the weights in order.. and the top-most wins: we use
 	// its configuration.
 	return true
 }
 
-func (c *Network) ConsensusLaunchData() (*LaunchData, error) {
+func (net *Network) ConsensusDiscovery() (*disco.Discovery, error) {
 	// TODO: implement the algo to create a Discovery file based on
 	// the most vouched for hashes for all the components.
 	//
 	// Will that work ? Will that make sense ?
 	//
 	// Cycle through the top peers, take the most vetted
-	return &(c.orderedPeers[0].Discovery.LaunchData), nil
+	return net.orderedPeers[0].Discovery, nil
 }

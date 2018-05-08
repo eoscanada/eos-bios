@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	yaml2json "github.com/bronze1man/go-yaml2json"
+	"github.com/eoscanada/eos-bios/disco"
 )
 
 func yamlUnmarshal(cnt []byte, v interface{}) error {
@@ -19,51 +20,48 @@ func yamlUnmarshal(cnt []byte, v interface{}) error {
 	return json.Unmarshal(jsonCnt, v)
 }
 
-func ValidateDiscoveryFile(filename string) error {
-	cnt, err := ioutil.ReadFile(filename)
+func LoadDiscoveryFromFile(fileName string) (discovery *disco.Discovery, err error) {
+	cnt, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return err
+		return
 	}
 
-	var disco *Discovery
-	err = yamlUnmarshal(cnt, &disco)
+	err = yamlUnmarshal(cnt, &discovery)
 	if err != nil {
-		return err
+		return
 	}
 
-	return ValidateDiscovery(disco)
+	err = ValidateDiscovery(discovery)
+	return
 }
 
-func ValidateDiscovery(disco *Discovery) error {
-	for _, peer := range disco.LaunchData.Peers {
-		if !strings.HasPrefix(string(peer.DiscoveryLink), "/ipns/") {
-			return fmt.Errorf("peer link %q invalid, should start with '/ipns/'", peer.DiscoveryLink)
+func ValidateDiscoveryFile(filename string) error {
+	discovery, err := LoadDiscoveryFromFile(filename)
+	if err != nil {
+		return err
+	}
+	ValidateDiscovery(discovery)
+	return nil
+}
+
+func ValidateDiscovery(discovery *disco.Discovery) error {
+	for _, peer := range discovery.SeedNetworkPeers {
+		if peer.Weight > 1.0 || peer.Weight < 0.0 {
+			return fmt.Errorf("peer %q weight must be between 0.0 and 1.0", peer.Account)
 		}
-		if peer.Weight > 1.0 {
-			return fmt.Errorf("peer %q weight must be between 0.0 and 1.0", peer.DiscoveryLink)
-		}
 	}
 
-	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
-		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
+	if discovery.TargetAccountName == "" {
+		return errors.New("target_account_name is missing")
 	}
 
-	if disco.EOSIOAccountName == "" {
-		return errors.New("eosio_account_name is missing")
+	if !strings.Contains(discovery.TargetP2PAddress, ":") {
+		return errors.New("target_p2p_address doesn't contain port number")
 	}
 
-	// TODO: Validate the `eosio_p2p` is the right format, with a port.
-	// Prevent `127.0.0.1`, `localhost`, and `192.168` and local stuff ?
-
-	// TODO: check that p2p nodes don't end with `example.com` or something..
-
-	// TODO: check that `eosio_http` has `http://` prefix, not necessarily a port if standard.
-	// TODO: check that `eosio_https` has `https://` prefix.
-
-	// Validate the EOSIO initial authority, make sure its valid..
-
-	// launch ethereum block present.. within reasonable boundaries
-	//
+	// if strings.Contains(discovery.TargetP2PAddress, "example.com") {
+	// 	return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
+	// }
 
 	return nil
 }

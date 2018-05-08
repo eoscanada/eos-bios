@@ -84,10 +84,19 @@ type OpSetCode struct {
 
 func (op *OpSetCode) ResetTestnetOptions() { return }
 func (op *OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
+	wasmFileRef, err := b.GetContentsCacheRef(fmt.Sprintf("%s.wasm", op.ContractNameRef))
+	if err != nil {
+		return nil, err
+	}
+	abiFileRef, err := b.GetContentsCacheRef(fmt.Sprintf("%s.abi", op.ContractNameRef))
+	if err != nil {
+		return nil, err
+	}
+
 	setCode, err := system.NewSetCodeTx(
 		op.Account,
-		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].Code),
-		b.Network.FileNameFromCache(b.LaunchData.Contracts[op.ContractNameRef].ABI),
+		b.Network.FileNameFromCache(wasmFileRef),
+		b.Network.FileNameFromCache(abiFileRef),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("NewSetCodeTx %s: %s", op.ContractNameRef, err)
@@ -176,9 +185,9 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		newAccount.Data = eos.NewActionData(system.NewAccount{
 			Creator:  AN("eosio"),
 			Name:     AN(prod.AccountName()),
-			Owner:    prod.Discovery.EOSIOInitialAuthority.Owner,
-			Active:   prod.Discovery.EOSIOInitialAuthority.Active,
-			Recovery: prod.Discovery.EOSIOInitialAuthority.Recovery,
+			Owner:    prod.Discovery.TargetInitialAuthority.Owner,
+			Active:   prod.Discovery.TargetInitialAuthority.Active,
+			Recovery: prod.Discovery.TargetInitialAuthority.Recovery,
 		})
 
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
@@ -206,11 +215,26 @@ func (op *OpInjectSnapshot) ResetTestnetOptions() {
 }
 
 func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if len(b.Snapshot) == 0 {
+	snapshotFile, err := b.GetContentsCacheRef("snapshot.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading snapshot file: %s", err)
+	}
+
+	snapshotData, err := NewSnapshot(rawSnapshot)
+	if err != nil {
+		return nil, fmt.Errorf("loading snapshot csv: %s", err)
+	}
+
+	if len(snapshotData) == 0 {
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	for idx, hodler := range b.Snapshot {
+	for idx, hodler := range snapshotData {
 		flipped := flipEndianness(uint64(idx + 1))
 		destAccount := AN("genesis." + eos.NameToString(flipped))
 		fmt.Println("Transfer", hodler, destAccount)
@@ -229,7 +253,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 		}
 
 		// TODO: stake 50% bandwidth, 50% cpu for all new accounts
-		// b.EOSAPI.SignPushActions(system.Stake(AN("eosio"), destAccount, 999, 888, ""))
+		// out = append(out, system.Stake(AN("eosio"), destAccount, 999, 888, ""))
 	}
 
 	return
@@ -247,7 +271,7 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	}}
 	// prodkeys := []system.ProducerKey{}
 	for _, prod := range b.ShuffledProducers {
-		prodkeys = append(prodkeys, system.ProducerKey{AN(prod.AccountName()), prod.Discovery.EOSIOABPSigningKey})
+		prodkeys = append(prodkeys, system.ProducerKey{AN(prod.AccountName()), prod.Discovery.TargetAppointedBlockProducerSigningKey})
 		if len(prodkeys) >= 21 {
 			break
 		}
@@ -276,8 +300,24 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 	for _, acct := range op.Accounts {
 		out = append(out,
-			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
+				Threshold: 1,
+				Keys: []eos.KeyWeight{
+					eos.KeyWeight{
+						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
+						Weight:    1,
+					},
+				},
+			}, PN("active")),
+			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{
+				Threshold: 1,
+				Keys: []eos.KeyWeight{
+					eos.KeyWeight{
+						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
+						Weight:    1,
+					},
+				},
+			}, PN("owner")),
 			// TODO: add recovery here ??
 		)
 

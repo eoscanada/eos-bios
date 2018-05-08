@@ -29,6 +29,8 @@ docker run -ti --rm --detach --name nodeos-bios \
                              --genesis-json=/etc/nodeos/genesis.json \
                              --config-dir=/etc/nodeos
 
+#~/build/eos/build/programs/nodeos/nodeos --data-dir /tmp/nodeos-data --genesis-json `pwd`/genesis.json --config-dir `pwd` &
+
 echo ""
 echo "   View logs with: docker logs -f nodeos-bios"
 echo ""
