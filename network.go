@@ -58,7 +58,6 @@ func (net *Network) UpdateGraph() error {
 		UpdatedAt     eos.JSONTime     `json:"updated_at"`
 	}
 
-	fmt.Println("MAMA", net.LocalOnly)
 	if !net.LocalOnly {
 		rowsJSON, err := net.SeedNetAPI.GetTableRows(
 			eos.GetTableRowsRequest{
