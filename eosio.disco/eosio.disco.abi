@@ -33,7 +33,7 @@
           "type": "string"
         },{
           "name": "weight",
-          "type": "int8"
+          "type": "float64"
         }
       ]
     },{
@@ -46,6 +46,13 @@
           "name": "weight",
           "type": "weight_type"
         }
+      ]
+    },{
+      "name": "permission_level",
+      "base": "",
+      "fields": [
+        {"name": "actor", "type": "account_name"},
+        {"name": "permission", "type": "permission_name"}
       ]
     },{
       "name": "permission_level_weight",
@@ -158,9 +165,42 @@
           "type": "time"
         }
       ]
+    },
+
+    {
+      "name": "updtdisco",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        }, {
+          "name": "disco",
+          "type": "discovery_file"
+        }
+      ]
+    }, {
+      "name": "updtgenesis",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        }, {
+          "name": "genesis_json",
+          "type": "string"
+        }, {
+          "name": "initial_p2p_addresses",
+          "type": "string[]"
+        }
+      ]
     }
   ],
-  "actions": [],
+  "actions": [{
+    "name": "updtdisco",
+    "type": "updtdisco"
+  }, {
+    "name": "updtgenesis",
+    "type": "updtgenesis"
+  }],
   "tables": [{
       "name": "genesis",
       "index_type": "i64",
