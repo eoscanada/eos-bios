@@ -30,7 +30,7 @@
           "type": "string"
         },{
           "name": "weight",
-          "type": "float64"
+          "type": "uint8"
         }
       ]
     },{

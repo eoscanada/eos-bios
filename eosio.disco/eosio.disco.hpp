@@ -47,7 +47,7 @@ namespace eosio {
   struct peer_link {
     account_name account;
     string comment;
-    double weight; // between 0.0 and 1.0
+    uint8_t weight; // betwee 0 and 100
   };
 
   //@abi type

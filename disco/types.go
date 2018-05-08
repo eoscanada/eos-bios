@@ -8,7 +8,7 @@ import (
 type PeerLink struct {
 	Account eos.AccountName `json:"account"`
 	Comment string          `json:"comment"`
-	Weight  float64         `json:"weight"`
+	Weight  uint8           `json:"weight"`
 }
 type ContentRef struct {
 	Name    string `json:"name"`

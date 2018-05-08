@@ -54,7 +54,7 @@ func (net *Network) UpdateGraph() error {
 
 	var rows []struct {
 		ID            eos.AccountName  `json:"id"`
-		DiscoveryFile *disco.Discovery `json:"discovery_file"`
+		DiscoveryFile *disco.Discovery `json:"content"`
 		UpdatedAt     eos.JSONTime     `json:"updated_at"`
 	}
 
@@ -223,8 +223,8 @@ func (net *Network) calculateWeights() error {
 			}
 
 			fmt.Println("adding weight to", peerLink.Account)
-			// Weight defaults to 0.0
-			peerLinkPeer.TotalWeight += peerLink.Weight
+			// Weight defaults to 0
+			peerLinkPeer.TotalWeight += int(peerLink.Weight)
 		}
 
 		allPeers = append(allPeers, peer)

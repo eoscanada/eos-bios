@@ -11,10 +11,10 @@ seed_network_account_name: eoscanadacom
 seed_network_peers:
 - account: eosexample
   comment: "They are good"
-  weight: 0.2  # Weights are between 0.0 and 1.0
+  weight: 10  # Weights are between 0 and 100
 - account: eosmore
   comment: "They are better"
-  weight: 0.3
+  weight: 20
 
 seed_network_launch_block: 5000  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
 

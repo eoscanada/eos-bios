@@ -9,7 +9,7 @@ import (
 type Peer struct {
 	Discovery *disco.Discovery
 
-	TotalWeight float64
+	TotalWeight int
 
 	ClonedAccountName string
 }
@@ -29,9 +29,9 @@ func (p *Peer) String() string {
 		return "Discovery:nil"
 	}
 
-	return fmt.Sprintf("account=%s weight=%.2f", p.AccountName(), p.TotalWeight)
+	return fmt.Sprintf("account=%s weight=%d", p.AccountName(), p.TotalWeight)
 }
 
 func (p *Peer) Columns() string {
-	return fmt.Sprintf("%s | %s | %.2f", p.AccountName(), p.Discovery.TargetAccountName, p.TotalWeight)
+	return fmt.Sprintf("%s | %s | %d", p.AccountName(), p.Discovery.TargetAccountName, p.TotalWeight)
 }
