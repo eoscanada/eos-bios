@@ -14,15 +14,9 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
-	"net/url"
-	"os"
 
-	bios "github.com/eoscanada/eos-bios"
-	eos "github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // orchestrateCmd represents the orchestrate command
@@ -31,32 +25,21 @@ var orchestrateCmd = &cobra.Command{
 	Short: "Automate all the operations to launch a new network, by collaborating with other in the launch.",
 	Long:  `This operation will auto-select the roles, based on a discovered Network shared amongst participants.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
-		if err != nil {
-			fmt.Println("ipfs client error:", err)
-			os.Exit(1)
-		}
-
-		net, err := fetchNetwork(ipfs)
+		net, err := fetchNetwork(false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
 
-		apiAddressURL, err = url.Parse(apiAddress)
+		b, err := setupBIOS(net)
 		if err != nil {
-			log.Fatalln("error parsing --api-address:", err)
+			log.Fatalln("bios setup:", err)
 		}
-
-		api := eos.New(apiAddressURL, net.ChainID())
-		api.SetSigner(eos.NewKeyBag())
-
-		b := bios.NewBIOS(net, api)
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartOrchestrate(secretP2PAddress); err != nil {
+		if err := b.StartOrchestrate(); err != nil {
 			log.Fatalf("error orchestrating: %s", err)
 		}
 
@@ -65,11 +48,4 @@ var orchestrateCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(orchestrateCmd)
-
-	orchestrateCmd.Flags().StringVarP(&secretP2PAddress, "secret-p2p-address", "", "localhost:9876", "Address to publish once boot is complete. In an orchestrated boot, you would want to keep this one secret to avoid being DDoS'd.")
-	orchestrateCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
-
-	for _, flag := range []string{"secret-p2p-address", "api-address"} {
-		viper.BindPFlag(flag, orchestrateCmd.Flags().Lookup(flag))
-	}
 }

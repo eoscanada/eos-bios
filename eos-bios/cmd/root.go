@@ -27,14 +27,10 @@ var Version string
 
 // Flags
 var noDiscovery bool
-var cachePath string
-var myDiscoveryFile string
-var secretP2PAddress string
 var apiAddress string
 var apiAddressURL *url.URL
 var ipfsAPIAddress string
-var ipfsGatewayAddress string
-var ipfsLocalGatewayAddress string
+var seedNetworkContract = "eosio.disco"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -56,15 +52,19 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().BoolVarP(&noDiscovery, "no-discovery", "", false, "Don't traverse the discovery graph, but use the cached version instead (will still traverse if the cache is incomplete)")
-	RootCmd.PersistentFlags().StringVarP(&myDiscoveryFile, "my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
-	RootCmd.PersistentFlags().StringVarP(&ipfsGatewayAddress, "ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
-	RootCmd.PersistentFlags().StringVarP(&ipfsLocalGatewayAddress, "ipfs-local-gateway-address", "", "http://127.0.0.1:8080", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
+	RootCmd.PersistentFlags().StringP("my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
+	RootCmd.PersistentFlags().StringP("ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
+	RootCmd.PersistentFlags().StringP("seednet-api", "", "http://stage0.example.com:8888", "API Address of a seed network nodeos instance")
+	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./privkeys.keys", "File containing private keys to your account on the seed network")
+	// RootCmd.PersistentFlags().StringVarP(&seedNetworkContract, "seednet-contract", "", "eosio.disco", "Contract account name on the seed network, where to find discovery files from all Block producer candidates.")
+	RootCmd.PersistentFlags().StringP("target-api", "", "http://127.0.0.1:8888", "API Address of the target network's nodeos instance that you control (for injection and verification)")
 
-	RootCmd.PersistentFlags().StringVarP(&cachePath, "cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
+	RootCmd.PersistentFlags().StringP("cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
 
-	for _, flag := range []string{"no-discovery", "cache-path", "my-discovery", "ipfs-local-gateway-address", "ipfs-gateway-address"} {
-		viper.BindPFlag(flag, RootCmd.Flags().Lookup(flag))
+	for _, flag := range []string{"cache-path", "my-discovery", "ipfs-gateway-address", "seednet-keys", "seednet-api", "target-api"} { // "seednet-contract",
+		if err := viper.BindPFlag(flag, RootCmd.PersistentFlags().Lookup(flag)); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -72,5 +72,4 @@ func init() {
 func initConfig() {
 	viper.SetEnvPrefix("EOS_BIOS")
 	viper.AutomaticEnv() // read in environment variables that match
-	//viper.ReadInConfig()
 }

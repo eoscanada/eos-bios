@@ -6,18 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestDiscoveryDir(t *testing.T) {
 	ts := newFileServer()
 	defer ts.Close()
 
-	net := NewNetwork("/tmp/disco", ts.URL+"/bp1.yaml", &IPFS{})
-	assert.NoError(t, net.traverseGraph())
-	assert.NoError(t, net.verifyGraph())
-	assert.NoError(t, net.calculateWeights())
+	// net := NewNetwork("/tmp/disco", ts.URL+"/bp1.yaml", &IPFS{}, "eosio.disco", eos.New("http://seed.net:8888", make([]byte, 32, 32)))
+	// assert.NoError(t, net.UpdateGraph())
 	// assert.Equal(t, 0.5, net.discoveredPeers[ts.URL+"/bp1.yaml"].TotalWeight)
 	// assert.Equal(t, 1.0, net.discoveredPeers[ts.URL+"/bp2.yaml"].TotalWeight)
 	// assert.Equal(t, 1.0, net.discoveredPeers[ts.URL+"/bp3.yaml"].TotalWeight)

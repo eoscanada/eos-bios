@@ -1,45 +1,34 @@
-#
-# Discovery happens on a SEED network running EOS.IO software.
-# We boot a new network from a previous network, until we reach the mainnet.
-# We call each network a stage. Ex: stage0, stage1, stage2, stage3, until "mainnet".
-#
-seed_network_chain_id: "0000000000000000000000000000000000000000000000000000000000000001"
+seed_network_chain_id: 0000000000000000000000000000000000000000000000000000000000000001
 seed_network_account_name: eoscanadacom
-# These are your peers on the SEED network.  They must have published
-# their discovery in the seed network `eosio.disco` contract (with
-# `eos-bios publish`). Otherwise, your peer link here will be ignored.
 seed_network_peers:
-- account: eosexample
-  comment: "They are good"
-  weight: 0.2  # Weights are between 0.0 and 1.0
-- account: eosmore
-  comment: "They are better"
-  weight: 0.3
-
-seed_network_launch_block: 5000  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
+- account: eosnation
+  comment: ""
+  weight: 0.2
+- account: eosblocksmith
+  comment: "great life"
+  weight: 0.1
+seed_network_launch_block: 5544732  # Past block, for testing
 
 urls:
 - https://website.com
-
-# To help organize schedules for rehearsals.
 gmt_offset: -0700  # in HourMinutes format
 
-target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
+target_network_is_test: 0  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
-target_chain_id: "0000000000000000000000000000000000000000000000000000000000000002"
-target_p2p_address: stage1.example.com:9876
-target_account_name: eosnextgen
-target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+target_chain_id: 0000000000000000000000000000000000000000000000000000000000000002
+target_p2p_address: 192.168.1.111:9876
+target_account_name: eoscanadacom
+target_appointed_block_producer_signing_key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
 target_initial_authority:
   owner:
     threshold: 1
     keys:
-    - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+    - key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
       weight: 1
   active:
     threshold: 1
     keys:
-    - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+    - key: EOS8NijGLHT8WyDmt2nqMwfP1hr8EiYx5JCYBWSP9S26WgbeugvSJ
       weight: 1
   recovery:
     threshold: 1

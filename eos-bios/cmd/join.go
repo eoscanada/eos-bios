@@ -14,16 +14,11 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
-	"os"
 
-	bios "github.com/eoscanada/eos-bios"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-var verifyFlag bool
 
 // joinCmd represents the join command
 var joinCmd = &cobra.Command{
@@ -31,24 +26,21 @@ var joinCmd = &cobra.Command{
 	Short: "Triggers the hooks to join an already running network",
 	Long:  `This will run the "join_network" hook with data discovered from the network pointed to by the seed_discovery_url.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
+		net, err := fetchNetwork(false)
 		if err != nil {
-			fmt.Println("ipfs client error:", err)
-			os.Exit(1)
+			log.Fatalln("fetch network:", err)
 		}
 
-		net, err := fetchNetwork(ipfs)
+		b, err := setupBIOS(net)
 		if err != nil {
-			fmt.Println("error loading network:", err)
-			os.Exit(1)
+			log.Fatalln("bios setup:", err)
 		}
 
-		b := bios.NewBIOS(net, nil)
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartJoin(verifyFlag); err != nil {
+		if err := b.StartJoin(viper.GetBool("verify")); err != nil {
 			log.Fatalf("error joining network: %s", err)
 		}
 	},
@@ -57,10 +49,9 @@ var joinCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(joinCmd)
 
-	joinCmd.Flags().BoolVarP(&verifyFlag, "verify", "v", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
-	joinCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
+	joinCmd.Flags().BoolP("verify", "v", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
 
-	for _, flag := range []string{"verify", "api-address"} {
-		viper.BindPFlag(flag, joinCmd.Flags().Lookup(flag))
+	if err := viper.BindPFlag("verify", joinCmd.Flags().Lookup("verify")); err != nil {
+		panic(err)
 	}
 }

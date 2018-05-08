@@ -14,13 +14,8 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
-	"net/url"
-	"os"
 
-	bios "github.com/eoscanada/eos-bios"
-	eos "github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -36,32 +31,23 @@ The "publish_kickstart_data" will also be run, giving you the opportunity to dis
 Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		ipfs, err := bios.NewIPFS(ipfsLocalGatewayAddress, ipfsGatewayAddress)
-		if err != nil {
-			fmt.Println("ipfs client error:", err)
-			os.Exit(1)
-		}
-
-		net, err := fetchNetwork(ipfs)
+		net, err := fetchNetwork(viper.GetBool("local"))
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
 
-		apiAddressURL, err = url.Parse(apiAddress)
+		b, err := setupBIOS(net)
 		if err != nil {
-			log.Fatalln("error parsing --api-address:", err)
+			log.Fatalln("bios setup:", err)
 		}
 
-		api := eos.New(apiAddressURL, net.ChainID())
-		api.SetSigner(eos.NewKeyBag())
-
-		b := bios.NewBIOS(net, api)
+		b.LocalOnly = viper.GetBool("local")
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartBoot(secretP2PAddress); err != nil {
+		if err := b.StartBoot(); err != nil {
 			log.Fatalf("error booting network: %s", err)
 		}
 	},
@@ -70,10 +56,9 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 func init() {
 	RootCmd.AddCommand(bootCmd)
 
-	bootCmd.Flags().StringVarP(&secretP2PAddress, "secret-p2p-address", "", "localhost:9876", "Address to publish once boot is complete. In an orchestrated boot, you would want to keep this one secret to avoid being DDoS'd.")
-	bootCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
+	bootCmd.Flags().BoolP("local", "l", false, "Don't try to discover the world, just boot a local instance.")
 
-	for _, flag := range []string{"secret-p2p-address", "api-address"} {
-		viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag))
+	if err := viper.BindPFlag("local", bootCmd.Flags().Lookup("local")); err != nil {
+		panic(err)
 	}
 }

@@ -3,21 +3,37 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/eoscanada/eos-bios/disco"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var publishCmd = &cobra.Command{
 	Use:   "publish",
-	Short: "Publish some content to IPFS for others to discover.",
+	Short: "Publish my discovery file to the seed network",
 	Long:  ``,
+	Run: func(cmd *cobra.Command, args []string) {
+		net, err := fetchNetwork(false)
+		if err != nil {
+			log.Fatalln("fetch network:", err)
+		}
+
+		_, err = net.SeedNetAPI.SignPushActions(
+			disco.NewUpdateDiscovery(net.MyPeer.Discovery.SeedNetworkAccountName, net.MyPeer.Discovery),
+		)
+
+		if err != nil {
+			fmt.Println("error:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Done.")
+	},
 }
 
 func init() {
 	RootCmd.AddCommand(publishCmd)
-	publishCmd.PersistentFlags().StringVarP(&ipfsAPIAddress, "ipfs-api-address", "", "/ip4/127.0.0.1/tcp/5001", "API Endpoint of the local IPFS node, to publish content. Make sure it matches your running `ipfs` instance.")
-
-	for _, flag := range []string{"ipfs-api-address"} {
-		viper.BindPFlag(flag, publishCmd.Flags().Lookup(flag))
-	}
 }

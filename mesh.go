@@ -40,7 +40,7 @@ func (b *BIOS) computeMyMeshP2PAddresses() []string {
 		if myPosition != -1 {
 			peerIDs := getPeerIndexesToMeshWith(len(b.ShuffledProducers), myPosition)
 			for idx, peer := range b.ShuffledProducers {
-				p2pAddr := peer.Discovery.EOSIOP2P
+				p2pAddr := peer.Discovery.TargetP2PAddress
 				if peerIDs[idx] && !otherPeersMap[p2pAddr] {
 					otherPeers = append(otherPeers, p2pAddr)
 					otherPeersMap[p2pAddr] = true
@@ -49,6 +49,19 @@ func (b *BIOS) computeMyMeshP2PAddresses() []string {
 		}
 	}
 	return otherPeers
+}
+
+func (b *BIOS) allExceptBootP2PAddresses() (out []string) {
+	for _, el := range b.Network.discoveredPeers {
+		if el.Discovery.SeedNetworkAccountName == b.Network.MyPeer.Discovery.SeedNetworkAccountName {
+			continue
+		}
+
+		// TODO: also skip boot node, as he wasn't participating in the launch
+
+		out = append(out, el.Discovery.TargetP2PAddress)
+	}
+	return
 }
 
 func (b *BIOS) getPeersForBootNode(randSource rand.Source) (out []*Peer) {
@@ -86,7 +99,7 @@ func (b *BIOS) someTopmostPeersAddresses() []string {
 	listOfPeers := b.getPeersForBootNode(rand.NewSource(time.Now().UTC().UnixNano()))
 	otherPeers := []string{}
 	for _, peer := range listOfPeers {
-		otherPeers = append(otherPeers, peer.Discovery.EOSIOP2P)
+		otherPeers = append(otherPeers, peer.Discovery.TargetP2PAddress)
 	}
 	return otherPeers
 }

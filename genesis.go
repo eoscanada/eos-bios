@@ -28,7 +28,7 @@ func readGenesisData(text string, ipfs *IPFS) (out *GenesisJSON, err error) {
 
 	if strings.Contains(text, "/ipfs/") {
 		// fetch from IPFS and decode
-		cnt, err := ipfs.Get(IPFSRef(text))
+		cnt, err := ipfs.Get(text)
 		if err != nil {
 			return nil, err
 		}
