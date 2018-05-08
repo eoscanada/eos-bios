@@ -107,11 +107,10 @@ namespace eosio {
 
       string genesis_json;
       vector<string> initial_p2p_addresses;
-      time updated_at;
 
       uint64_t primary_key() const { return id; }
 
-      EOSLIB_SERIALIZE(genesis_row, (id)(genesis_json)(initial_p2p_addresses)(updated_at))
+      EOSLIB_SERIALIZE(genesis_row, (id)(genesis_json)(initial_p2p_addresses))
     };
 
     //@abi table discovery i64

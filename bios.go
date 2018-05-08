@@ -17,7 +17,7 @@ import (
 
 type BIOS struct {
 	Network   *Network
-	LocalOnly bool
+	SingleOnly bool
 
 	LaunchDisco  *disco.Discovery
 	TargetNetAPI *eos.API
@@ -201,7 +201,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.LocalOnly {
+	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.SingleOnly {
 		_, err = b.Network.SeedNetAPI.SignPushActions(
 			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
 		)
@@ -274,7 +274,7 @@ func (b *BIOS) RunBootSequence() error {
 
 func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if b.Genesis == nil {
-		if b.LocalOnly {
+		if b.SingleOnly {
 			b.Genesis = b.inputGenesisData()
 		} else {
 			b.Genesis = b.pollGenesisData()

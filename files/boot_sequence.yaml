@@ -97,3 +97,5 @@ boot_sequence:
     - eosio.msig
     - eosio.token
     - eosio.disco
+
+# TODO: also destroy the signing capability of `eosio`.. or `unregproducer` for `eosio`.
