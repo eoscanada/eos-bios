@@ -222,9 +222,12 @@ func (net *Network) calculateWeights() error {
 				continue
 			}
 
-			fmt.Println("adding weight to", peerLink.Account)
-			// Weight defaults to 0
-			peerLinkPeer.TotalWeight += int(peerLink.Weight)
+			if peerLink.Weight > 100 {
+				fmt.Println("weight overboard for peer", peerLink.Account, ".. skipping!")
+			} else {
+				fmt.Println("adding weight to", peerLink.Account)
+				peerLinkPeer.TotalWeight += int(peerLink.Weight)
+			}
 		}
 
 		allPeers = append(allPeers, peer)
