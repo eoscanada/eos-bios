@@ -84,10 +84,10 @@ target_contents:
     ref: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
     comment: "Published by EOS Canada. Dawn3x release."
   - name: eosio.disco.abi
-    ref: /ipfs/QmY3dQs94Eman6zY2fnD4vXRxTuFAH5faKDNsS83CQjSZV
+    ref: /ipfs/QmRQ4v7cBPUeKHLFSNokmmKKCb8wRni4oUjNGfQB9Wr7Ma
     comment: "Published by EOS Canada. Dawn3x release."
   - name: eosio.disco.wasm
-    ref: /ipfs/QmP9cpGvu6X8jF2f2nqQ7tBFvEmmEqteLjikva32nyn9C4
+    ref: /ipfs/QmNZYcQ3NbV1gfqKQQs4i6dMScveFaLFMLHbSMmP33TMSq
     comment: "Published by EOS Canada. Dawn3x release."
 
   # - name: eosio.unregd.abi
