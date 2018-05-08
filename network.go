@@ -18,7 +18,7 @@ import (
 )
 
 type Network struct {
-	LocalOnly bool
+	SingleOnly bool
 
 	MyPeer *Peer
 
@@ -58,7 +58,7 @@ func (net *Network) UpdateGraph() error {
 		UpdatedAt     eos.JSONTime     `json:"updated_at"`
 	}
 
-	if !net.LocalOnly {
+	if !net.SingleOnly {
 		rowsJSON, err := net.SeedNetAPI.GetTableRows(
 			eos.GetTableRowsRequest{
 				JSON:     true,

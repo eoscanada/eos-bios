@@ -10,11 +10,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork(local bool) (*bios.Network, error) {
+func fetchNetwork(single bool) (*bios.Network, error) {
 	discoFile := viper.GetString("my-discovery")
 	discovery, err := bios.LoadDiscoveryFromFile(discoFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading %q: %s", discoFile, err)
 	}
 
 	ipfs := bios.NewIPFS(viper.GetString("ipfs-gateway-address"))
@@ -41,7 +41,7 @@ func fetchNetwork(local bool) (*bios.Network, error) {
 		seedNetworkContract, //	viper.GetString("seednet-contract"),
 		seedNetAPI,
 	)
-	net.LocalOnly = local
+	net.SingleOnly = single
 
 	if err := net.UpdateGraph(); err != nil {
 		return nil, fmt.Errorf("updating graph: %s", err)

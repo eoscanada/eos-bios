@@ -27,7 +27,7 @@ import (
 
 // inviteCmd represents the invite command
 var inviteCmd = &cobra.Command{
-	Use:   "invite [account_name] [public_key]",
+	Use:   "invite 'account_name' 'EOSpublickey'",
 	Short: "Invite a fellow block producer to the seed network where you have access to",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -42,7 +42,10 @@ var inviteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("Inviting", args[0], "with public key", args[1])
+		fmt.Println("")
+		fmt.Printf("Creating account %q with public key %q, using my account %q\n", args[0], args[1], net.MyPeer.Discovery.SeedNetworkAccountName)
+		fmt.Println("")
+
 		_, err = net.SeedNetAPI.SignPushActions(
 			system.NewNewAccount(
 				eos.AccountName(net.MyPeer.Discovery.SeedNetworkAccountName),
@@ -51,8 +54,7 @@ var inviteCmd = &cobra.Command{
 			),
 		)
 		if err != nil {
-			fmt.Println("error:", err)
-			os.Exit(1)
+			log.Fatalln("creating account:", err)
 		}
 
 		fmt.Println("Done.")
