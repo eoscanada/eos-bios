@@ -22,7 +22,7 @@ urls:
 - https://website.com
 
 # To help organize schedules for rehearsals.
-gmt_offset: -0700  # in HourMinutes format
+gmt_offset: -700  # in HourMinutes format
 
 target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
