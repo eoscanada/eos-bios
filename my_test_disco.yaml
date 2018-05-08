@@ -40,11 +40,11 @@ target_initial_authority:
 
 target_contents:
   - name: boot_sequence.yaml
-    ref: /ipfs/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH
-    comment: "Has test flags enabled."
+    ref: /ipfs/QmdNbPrn8zFPN3obHhddMzj9SMpw642AAe411gQYi4PSxW
+    comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
-    comment: "Snapshot until period 290."
+    comment: "Snapshot at period 290."
   #- name: snapshot_unregistered.csv
   #  ref: /ipfs/Qm...
   #  comment: ""
@@ -72,12 +72,12 @@ target_contents:
   - name: eosio.token.wasm
     ref: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
     comment: "Published by EOS Canada. Dawn3x release."
-  # - name: eosio.disco.abi
-  #   ref: /ipfs/QmZpmcrfWAEUU4KG6hRPrBRTJ2X63sTrQsBRogiKZA7aP6
-  #   comment: "Published by EOS Canada. Dawn3x release."
-  # - name: eosio.disco.wasm
-  #   ref: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
-  #   comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.disco.abi
+    ref: /ipfs/QmY3dQs94Eman6zY2fnD4vXRxTuFAH5faKDNsS83CQjSZV
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.disco.wasm
+    ref: /ipfs/QmP9cpGvu6X8jF2f2nqQ7tBFvEmmEqteLjikva32nyn9C4
+    comment: "Published by EOS Canada. Dawn3x release."
 
   # - name: eosio.unregd.abi
   #   ref: /ipfs/Qm...

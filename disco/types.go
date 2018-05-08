@@ -22,8 +22,8 @@ type Discovery struct {
 	SeedNetworkPeers                       []*PeerLink     `json:"seed_network_peers"`
 	SeedNetworkLaunchBlock                 uint64          `json:"seed_network_launch_block"`
 	URLs                                   []string        `json:"urls"`
-	GMTOffset                              int8            `json:"gmt_offset"`
-	TargetNetworkIsTest                    bool            `json:"target_network_is_test"`
+	GMTOffset                              int16           `json:"gmt_offset"`
+	TargetNetworkIsTest                    int8            `json:"target_network_is_test"`
 	TargetChainID                          eos.SHA256Bytes `json:"target_chain_id"`
 	TargetP2PAddress                       string          `json:"target_p2p_address"`
 	TargetAccountName                      eos.AccountName `json:"target_account_name"`
@@ -35,6 +35,8 @@ type Discovery struct {
 	} `json:"target_initial_authority"`
 
 	TargetContents []ContentRef `json:"target_contents"`
+
+	UpdatedAt eos.JSONTime `json:"-"` // injected in `UpdatedGraph`
 }
 
 type GenesisRow struct {

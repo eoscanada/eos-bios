@@ -15,11 +15,10 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	"os"
 
-	"github.com/eoscanada/eos-bios"
-	"github.com/eoscanada/eos-bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 	"github.com/eoscanada/eos-go/system"
@@ -32,36 +31,31 @@ var inviteCmd = &cobra.Command{
 	Short: "Invite a fellow block producer to the seed network where you have access to",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-
-		fmt.Printf("Reading discovery file... ")
-		var discovery *disco.Discovery
-		var err error
-		if discovery, err = bios.LoadDiscoveryFromFile(myDiscoveryFile); err != nil {
-			fmt.Println("error")
-			fmt.Fprintf(os.Stderr, "format invalid: %s", err)
-			os.Exit(1)
-		}
-
-		api, err := api(discovery.SeedNetworkChainID)
+		net, err := fetchNetwork()
 		if err != nil {
-			fmt.Println("api error:", err)
-			os.Exit(1)
+			log.Fatalln("fetch network:", err)
 		}
+
 		publicKey, err := ecc.NewPublicKey(args[1])
 		if err != nil {
-			fmt.Println("error")
-			fmt.Fprintf(os.Stderr, "public key: %s", err)
+			fmt.Println("invalid public key:", err)
 			os.Exit(1)
 		}
-		api.SignPushActions(
+
+		fmt.Println("Inviting", args[0], "with public key", args[1])
+		_, err = net.SeedNetAPI.SignPushActions(
 			system.NewNewAccount(
-				eos.AccountName(discovery.SeedNetworkAccountName),
+				eos.AccountName(net.MyPeer.Discovery.SeedNetworkAccountName),
 				eos.AccountName(args[0]),
 				publicKey,
 			),
 		)
-		fmt.Println("inviting", args[0], "with public key", args[1])
-		fmt.Println("done ... chicken")
+		if err != nil {
+			fmt.Println("error:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Done.")
 	},
 }
 

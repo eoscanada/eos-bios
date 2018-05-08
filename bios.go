@@ -19,7 +19,7 @@ type BIOS struct {
 	Network *Network
 
 	LaunchDisco  *disco.Discovery
-	EOSAPI       *eos.API
+	TargetNetAPI       *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
@@ -38,10 +38,10 @@ type BIOS struct {
 	EphemeralPrivateKey *ecc.PrivateKey
 }
 
-func NewBIOS(network *Network, api *eos.API) *BIOS {
+func NewBIOS(network *Network, targetAPI *eos.API) *BIOS {
 	b := &BIOS{
 		Network: network,
-		EOSAPI:  api,
+		TargetNetAPI:  targetAPI,
 	}
 	return b
 }
@@ -181,7 +181,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	b.EphemeralPrivateKey = ephemeralPrivateKey
 
-	// b.EOSAPI.Debug = true
+	// b.TargetNetAPI.Debug = true
 
 	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
@@ -189,11 +189,11 @@ func (b *BIOS) RunBootSequence() error {
 	fmt.Printf("Generated ephemeral keys: pub=%s priv=%s..%s\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
-	if err := b.EOSAPI.Signer.ImportPrivateKey(privKey); err != nil {
+	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
-	// keys, _ := b.EOSAPI.Signer.(*eos.KeyBag).AvailableKeys()
+	// keys, _ := b.TargetNetAPI.Signer.(*eos.KeyBag).AvailableKeys()
 	// for _, key := range keys {
 	// 	fmt.Println("Available key in the KeyBag:", key)
 	// }
@@ -201,7 +201,7 @@ func (b *BIOS) RunBootSequence() error {
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
 	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 {
-		_, err = b.Network.seedNetAPI.SignPushActions(
+		_, err = b.Network.SeedNetAPI.SignPushActions(
 			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
 		)
 		if err != nil {
@@ -217,7 +217,7 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
-	fmt.Println(b.EOSAPI.Signer.AvailableKeys())
+	fmt.Println(b.TargetNetAPI.Signer.AvailableKeys())
 
 	// Load Boot Sequence...
 
@@ -248,7 +248,7 @@ func (b *BIOS) RunBootSequence() error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range chunkifyActions(acts, 400) { // transfers max out resources higher than ~400
-				_, err = b.EOSAPI.SignPushActions(chunk...)
+				_, err = b.TargetNetAPI.SignPushActions(chunk...)
 				if err != nil {
 					return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 				}
@@ -301,7 +301,7 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
 		for {
 			time.Sleep(1 * time.Second)
-			acct, err := b.EOSAPI.GetAccount(AN("eosio"))
+			acct, err := b.TargetNetAPI.GetAccount(AN("eosio"))
 			if err != nil {
 				fmt.Printf("e")
 				continue
@@ -373,19 +373,25 @@ func (b *BIOS) waitOnGenesisData() (genesis *GenesisJSON) {
 	fmt.Println("Waiting for the BIOS Boot node to publish the genesis data to the seed network contract..")
 
 	bootNode := b.ShuffledProducers[0]
-	disco := bootNode.Discovery
-	// TODO: print the social media properties of the BP..
 
 	fmt.Printf("Polling..")
 	for {
 		time.Sleep(500 * time.Millisecond)
 		fmt.Printf(".")
 
-		b.Network.seedNetAPI.GetTableRows()
-		// TODO: poll seedNetAPI.GetTableRows(seedContractName, "genesis.tbl")
-		// quand on l'a, on le retourne..
+		genesisData, err := b.Network.PollGenesisTable(bootNode.Discovery.SeedNetworkAccountName)
+		if err != nil {
+			fmt.Printf("e")
+			continue
+		}
 
-		return genesis
+		err = json.Unmarshal([]byte(genesisData), &genesis)
+		if err != nil {
+			fmt.Printf("\ninvalid genesis data read from BIOS boot! (err=%s, content=%q)", err, genesisData)
+			continue
+		}
+
+		return
 	}
 }
 
@@ -428,7 +434,7 @@ func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	cnt, _ := json.Marshal(&GenesisJSON{
 		InitialTimestamp: time.Now().UTC().Format("2006-01-02T15:04:05"),
 		InitialKey:       pubKey,
-		InitialChainID:   hex.EncodeToString(b.EOSAPI.ChainID),
+		InitialChainID:   hex.EncodeToString(b.TargetNetAPI.ChainID),
 	})
 	return string(cnt)
 }

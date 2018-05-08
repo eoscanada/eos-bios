@@ -14,14 +14,9 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
-	"net/url"
-	"os"
 
-	bios "github.com/eoscanada/eos-bios"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // bootCmd represents the boot command
@@ -35,23 +30,15 @@ The "publish_kickstart_data" will also be run, giving you the opportunity to dis
 Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		api, err := api()
-		if err != nil {
-			fmt.Println("api error:", err)
-			os.Exit(1)
-		}
-
-		net, err := fetchNetwork(api)
+		net, err := fetchNetwork()
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
 
-		apiAddressURL, err = url.Parse(apiAddress)
+		b, err := setupBIOS(net)
 		if err != nil {
-			log.Fatalln("error parsing --api-address:", err)
+			log.Fatalln("bios setup:", err)
 		}
-
-		b := bios.NewBIOS(net, api)
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
@@ -65,10 +52,4 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 
 func init() {
 	RootCmd.AddCommand(bootCmd)
-
-	bootCmd.Flags().StringVarP(&apiAddress, "api-address", "", "http://localhost:8888", "RPC endpoint of your nodeos instance. Needs only to be reachable by this process.")
-
-	for _, flag := range []string{"api-address"} {
-		viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag))
-	}
 }

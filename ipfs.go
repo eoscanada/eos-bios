@@ -19,8 +19,8 @@ func NewIPFS(gatewayAddress string) (out *IPFS) {
 	return
 }
 
-func (i *IPFS) Get(ref IPFSRef) ([]byte, error) {
-	req, err := http.NewRequest("GET", i.GatewayAddressURL+string(ref), nil)
+func (i *IPFS) Get(ref string) ([]byte, error) {
+	req, err := http.NewRequest("GET", i.GatewayAddressURL+ref, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -10,8 +10,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork(api *eos.API) (*bios.Network, error) {
-	discovery, err := bios.LoadDiscoveryFromFile(viper.GetString("my-discovery"))
+func fetchNetwork() (*bios.Network, error) {
+	discoFile := viper.GetString("my-discovery")
+	discovery, err := bios.LoadDiscoveryFromFile(discoFile)
 	if err != nil {
 		return nil, err
 	}
@@ -23,11 +24,19 @@ func fetchNetwork(api *eos.API) (*bios.Network, error) {
 		discovery.SeedNetworkChainID,
 	)
 
+	keyBag := eos.NewKeyBag()
+	err = keyBag.ImportFromFile(viper.GetString("seednet-keys"))
+	if err != nil {
+		return nil, fmt.Errorf("importing keys: %s", err)
+	}
+
+	seedNetAPI.SetSigner(keyBag)
+
 	net := bios.NewNetwork(
 		viper.GetString("cache-path"),
 		discovery,
 		ipfs,
-		viper.GetString("seednet-contract"),
+		seedNetworkContract, //	viper.GetString("seednet-contract"),
 		seedNetAPI,
 	)
 
@@ -53,9 +62,14 @@ func ipfsClient() (*shell.IdOutput, *shell.Shell) {
 	return info, ipfsClient
 }
 
-func api(chainID eos.SHA256Bytes) (api *eos.API, err error) {
-	api = eos.New(apiAddressURL, chainID)
+func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
+	targetNetAPI := eos.New(
+		viper.GetString("target-api"),
+		net.MyPeer.Discovery.TargetChainID,
+	)
+
 	keyBag := eos.NewKeyBag()
-	err = keyBag.ImportFromFile(seedNetworkKeysFile)
-	return
+	targetNetAPI.SetSigner(keyBag)
+
+	return bios.NewBIOS(net, targetNetAPI), nil
 }

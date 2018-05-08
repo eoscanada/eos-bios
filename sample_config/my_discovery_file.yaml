@@ -1,62 +1,45 @@
-# Canonical reference: /ipns/Qm......[insert your ipfs IPNS ref]
-# Provide your canonical reference to other BPs
+#
+# Discovery happens on a SEED network running EOS.IO software.
+# We boot a new network from a previous network, until we reach the mainnet.
+# We call each network a stage. Ex: stage0, stage1, stage2, stage3, until "mainnet".
+#
+seed_network_chain_id: "0000000000000000000000000000000000000000000000000000000000000001"
+seed_network_account_name: eoscanadacom
+# These are your peers on the SEED network.  They must have published
+# their discovery in the seed network `eosio.disco` contract (with
+# `eos-bios publish`). Otherwise, your peer link here will be ignored.
+seed_network_peers:
+- account: eosexample
+  comment: "They are good"
+  weight: 0.2  # Weights are between 0.0 and 1.0
+- account: eosmore
+  comment: "They are better"
+  weight: 0.3
 
-email_support: support@example.com
-email_abuse: abuse@example.com
-email_tech: tech@example.com
+seed_network_launch_block: 5000  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
 
-social_twitter: https://twitter/example
-social_telegram: https://t.me/link
-social_github: https://github.com/exampleorg
-social_youtube: https://youtube.com/example
-social_facebook: ...
-social_slack: ...
-social_wechat: ...
-social_steem: ...
+urls:
+- https://website.com
 
-social_keybase: https://keybase.io/exampleuser  # Potentially used for cryptographic
-                                                # operations. Please provide this one
-                                                # if using `eos-bios`
+# To help organize schedules for rehearsals.
+gmt_offset: -0700  # in HourMinutes format
 
-website: "https://example.com"  # Your main website
-
-introduction_post_url: "https://steemit.com/something/"  # Like your BP candidacy proposal.
-
-organization_name: EOS Example  # Used in different interface to say who you are.
-
-organization_tagline: The example in the EOS space  # For websites that feed from these files.
-
-logo_url_1024: "https://example.com/logo_1024x1024.jpg"
-logo_url_256: "https://example.com/logo_256x256.png"
-
-timezone: Africa/Abidjan  # From https://en.m.wikipedia.org/wiki/List_of_tz_database_time_zones, only non-deprecated ones.
-
-latitude: 27.98785      # For websites displaying maps
-longitude: 86.9250261
-
-##################### REQUIRED SECTION FOR LAUNCH #####################
-
-testnet: true  # REQUIRED, one or the other, not both.
-# mainnet: true
-# Marking mainnet=true means we automatically disabling all the TESTNET features in the boot_sequence
-
-eosio_account_name: example  # The account you go by on the network
-eosio_http: http://http.example.com:8888
-eosio_https: https://http.example.com
-eosio_p2p: peering.example.com:9876  # This is required, public and
-                                     # will be used by the discovered
-                                     # network to mesh together before
-                                     # receiving the first blocks.
-eosio_initial_authority:  # To be injected in a newly created network where you participate.
+target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
+# You can only link with peers that target the same chain_id
+target_chain_id: "0000000000000000000000000000000000000000000000000000000000000002"
+target_p2p_address: stage1.example.com:9876
+target_account_name: eosnextgen
+target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+target_initial_authority:
   owner:
     threshold: 1
     keys:
-    - public_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+    - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
   active:
     threshold: 1
     keys:
-    - public_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+    - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
   recovery:
     threshold: 1
@@ -66,78 +49,50 @@ eosio_initial_authority:  # To be injected in a newly created network where you 
         permission: active
       weight: 1
 
-# The following one is used by the BIOS Boot node to hook up initial
-# Appointed Block Producers keys (and potentially other participants
-# in the launch)
-eosio_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+target_contents:
+  - name: boot_sequence.yaml
+    ref: /ipfs/QmdNbPrn8zFPN3obHhddMzj9SMpw642AAe411gQYi4PSxW
+    comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
+  - name: snapshot.csv
+    ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
+    comment: "Snapshot at period 290."
+  #- name: snapshot_unregistered.csv
+  #  ref: /ipfs/Qm...
+  #  comment: ""
+  - name: eosio.bios.abi
+    ref: /ipfs/QmbZATGSuN1rwfX4WMHaVHCroZgKwHZjvvEQg93HtcpSk4
+    comment: "Published by EOS Canada. From dawn3x release tag"
+  - name: eosio.bios.wasm
+    ref: /ipfs/QmVNzTLXSegBdpDxUMrKMVpFBbwnpu2j45iRrFkBtxuQby
+    comment: "Published by EOS Canada. From dawn3x release."
+  - name: eosio.system.abi
+    ref: /ipfs/QmPxEwukXL4tsMiqKtGozLUDzrc6ckwcVjgf68YQyGD5Fu
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.system.wasm
+    ref: /ipfs/QmQaMSL54PDxQZZFmXK2TXcV7oHCBocCZ6i4D98CNDSBd8
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.msig.abi
+    ref: /ipfs/Qmdbo2jFGLH1mBGYTiktpEmizwK4ZVSxjtfh9o38AAQquw
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.msig.wasm
+    ref: /ipfs/QmbXo3nTe3obzQdKYqj9pe5Abf1Er5pqtFL2DsVSQKyF4p
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.token.abi
+    ref: /ipfs/QmZpmcrfWAEUU4KG6hRPrBRTJ2X63sTrQsBRogiKZA7aP6
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.token.wasm
+    ref: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.disco.abi
+    ref: /ipfs/QmY3dQs94Eman6zY2fnD4vXRxTuFAH5faKDNsS83CQjSZV
+    comment: "Published by EOS Canada. Dawn3x release."
+  - name: eosio.disco.wasm
+    ref: /ipfs/QmP9cpGvu6X8jF2f2nqQ7tBFvEmmEqteLjikva32nyn9C4
+    comment: "Published by EOS Canada. Dawn3x release."
 
-# This section is required for an `eos-bios` launch.
-launch_data:
-  # --- WHEN ---
-  # The Ethereum block is the seed data we're waiting to launch the
-  # `orchestrate` step.  When you start `eos-bios orchestrate`, it
-  # first fetches the Ethereum block's hash, and uses it for
-  # randomly selected the BIOS Boot node.
-  launch_ethereum_block: 5544732  # Past block, for testing
-  #launch_ethereum_block: 5716358  # Approx June 2st 2018, 0100 UTC, 2 hours after snapshot freeze
-
-  # --- WITH WHO ---
-  #
-  # Other BPs' discovery_link, with whom you're comfortable launching
-  # the network with, you've discussed and think they are competent to
-  # 1) not screw up a launch and, 2) run the network and take good
-  # decisions.
-  #
-  # By tagging along peers, we are effectively creating a
-  # distributed graph.  `eos-bios` will be able to traverse this graph
-  # and create a full portrait of the community, with all information
-  # necessary to automate the steps of network boot.
-  peers: []
-  # peers:
-  # - discovery_link: /ipns/Qm...
-  #   comment: "EOS Antarctica's Igloo testnet"
-  #   weight: 1.0  # from 0.0 to 1.0, floating point number
-  # - discovery_link: /ipns/QmEOSLAUTRE..........................
-  #   weight: 0.8
-  # - discovery_link: /ipns/Qm................................
-  #   weight: 0.2
-  # - discovery_link: /ipns/Qm................................
-  #   comment: "He just learned what 'ls' was.. but he'll ramp up fast, I'm sure"
-  #   weight: 0.0  # Link him on the network, but not vouching for them.
-
-  # --- WHAT ---
-
-  # Takes into consideration the snapshot, msig, token, system and bios contracts.
-  boot_sequence: /ipfs/QmYRsQNxAZFvx8djAxKsgurJT1RF47MhAEQ2sLz1MunnXH
-
-  # This one skips the step to set the appointd block producers,
-  #leaving `eosio` to produce all the time.  This is great for local
-  #development.
-  #boot_sequence: /ipfs/QmVoz3u3N6hYTktit2npTMdXkzWey5gknY9MWoeNB8tSrj
-
-  # Built by Robert on that infrastructure, in this context, etc...
-  snapshot: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
-
-  # snapshot_unregistered:
-
-  contracts:
-    eosio.bios:
-      # From github.com/eosio/eos, built from git commit abcdef1234 on Jan 21st 2020, by EOS Antarctica
-      abi: /ipfs/QmbZATGSuN1rwfX4WMHaVHCroZgKwHZjvvEQg93HtcpSk4
-      code: /ipfs/QmVNzTLXSegBdpDxUMrKMVpFBbwnpu2j45iRrFkBtxuQby
-
-    eosio.system:
-      abi: /ipfs/QmPxEwukXL4tsMiqKtGozLUDzrc6ckwcVjgf68YQyGD5Fu
-      code: /ipfs/QmQaMSL54PDxQZZFmXK2TXcV7oHCBocCZ6i4D98CNDSBd8
-
-    eosio.msig:
-      abi: /ipfs/Qmdbo2jFGLH1mBGYTiktpEmizwK4ZVSxjtfh9o38AAQquw
-      code: /ipfs/QmbXo3nTe3obzQdKYqj9pe5Abf1Er5pqtFL2DsVSQKyF4p
-
-    eosio.token:
-      abi: /ipfs/QmZpmcrfWAEUU4KG6hRPrBRTJ2X63sTrQsBRogiKZA7aP6
-      code: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
-
-    # eosio.unregd:
-    #   abi: /ipfs/Qm...
-    #   code: /ipfs/Qm...
+  # - name: eosio.unregd.abi
+  #   ref: /ipfs/Qm...
+  #   comment: ""
+  # - name: eosio.unregd.wasm
+  #   ref: /ipfs/Qm...
+  #   comment: ""

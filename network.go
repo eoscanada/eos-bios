@@ -20,7 +20,7 @@ import (
 type Network struct {
 	MyPeer *Peer
 
-	seedNetAPI      *eos.API
+	SeedNetAPI      *eos.API
 	seedNetContract string
 
 	ipfs            *IPFS
@@ -32,7 +32,7 @@ type Network struct {
 
 func NewNetwork(cachePath string, myDiscovery *disco.Discovery, ipfs *IPFS, seedNetContract string, seedNetAPI *eos.API) *Network {
 	return &Network{
-		seedNetAPI:      seedNetAPI,
+		SeedNetAPI:      seedNetAPI,
 		ipfs:            ipfs,
 		cachePath:       cachePath,
 		seedNetContract: seedNetContract,
@@ -50,11 +50,11 @@ func (net *Network) UpdateGraph() error {
 	net.discoveredPeers = map[eos.AccountName]*Peer{}
 	net.candidates = make(map[string]*disco.Discovery)
 
-	rows, err := net.seedNetAPI.GetTableRows(
+	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{
 			JSON:     true,
-			Scope:    "eosio.disco",
-			Code:     "eosio.disco",
+			Scope:    net.seedNetContract,
+			Code:     net.seedNetContract,
 			Table:    "discovery",
 			TableKey: "id",
 			//LowerBound: "",
@@ -66,14 +66,21 @@ func (net *Network) UpdateGraph() error {
 		return fmt.Errorf("get table rows: %s", err)
 	}
 
-	var candidates []*disco.Discovery
-	if err := rows.JSONToStructs(&candidates); err != nil {
+	var rows []struct {
+		ID            eos.AccountName  `json:"id"`
+		DiscoveryFile *disco.Discovery `json:"discovery_file"`
+		UpdatedAt     eos.JSONTime     `json:"updated_at"`
+	}
+	if err := rowsJSON.JSONToStructs(&rows); err != nil {
 		return fmt.Errorf("reading discovery from table: %s", err)
 	}
 
-	for _, cand := range candidates {
-		// verify cand discovery
-		net.candidates[string(cand.SeedNetworkAccountName)] = cand
+	for _, cand := range rows {
+		// TODO: verify their discovery file.. the values in there.. do we simply skip those with invalid weights for example ?? They're excluded from the graph?
+
+		cand.DiscoveryFile.UpdatedAt = cand.UpdatedAt
+		cand.DiscoveryFile.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
+		net.candidates[string(cand.ID)] = cand.DiscoveryFile
 	}
 
 	if err = net.ensureExists(); err != nil {
@@ -113,7 +120,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 
 		peerDisco, found := net.candidates[string(peerLink.Account)]
 		if !found {
-			fmt.Println("    - peer not found")
+			fmt.Println("    - peer not found, won't weight in")
 			continue
 		}
 
@@ -145,7 +152,7 @@ func (net *Network) DownloadIPFSRef(ref string) error {
 		return nil
 	}
 
-	cnt, err := net.ipfs.Get(IPFSRef(ref))
+	cnt, err := net.ipfs.Get(ref)
 	if err != nil {
 		return err
 	}
@@ -176,13 +183,13 @@ func (net *Network) ReadFromCache(ref string) ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(net.cachePath, fileName))
 }
 
-func (net *Network) ReaderFromCache(ref IPFSRef) (io.ReadCloser, error) {
-	fileName := replaceAllWeirdities(string(ref))
+func (net *Network) ReaderFromCache(ref string) (io.ReadCloser, error) {
+	fileName := replaceAllWeirdities(ref)
 	return os.Open(filepath.Join(net.cachePath, fileName))
 }
 
-func (net *Network) FileNameFromCache(ref IPFSRef) string {
-	fileName := replaceAllWeirdities(string(ref))
+func (net *Network) FileNameFromCache(ref string) string {
+	fileName := replaceAllWeirdities(ref)
 	return filepath.Join(net.cachePath, fileName)
 }
 
@@ -197,7 +204,7 @@ func (net *Network) calculateWeights() error {
 	var allPeers []*Peer
 	for _, peer := range net.discoveredPeers {
 
-		fmt.Println("First level peer", peer.DiscoveryLink)
+		fmt.Println("First level peer", peer.AccountName())
 		for _, peerLink := range peer.Discovery.SeedNetworkPeers {
 
 			if peer.Discovery.SeedNetworkAccountName == peerLink.Account {
@@ -207,7 +214,7 @@ func (net *Network) calculateWeights() error {
 
 			peerLinkPeer, found := net.discoveredPeers[peerLink.Account]
 			if !found {
-				return fmt.Errorf("couldn't find %q in list of peers", peerLink.Account)
+				continue
 			}
 
 			fmt.Println("adding weight to", peerLink.Account)
@@ -221,7 +228,7 @@ func (net *Network) calculateWeights() error {
 	// Sort the `orderedPeers`
 	sort.Slice(allPeers, func(i, j int) bool {
 		if allPeers[i].TotalWeight == allPeers[j].TotalWeight {
-			return allPeers[i].DiscoveryFile < allPeers[j].DiscoveryFile
+			return allPeers[i].AccountName() < allPeers[j].AccountName()
 		}
 		return allPeers[i].TotalWeight > allPeers[j].TotalWeight
 	})
@@ -236,7 +243,7 @@ func (net *Network) OrderedPeers() []*Peer {
 }
 
 func (net *Network) GetBlockHeight(height uint64) (blockhash string, err error) {
-	resp, err := net.seedNetAPI.GetBlockByNum(height)
+	resp, err := net.SeedNetAPI.GetBlockByNum(height)
 	if err != nil {
 		return "", err
 	}
@@ -244,33 +251,43 @@ func (net *Network) GetBlockHeight(height uint64) (blockhash string, err error) 
 	return resp.ID, nil
 }
 
-func (net *Network) PollGenesisTable() (data string, err error) {
-	rows, err := net.seedNetAPI.GetTableRows(
+func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err error) {
+	accountRaw, err := eos.MarshalBinary(account)
+	if err != nil {
+		return "", err
+	}
+	accountHex := hex.EncodeToString(accountRaw)
+	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{
 			JSON:       true,
-			Scope:      "eosio.disco",
-			Code:       "eosio.disco",
+			Scope:      net.seedNetContract,
+			Code:       net.seedNetContract,
 			Table:      "genesis",
 			TableKey:   "id",
-			LowerBound: "",
-			UpperBound: "",
+			LowerBound: accountHex,
+			UpperBound: accountHex,
 			Limit:      1,
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("get table rows: %s", err)
+		return "", fmt.Errorf("get table rows: %s", err)
 	}
 
-	var candidates []*disco.Discovery
-	if err := rows.JSONToStructs(&candidates); err != nil {
-		return fmt.Errorf("reading discovery from table: %s", err)
+	var rows []struct {
+		ID                  eos.AccountName `json:"id"`
+		GenesisJSON         string          `json:"genesis_json"`
+		InitialP2PAddresses []string        `json:"initial_p2p_addresses"`
+		UpdatedAt           eos.JSONTime    `json:"updated_at"`
+	}
+	if err := rowsJSON.JSONToStructs(&rows); err != nil {
+		return "", fmt.Errorf("reading discovery from table: %s", err)
 	}
 
-	for _, cand := range candidates {
-		// verify cand discovery
-		net.candidates[string(cand.SeedNetworkAccountName)] = cand
+	if len(rows) != 1 {
+		return "", nil
 	}
 
+	return rows[0].GenesisJSON, nil
 }
 
 func sha2(input []byte) string {
@@ -285,8 +302,8 @@ func (net *Network) PrintOrderedPeers() {
 	fmt.Println("")
 
 	columns := []string{
-		"Role | IPNS Link | Account | Organization | Weight",
-		"---- | --------- | ------- | ------------ | ------",
+		"Role | Seed Account | Target Acct | Weight",
+		"---- | ------------ | ----------- | ------",
 	}
 	columns = append(columns, fmt.Sprintf("BIOS NODE | %s", net.orderedPeers[0].Columns()))
 	for i := 1; i < 22 && len(net.orderedPeers) > i; i++ {

@@ -84,19 +84,19 @@ type OpSetCode struct {
 
 func (op *OpSetCode) ResetTestnetOptions() { return }
 func (op *OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
-	wasmFile, err := b.GetContentsCacheRef(fmt.Sprintf("%s.wasm", op.ContractNameRef))
+	wasmFileRef, err := b.GetContentsCacheRef(fmt.Sprintf("%s.wasm", op.ContractNameRef))
 	if err != nil {
 		return nil, err
 	}
-	abiFile, err := b.GetContentsCacheRef(fmt.Sprintf("%s.abi", op.ContractNameRef))
+	abiFileRef, err := b.GetContentsCacheRef(fmt.Sprintf("%s.abi", op.ContractNameRef))
 	if err != nil {
 		return nil, err
 	}
 
 	setCode, err := system.NewSetCodeTx(
 		op.Account,
-		b.Network.FileNameFromCache(IPFSRef(wasmFile)),
-		b.Network.FileNameFromCache(IPFSRef(abiFile)),
+		b.Network.FileNameFromCache(wasmFileRef),
+		b.Network.FileNameFromCache(abiFileRef),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("NewSetCodeTx %s: %s", op.ContractNameRef, err)
@@ -253,7 +253,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 		}
 
 		// TODO: stake 50% bandwidth, 50% cpu for all new accounts
-		// b.EOSAPI.SignPushActions(system.Stake(AN("eosio"), destAccount, 999, 888, ""))
+		// out = append(out, system.Stake(AN("eosio"), destAccount, 999, 888, ""))
 	}
 
 	return

@@ -14,46 +14,20 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
+	"log"
 
-	"github.com/eoscanada/eos-bios"
-	"github.com/eoscanada/eos-bios/disco"
 	"github.com/spf13/cobra"
 )
 
 // discoverCmd represents the discovery command
 var discoverCmd = &cobra.Command{
 	Use:   "discover",
-	Short: "Discover and update info about all peers in the network, based on an initial discovery URL",
-	Long:  `This uses the "network.seed_discovery_url" key in your configuration to start discovery.`,
+	Short: "Discover and update info about all peers listed in the seed network, based on your discovery file.",
 	Run: func(cmd *cobra.Command, args []string) {
-
-		ipfs, err := bios.NewIPFS(ipfsGatewayAddress)
+		net, err := fetchNetwork()
 		if err != nil {
-			fmt.Println("ipfs client error:", err)
-			os.Exit(1)
+			log.Fatalln("fetch network:", err)
 		}
-
-		var discovery *disco.Discovery
-		if discovery, err = bios.LoadDiscoveryFromFile(myDiscoveryFile); err != nil {
-			fmt.Println("error")
-			fmt.Fprintf(os.Stderr, "format invalid: %s", err)
-			os.Exit(1)
-		}
-
-		api, err := api(discovery.SeedNetworkChainID)
-		if err != nil {
-			fmt.Println("api error:", err)
-			os.Exit(1)
-		}
-		net, err := fetchNetwork(api, ipfs, seedNetworkContract)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		fmt.Println("Fetched successfully")
 
 		net.PrintOrderedPeers()
 	},

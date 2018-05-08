@@ -26,7 +26,7 @@ func LoadDiscoveryFromFile(fileName string) (discovery *disco.Discovery, err err
 		return
 	}
 
-	err = yamlUnmarshal(cnt, discovery)
+	err = yamlUnmarshal(cnt, &discovery)
 	if err != nil {
 		return
 	}
@@ -59,9 +59,9 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 		return errors.New("target_p2p_address doesn't contain port number")
 	}
 
-	if strings.Contains(discovery.TargetP2PAddress, "example.com") {
-		return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
-	}
+	// if strings.Contains(discovery.TargetP2PAddress, "example.com") {
+	// 	return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
+	// }
 
 	return nil
 }
