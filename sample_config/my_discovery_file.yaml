@@ -16,7 +16,7 @@ seed_network_peers:
   comment: "They are better"
   weight: 20
 
-seed_network_launch_block: 5000  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
+seed_network_launch_block: 551  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
 
 urls:
 - https://website.com

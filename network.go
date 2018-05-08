@@ -2,6 +2,7 @@ package bios
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -266,7 +267,7 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 	if err != nil {
 		return "", err
 	}
-	accountHex := hex.EncodeToString(accountRaw)
+	accountInt := binary.LittleEndian.Uint64(accountRaw)
 	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{
 			JSON:       true,
@@ -274,8 +275,8 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 			Code:       net.seedNetContract,
 			Table:      "genesis",
 			TableKey:   "id",
-			LowerBound: accountHex,
-			UpperBound: accountHex,
+			LowerBound: fmt.Sprintf("%d", accountInt),
+			UpperBound: fmt.Sprintf("%d", accountInt+1),
 			Limit:      1,
 		},
 	)
