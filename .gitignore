@@ -1,9 +1,8 @@
-/local/
+/local*
 /dist/
 test-data/mesh/flare*.json
-/local2
 sample_config/eos-bios
 sample_config/cleos
 sample_config/env.sh
 eosio.disco/copy.sh
-
+/stage*

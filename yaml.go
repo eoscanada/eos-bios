@@ -46,8 +46,8 @@ func ValidateDiscoveryFile(filename string) error {
 
 func ValidateDiscovery(discovery *disco.Discovery) error {
 	for _, peer := range discovery.SeedNetworkPeers {
-		if peer.Weight > 1.0 || peer.Weight < 0.0 {
-			return fmt.Errorf("peer %q weight must be between 0.0 and 1.0", peer.Account)
+		if peer.Weight > 100 || peer.Weight < 0 {
+			return fmt.Errorf("peer %q weight must be between 0 and 100", peer.Account)
 		}
 	}
 
