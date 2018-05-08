@@ -16,7 +16,7 @@ var publishCmd = &cobra.Command{
 	Short: "Publish my discovery file to the seed network",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork()
+		net, err := fetchNetwork(false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}

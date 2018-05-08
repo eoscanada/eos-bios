@@ -24,7 +24,7 @@ var discoverCmd = &cobra.Command{
 	Use:   "discover",
 	Short: "Discover and update info about all peers listed in the seed network, based on your discovery file.",
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork()
+		net, err := fetchNetwork(false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}

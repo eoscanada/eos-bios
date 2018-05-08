@@ -16,10 +16,11 @@ import (
 )
 
 type BIOS struct {
-	Network *Network
+	Network   *Network
+	LocalOnly bool
 
 	LaunchDisco  *disco.Discovery
-	TargetNetAPI       *eos.API
+	TargetNetAPI *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
 
@@ -40,8 +41,8 @@ type BIOS struct {
 
 func NewBIOS(network *Network, targetAPI *eos.API) *BIOS {
 	b := &BIOS{
-		Network: network,
-		TargetNetAPI:  targetAPI,
+		Network:      network,
+		TargetNetAPI: targetAPI,
 	}
 	return b
 }
@@ -138,7 +139,7 @@ func (b *BIOS) StartBoot() error {
 	}
 
 	if err := b.RunBootSequence(); err != nil {
-		return fmt.Errorf("join network: %s", err)
+		return fmt.Errorf("run boot sequence: %s", err)
 	}
 
 	return b.DispatchDone("boot")
@@ -200,7 +201,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	genesisData := b.GenerateGenesisJSON(pubKey)
 
-	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 {
+	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.LocalOnly {
 		_, err = b.Network.SeedNetAPI.SignPushActions(
 			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
 		)
@@ -256,6 +257,9 @@ func (b *BIOS) RunBootSequence() error {
 		}
 	}
 
+	fmt.Println("Flushing transactions into blocks")
+	time.Sleep(2 * time.Second)
+
 	otherPeers := b.someTopmostPeersAddresses()
 	if err = b.DispatchBootConnectMesh(otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
@@ -270,7 +274,11 @@ func (b *BIOS) RunBootSequence() error {
 
 func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if b.Genesis == nil {
-		b.Genesis = b.waitOnGenesisData()
+		if b.LocalOnly {
+			b.Genesis = b.inputGenesisData()
+		} else {
+			b.Genesis = b.pollGenesisData()
+		}
 	}
 
 	// Create mesh network
@@ -368,7 +376,7 @@ func (b *BIOS) waitLaunchBlock() rand.Source {
 	}
 }
 
-func (b *BIOS) waitOnGenesisData() (genesis *GenesisJSON) {
+func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 	fmt.Println("")
 	fmt.Println("Waiting for the BIOS Boot node to publish the genesis data to the seed network contract..")
 
@@ -388,6 +396,27 @@ func (b *BIOS) waitOnGenesisData() (genesis *GenesisJSON) {
 		err = json.Unmarshal([]byte(genesisData), &genesis)
 		if err != nil {
 			fmt.Printf("\ninvalid genesis data read from BIOS boot! (err=%s, content=%q)", err, genesisData)
+			continue
+		}
+
+		return
+	}
+}
+
+func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
+	fmt.Println("")
+
+	for {
+		fmt.Printf("Please input the genesis data of the network you want to join: ")
+		genesisData, err := ScanSingleLine()
+		if err != nil {
+			fmt.Println("error reading:", err)
+			continue
+		}
+
+		err = json.Unmarshal([]byte(genesisData), &genesis)
+		if err != nil {
+			fmt.Printf("Invalid genesis data: %s\n", err)
 			continue
 		}
 
@@ -449,7 +478,6 @@ func (b *BIOS) GetContentsCacheRef(filename string) (string, error) {
 }
 
 func (b *BIOS) setProducers() error {
-
 	b.ShuffledProducers = b.Network.OrderedPeers()
 
 	if b.RandSource != nil {

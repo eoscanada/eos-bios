@@ -54,7 +54,7 @@ func init() {
 
 	RootCmd.PersistentFlags().StringP("my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
 	RootCmd.PersistentFlags().StringP("ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
-	RootCmd.PersistentFlags().StringP("seednet-api", "", "http://127.0.0.1:8888", "API Address of a seed network nodeos instance")
+	RootCmd.PersistentFlags().StringP("seednet-api", "", "http://stage0.example.com:8888", "API Address of a seed network nodeos instance")
 	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./privkeys.keys", "File containing private keys to your account on the seed network")
 	// RootCmd.PersistentFlags().StringVarP(&seedNetworkContract, "seednet-contract", "", "eosio.disco", "Contract account name on the seed network, where to find discovery files from all Block producer candidates.")
 	RootCmd.PersistentFlags().StringP("target-api", "", "http://127.0.0.1:8888", "API Address of the target network's nodeos instance that you control (for injection and verification)")

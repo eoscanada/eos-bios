@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork() (*bios.Network, error) {
+func fetchNetwork(local bool) (*bios.Network, error) {
 	discoFile := viper.GetString("my-discovery")
 	discovery, err := bios.LoadDiscoveryFromFile(discoFile)
 	if err != nil {
@@ -23,6 +23,8 @@ func fetchNetwork() (*bios.Network, error) {
 		viper.GetString("seednet-api"),
 		discovery.SeedNetworkChainID,
 	)
+	// FIXME: when the blockchain uses the chain ID, we'll set it (!!)
+	seedNetAPI.ChainID = make([]byte, 32, 32)
 
 	keyBag := eos.NewKeyBag()
 	err = keyBag.ImportFromFile(viper.GetString("seednet-keys"))
@@ -39,6 +41,7 @@ func fetchNetwork() (*bios.Network, error) {
 		seedNetworkContract, //	viper.GetString("seednet-contract"),
 		seedNetAPI,
 	)
+	net.LocalOnly = local
 
 	if err := net.UpdateGraph(); err != nil {
 		return nil, fmt.Errorf("updating graph: %s", err)
@@ -67,6 +70,9 @@ func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
 		viper.GetString("target-api"),
 		net.MyPeer.Discovery.TargetChainID,
 	)
+	// FIXME: this is until the blockchain (past dawn3) actually USES the chain ID
+	// specified in the `genesis.json`.
+	targetNetAPI.ChainID = make([]byte, 32, 32)
 
 	keyBag := eos.NewKeyBag()
 	targetNetAPI.SetSigner(keyBag)

@@ -17,6 +17,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // bootCmd represents the boot command
@@ -30,7 +31,7 @@ The "publish_kickstart_data" will also be run, giving you the opportunity to dis
 Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork()
+		net, err := fetchNetwork(viper.GetBool("local"))
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
@@ -39,6 +40,8 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 		if err != nil {
 			log.Fatalln("bios setup:", err)
 		}
+
+		b.LocalOnly = viper.GetBool("local")
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
@@ -52,4 +55,10 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 
 func init() {
 	RootCmd.AddCommand(bootCmd)
+
+	bootCmd.Flags().BoolP("local", "l", false, "Don't try to discover the world, just boot a local instance.")
+
+	if err := viper.BindPFlag("local", bootCmd.Flags().Lookup("local")); err != nil {
+		panic(err)
+	}
 }

@@ -300,8 +300,24 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 	for _, acct := range op.Accounts {
 		out = append(out,
-			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{Threshold: 0}, PN("active")),
-			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{Threshold: 0}, PN("owner")),
+			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
+				Threshold: 1,
+				Keys: []eos.KeyWeight{
+					eos.KeyWeight{
+						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
+						Weight:    1,
+					},
+				},
+			}, PN("active")),
+			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{
+				Threshold: 1,
+				Keys: []eos.KeyWeight{
+					eos.KeyWeight{
+						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
+						Weight:    1,
+					},
+				},
+			}, PN("owner")),
 			// TODO: add recovery here ??
 		)
 

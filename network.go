@@ -18,6 +18,8 @@ import (
 )
 
 type Network struct {
+	LocalOnly bool
+
 	MyPeer *Peer
 
 	SeedNetAPI      *eos.API
@@ -50,29 +52,33 @@ func (net *Network) UpdateGraph() error {
 	net.discoveredPeers = map[eos.AccountName]*Peer{}
 	net.candidates = make(map[string]*disco.Discovery)
 
-	rowsJSON, err := net.SeedNetAPI.GetTableRows(
-		eos.GetTableRowsRequest{
-			JSON:     true,
-			Scope:    net.seedNetContract,
-			Code:     net.seedNetContract,
-			Table:    "discovery",
-			TableKey: "id",
-			//LowerBound: "",
-			//UpperBound: "",
-			Limit: 1000,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("get table rows: %s", err)
-	}
-
 	var rows []struct {
 		ID            eos.AccountName  `json:"id"`
 		DiscoveryFile *disco.Discovery `json:"discovery_file"`
 		UpdatedAt     eos.JSONTime     `json:"updated_at"`
 	}
-	if err := rowsJSON.JSONToStructs(&rows); err != nil {
-		return fmt.Errorf("reading discovery from table: %s", err)
+
+	fmt.Println("MAMA", net.LocalOnly)
+	if !net.LocalOnly {
+		rowsJSON, err := net.SeedNetAPI.GetTableRows(
+			eos.GetTableRowsRequest{
+				JSON:     true,
+				Scope:    net.seedNetContract,
+				Code:     net.seedNetContract,
+				Table:    "discovery",
+				TableKey: "id",
+				//LowerBound: "",
+				//UpperBound: "",
+				Limit: 1000,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("get discovery rows: %s", err)
+		}
+
+		if err := rowsJSON.JSONToStructs(&rows); err != nil {
+			return fmt.Errorf("reading discovery from table: %s", err)
+		}
 	}
 
 	for _, cand := range rows {
@@ -83,7 +89,7 @@ func (net *Network) UpdateGraph() error {
 		net.candidates[string(cand.ID)] = cand.DiscoveryFile
 	}
 
-	if err = net.ensureExists(); err != nil {
+	if err := net.ensureExists(); err != nil {
 		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
@@ -270,7 +276,7 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 		},
 	)
 	if err != nil {
-		return "", fmt.Errorf("get table rows: %s", err)
+		return "", fmt.Errorf("get genesis rows: %s", err)
 	}
 
 	var rows []struct {
