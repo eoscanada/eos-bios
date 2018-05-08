@@ -16,6 +16,13 @@ package cmd
 import (
 	"fmt"
 
+	"os"
+
+	"github.com/eoscanada/eos-bios"
+	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-go"
+	"github.com/eoscanada/eos-go/ecc"
+	"github.com/eoscanada/eos-go/system"
 	"github.com/spf13/cobra"
 )
 
@@ -25,15 +32,34 @@ var inviteCmd = &cobra.Command{
 	Short: "Invite a fellow block producer to the seed network where you have access to",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: read and validate the local discovery file
-		// TODO: read the `seed_netework_account_name`.. ensure the keys are loaded.
-		// TODO: create an eos.API based on the `--seednet-api` value and `seed_network_chain_id` in
-		// my discovery file.
-		//
 
-		// api.SignPushActions(
-		// 	system.NewCreateAccount(),
-		// )
+		fmt.Printf("Reading discovery file... ")
+		var discovery *disco.Discovery
+		var err error
+		if discovery, err = bios.LoadDiscoveryFromFile(myDiscoveryFile); err != nil {
+			fmt.Println("error")
+			fmt.Fprintf(os.Stderr, "format invalid: %s", err)
+			os.Exit(1)
+		}
+
+		api, err := api(discovery.SeedNetworkChainID)
+		if err != nil {
+			fmt.Println("api error:", err)
+			os.Exit(1)
+		}
+		publicKey, err := ecc.NewPublicKey(args[1])
+		if err != nil {
+			fmt.Println("error")
+			fmt.Fprintf(os.Stderr, "public key: %s", err)
+			os.Exit(1)
+		}
+		api.SignPushActions(
+			system.NewNewAccount(
+				eos.AccountName(discovery.SeedNetworkAccountName),
+				eos.AccountName(args[0]),
+				publicKey,
+			),
+		)
 		fmt.Println("inviting", args[0], "with public key", args[1])
 		fmt.Println("done ... chicken")
 	},

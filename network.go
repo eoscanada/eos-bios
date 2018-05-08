@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
-	multihash "github.com/multiformats/go-multihash"
+	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-go"
+	"github.com/multiformats/go-multihash"
 	"github.com/ryanuber/columnize"
 )
 
@@ -21,6 +23,8 @@ type Network struct {
 	UseCache bool
 
 	MyPeer *Peer
+
+	api *eos.API
 
 	IPFS *IPFS
 
@@ -30,15 +34,17 @@ type Network struct {
 	discoveredPeers map[IPFSRef]*Peer
 	orderedPeers    []*Peer
 
-	lastFetch time.Time
+	lastFetch    time.Time
+	contractName string
 }
 
-func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS, seedNetAPI string, seedNetContract string) *Network {
+func NewNetwork(cachePath string, myDiscoveryFile string, ipfs *IPFS, contractName string, api *eos.API) *Network {
 	return &Network{
-		IPFS:               ipfs,
-		cachePath:          cachePath,
-		myDiscoveryFile:    myDiscoveryFile,
-		SeedNetworkAddress: seedNetAPI,
+		api:             api,
+		IPFS:            ipfs,
+		cachePath:       cachePath,
+		myDiscoveryFile: myDiscoveryFile,
+		contractName:    contractName,
 	}
 }
 
@@ -47,9 +53,6 @@ func (c *Network) ensureExists() error {
 }
 
 func (net *Network) UpdateGraph() error {
-	// TODO: read myDiscoveryFile (done in traverseGraph already)
-	// TODO: take the `seed_network_chain_id`
-	// TODO: instantiate an eos.API with that chain_id and the net.seedNetworkAddress
 	// TODO: with that seedNetAPI.GetTableRows(seedNetworkContract)
 	// TODO: navigate and traverse the graph in memory.. no need to fetch from IPNS.. although we
 	// want to download any new references to ipfs.
@@ -57,6 +60,19 @@ func (net *Network) UpdateGraph() error {
 	// if time.Now().Before(net.lastFetch.Add(2 * time.Minute)) {
 	// 	return nil
 	// }
+
+	net.api.GetTableRows(
+		eos.GetTableRowsRequest{
+			JSON:     true,
+			Scope:    "eosio.disco",
+			Code:     "eosio.disco",
+			Table:    "discovery",
+			TableKey: "id",
+			//LowerBound: "",
+			//UpperBound: "",
+			Limit: 100,
+		},
+	)
 
 	if err := net.traverseGraph(); err != nil {
 		return fmt.Errorf("traversing graph: %s", err)
@@ -92,8 +108,8 @@ func (c *Network) traverseGraph() error {
 		return err
 	}
 
-	var disco *Discovery
-	err = yamlUnmarshal(rawDisco, &disco)
+	var discoFile *disco.Discovery
+	err = yamlUnmarshal(rawDisco, &discoFile)
 	if err != nil {
 		return err
 	}
@@ -101,16 +117,16 @@ func (c *Network) traverseGraph() error {
 	ipfsRef := toMultihash(rawDisco)
 
 	c.MyPeer = &Peer{
-		Discovery:     disco,
+		Discovery:     discoFile,
 		DiscoveryLink: IPNSRef("local " + c.myDiscoveryFile),
 		DiscoveryFile: ipfsRef,
 	}
 	c.discoveredPeers[ipfsRef] = c.MyPeer
 
-	return c.traversePeer(disco, c.MyPeer.DiscoveryLink, ipfsRef)
+	return c.traversePeer(discoFile, c.MyPeer.DiscoveryLink, ipfsRef)
 }
 
-func (c *Network) traversePeer(disco *Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
+func (c *Network) traversePeer(disco *disco.Discovery, ipnsRef IPNSRef, ipfsRef IPFSRef) error {
 	fmt.Printf("Loading launch data from %q (%q, %s)...\n", disco.EOSIOAccountName, disco.OrganizationName, ipnsRef)
 	if err := ValidateDiscovery(disco); err != nil {
 		return err

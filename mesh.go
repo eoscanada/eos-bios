@@ -36,7 +36,7 @@ func (b *BIOS) computeMyMeshP2PAddresses() []string {
 		if myPosition != -1 {
 			peerIDs := getPeerIndexesToMeshWith(len(b.ShuffledProducers), myPosition)
 			for idx, peer := range b.ShuffledProducers {
-				p2pAddr := peer.Discovery.EOSIOP2P
+				p2pAddr := peer.Discovery.TargetP2PAddress
 				if peerIDs[idx] && !otherPeersMap[p2pAddr] {
 					otherPeers = append(otherPeers, p2pAddr)
 					otherPeersMap[p2pAddr] = true
@@ -55,7 +55,7 @@ func (b *BIOS) someTopmostPeersAddresses() []string {
 		if idx > 5 {
 			return otherPeers
 		}
-		otherPeers = append(otherPeers, peer.Discovery.EOSIOP2P)
+		otherPeers = append(otherPeers, peer.Discovery.TargetP2PAddress)
 	}
 	return otherPeers
 }

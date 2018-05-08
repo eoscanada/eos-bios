@@ -20,7 +20,6 @@ import (
 	"os"
 
 	bios "github.com/eoscanada/eos-bios"
-	eos "github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -42,7 +41,13 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 			os.Exit(1)
 		}
 
-		net, err := fetchNetwork(ipfs)
+		api, err := api()
+		if err != nil {
+			fmt.Println("api error:", err)
+			os.Exit(1)
+		}
+
+		net, err := fetchNetwork(api, ipfs, seedNetworkContract)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
@@ -51,9 +56,6 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 		if err != nil {
 			log.Fatalln("error parsing --api-address:", err)
 		}
-
-		api := eos.New(apiAddressURL, net.ChainID())
-		api.SetSigner(eos.NewKeyBag())
 
 		b := bios.NewBIOS(net, api)
 

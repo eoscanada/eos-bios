@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	bios "github.com/eoscanada/eos-bios"
-	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/eoscanada/eos-bios"
+	"github.com/eoscanada/eos-go"
+	"github.com/ipfs/go-ipfs-api"
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork(ipfs *bios.IPFS) (*bios.Network, error) {
-	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs, seedNetworkAPIAddress, seedNetworkContract)
+func fetchNetwork(api *eos.API, ipfs *bios.IPFS, contractName string) (*bios.Network, error) {
+
+	net := bios.NewNetwork(cachePath, myDiscoveryFile, ipfs, contractName, api)
 
 	net.UseCache = viper.GetBool("no-discovery")
 
@@ -34,4 +36,11 @@ func ipfsClient() (*shell.IdOutput, *shell.Shell) {
 	fmt.Println("ok")
 
 	return info, ipfsClient
+}
+
+func api(chainID eos.SHA256Bytes) (api *eos.API, err error) {
+	api = eos.New(apiAddressURL, chainID)
+	keyBag := eos.NewKeyBag()
+	err = keyBag.ImportFromFile(seedNetworkKeysFile)
+	return
 }

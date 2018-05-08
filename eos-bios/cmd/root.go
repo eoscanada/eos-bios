@@ -36,6 +36,7 @@ var ipfsGatewayAddress string
 var ipfsLocalGatewayAddress string
 var seedNetworkAPIAddress string
 var seedNetworkContract string
+var seedNetworkKeysFile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -54,6 +55,8 @@ func Execute() {
 	}
 }
 
+
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -61,7 +64,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&myDiscoveryFile, "my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
 	RootCmd.PersistentFlags().StringVarP(&ipfsGatewayAddress, "ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
 	RootCmd.PersistentFlags().StringVarP(&seedNetworkAPIAddress, "seednet-api", "", "http://127.0.0.1:8888", "API Address of a seed network nodeos instance")
-	RootCmd.PersistentFlags().StringVarP(&seedNetworkAPIAddress, "seednet-keys", "", "./privkeys.keys", "Private keys to your account on the seed network (refers to `seed_network_account_name` in your discovery file).")
+	RootCmd.PersistentFlags().StringVarP(&seedNetworkKeysFile, "seednet-keys", "", "./privkeys.keys", "Private keys to your account on the seed network (refers to `seed_network_account_name` in your discovery file).")
 	//RootCmd.PersistentFlags().StringVarP(&seedNetworkWalletAddress, "seednet-wallet", "", "",  "Wallet address MAAAMAMAMA")
 	RootCmd.PersistentFlags().StringVarP(&seedNetworkContract, "seednet-contract", "", "eosio.disco", "Contract account name on the seed network, where to find discovery files from all Block producer candidates.")
 

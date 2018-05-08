@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	yaml2json "github.com/bronze1man/go-yaml2json"
+	"github.com/eoscanada/eos-bios/disco"
 )
 
 func yamlUnmarshal(cnt []byte, v interface{}) error {
@@ -19,23 +20,33 @@ func yamlUnmarshal(cnt []byte, v interface{}) error {
 	return json.Unmarshal(jsonCnt, v)
 }
 
-func ValidateDiscoveryFile(filename string) error {
-	cnt, err := ioutil.ReadFile(filename)
+func LoadDiscoveryFromFile(fileName string) (discovery *disco.Discovery, err error) {
+
+	cnt, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return err
+		return
 	}
 
-	var disco *Discovery
-	err = yamlUnmarshal(cnt, &disco)
+	err = yamlUnmarshal(cnt, discovery)
 	if err != nil {
-		return err
+		return
 	}
 
-	return ValidateDiscovery(disco)
+	err = ValidateDiscovery(discovery)
 }
 
-func ValidateDiscovery(disco *Discovery) error {
-	for _, peer := range disco.LaunchData.Peers {
+func ValidateDiscoveryFile(filename string) error {
+
+	discovery, err := LoadDiscoveryFromFile(filename)
+	if err != nil {
+		return err
+	}
+	ValidateDiscovery(discovery)
+	return nil
+}
+
+func ValidateDiscovery(discovery *disco.Discovery) error {
+	for _, peer := range discovery.LaunchData.Peers {
 		if !strings.HasPrefix(string(peer.DiscoveryLink), "/ipns/") {
 			return fmt.Errorf("peer link %q invalid, should start with '/ipns/'", peer.DiscoveryLink)
 		}
@@ -44,11 +55,11 @@ func ValidateDiscovery(disco *Discovery) error {
 		}
 	}
 
-	if (disco.Testnet && disco.Mainnet) || (!disco.Testnet && !disco.Mainnet) {
-		return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
-	}
+	//if (discovery.Testnet && discovery.Mainnet) || (!discovery.Testnet && !discovery.Mainnet) {
+	//	return errors.New("mainnet/testnet flag inconsistent, one is require, and only one")
+	//}
 
-	if disco.EOSIOAccountName == "" {
+	if discovery.TargetAccountName == "" {
 		return errors.New("eosio_account_name is missing")
 	}
 

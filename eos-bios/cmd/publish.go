@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	bios "github.com/eoscanada/eos-bios"
+	"github.com/eoscanada/eos-bios"
+	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-go"
 	"github.com/spf13/cobra"
 )
 
@@ -15,10 +17,11 @@ var publishCmd = &cobra.Command{
 	Short: "Publish my discovery file to the seed network",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		info, ipfs := ipfsClient()
 
 		fmt.Printf("Reading discovery file... ")
-		if err := bios.ValidateDiscoveryFile(myDiscoveryFile); err != nil {
+		var discovery *disco.Discovery
+		var err error
+		if discovery, err = bios.LoadDiscoveryFromFile(myDiscoveryFile); err != nil {
 			fmt.Println("error")
 			fmt.Fprintf(os.Stderr, "format invalid: %s", err)
 			os.Exit(1)
@@ -33,12 +36,15 @@ var publishCmd = &cobra.Command{
 		defer fl.Close()
 		fmt.Println("ok")
 
-		// TODO: load private keys, or use a keos wallet if configured as such
+		api, err := api(discovery.SeedNetworkChainID)
+		if err != nil {
+			fmt.Println("failed")
+			fmt.Fprintf(os.Stderr, "error initiating api %s\n", err)
+			os.Exit(2)
+		}
 
-		// load into `disco`..
-		var disco *Discovery
 		api.SignPushActions(
-,			disco.NewUpdateDiscovery(disco),
+			disco.NewUpdateDiscovery(discovery, eos.AccountName(seedNetworkContract)),
 		)
 
 		// fmt.Printf("Publishing discovery file... ")
