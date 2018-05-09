@@ -70,6 +70,7 @@ namespace eosio {
   struct discovery_file {
     checksum256 seed_network_chain_id;
     account_name seed_network_account_name;
+    string seed_network_http_address;
     vector<peer_link> seed_network_peers;
     uint64_t seed_network_launch_block;
 
@@ -79,15 +80,15 @@ namespace eosio {
     uint8_t target_network_is_test; //
     checksum256 target_chain_id;
     string target_p2p_address;
+    string target_http_address;
     account_name target_account_name;
     public_key target_appointed_block_producer_signing_key;
     authority_map target_initial_authority;
 
     vector<content_ref> target_contents;
 
-    EOSLIB_SERIALIZE(discovery_file, (seed_network_chain_id)(seed_network_account_name)(seed_network_peers)(seed_network_launch_block)(urls)(gmt_offset)(target_network_is_test)(target_chain_id)(target_p2p_address)(target_account_name)(target_appointed_block_producer_signing_key)(target_initial_authority)(target_contents))
+    EOSLIB_SERIALIZE(discovery_file, (seed_network_chain_id)(seed_network_account_name)(seed_network_http_address)(seed_network_peers)(seed_network_launch_block)(urls)(gmt_offset)(target_network_is_test)(target_chain_id)(target_p2p_address)(target_http_address)(target_account_name)(target_appointed_block_producer_signing_key)(target_initial_authority)(target_contents))
   };
-
 
   class disco : public contract {
   public:

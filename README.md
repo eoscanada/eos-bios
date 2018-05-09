@@ -170,23 +170,8 @@ TODO
 
 * In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
 
-* Implement more ethereum sources, so we're not blocked by DDoS of those websites.
-  * Could we RPC directly to a swarm of nodes ?
-  * We could also load some from the disk, like `ethereum_swarm.txt`
-
 * output.log -> output EVERYTHING to a file, hook a Tee on `os.Stderr`
   and `os.Stdout`.
-
-* No publishing of `secret-p2p-address`, only a remote control of
-  `/v1/net/connect` to some ABPs who have published and established
-  the network.
-  * hook_boot_publish_genesis.sh
-  * hook_boot_node.sh
-  * hook_boot_connect_mesh.sh
-  * hook_boot_publish_privkey.sh
-
-  * hook_join_network.sh  # add connect_count
-  * hook_done.sh [role]
 
 * Find out what we do for the chain_id.. do we vote for it too ?
   Top 20% must agree on the chain_id ?
@@ -199,3 +184,17 @@ TODO
   that the peers are up ?
 
 * Make sure `setprods` is called properly... and does affect the producer schedule.
+
+
+Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
+----       ------------  -----------   ------  ----------------  ------------
+BIOS NODE  eosmama       eoscanadacom  10      1112211           500 (Fri Nov 7th 23:36, local time)
+ABP 01     eosmarc       eosmarc       5       1111112           572 (Fri Nov 8th 00:25, local time)
+ABP 02     eosrita       eosrita       2       1111111           572 (Fri Nov 8th 00:25, local time)
+ABP 03     eosguy        eosguy        1       1111111           572 (Fri Nov 8th 00:25, local time)
+ABP 04     eosbob        eosbob        1
+
+Contents disagreements:
+* About column 1: `boot_sequence.yaml`
+  * eosmarc, eoscanadacom, eospouet says 1: /ipfs/Qmakjdsflakjdslfkjaldsfk
+  * eosmama says 2: /ipfs/Qmhellkajdlakjdsflkj

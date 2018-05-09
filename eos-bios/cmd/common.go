@@ -19,8 +19,16 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 
 	ipfs := bios.NewIPFS(viper.GetString("ipfs-gateway-address"))
 
+	seedNetHTTP := viper.GetString("seednet-api")
+	if seedNetHTTP == "" {
+		seedNetHTTP = discovery.SeedNetworkHTTPAddress
+	}
+	if seedNetHTTP == "" && !single {
+		return nil, fmt.Errorf("missing `seed_network_http_address` and no `--seednet-api` override provided")
+	}
+
 	seedNetAPI := eos.New(
-		viper.GetString("seednet-api"),
+		seedNetHTTP,
 		discovery.SeedNetworkChainID,
 	)
 	// FIXME: when the blockchain uses the chain ID, we'll set it (!!)
@@ -66,8 +74,16 @@ func ipfsClient() (*shell.IdOutput, *shell.Shell) {
 }
 
 func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
+	targetNetHTTP := viper.GetString("target-api")
+	if targetNetHTTP == "" {
+		targetNetHTTP = net.MyPeer.Discovery.TargetHTTPAddress
+	}
+	if targetNetHTTP == "" {
+		return nil, fmt.Errorf("missing `target_http_address` and no `--target-api` override provided")
+	}
+
 	targetNetAPI := eos.New(
-		viper.GetString("target-api"),
+		targetNetHTTP,
 		net.MyPeer.Discovery.TargetChainID,
 	)
 	// FIXME: this is until the blockchain (past dawn3) actually USES the chain ID

@@ -2,6 +2,7 @@ package bios
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -59,6 +60,7 @@ func (net *Network) UpdateGraph() error {
 	}
 
 	if !net.SingleOnly {
+		fmt.Println("Updating network graph")
 		rowsJSON, err := net.SeedNetAPI.GetTableRows(
 			eos.GetTableRowsRequest{
 				JSON:     true,
@@ -121,7 +123,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 	fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
 
 	for _, peerLink := range discoFile.SeedNetworkPeers {
-		fmt.Printf("  - peer %s comment=%q, weight=%.2f\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
+		fmt.Printf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
 
 		peerDisco, found := net.candidates[string(peerLink.Account)]
 		if !found {
@@ -157,6 +159,7 @@ func (net *Network) DownloadIPFSRef(ref string) error {
 		return nil
 	}
 
+	fmt.Printf("Downloading and caching content from IPFS: %q\n", ref)
 	cnt, err := net.ipfs.Get(ref)
 	if err != nil {
 		return err
@@ -222,9 +225,12 @@ func (net *Network) calculateWeights() error {
 				continue
 			}
 
-			fmt.Println("adding weight to", peerLink.Account)
-			// Weight defaults to 0
-			peerLinkPeer.TotalWeight += int(peerLink.Weight)
+			if peerLink.Weight > 100 {
+				fmt.Println("weight overboard for peer", peerLink.Account, ".. skipping!")
+			} else {
+				fmt.Println("adding weight to", peerLink.Account)
+				peerLinkPeer.TotalWeight += int(peerLink.Weight)
+			}
 		}
 
 		allPeers = append(allPeers, peer)
@@ -261,7 +267,7 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 	if err != nil {
 		return "", err
 	}
-	accountHex := hex.EncodeToString(accountRaw)
+	accountInt := binary.LittleEndian.Uint64(accountRaw)
 	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{
 			JSON:       true,
@@ -269,8 +275,8 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 			Code:       net.seedNetContract,
 			Table:      "genesis",
 			TableKey:   "id",
-			LowerBound: accountHex,
-			UpperBound: accountHex,
+			LowerBound: fmt.Sprintf("%d", accountInt),
+			UpperBound: fmt.Sprintf("%d", accountInt+1),
 			Limit:      1,
 		},
 	)

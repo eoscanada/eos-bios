@@ -16,7 +16,7 @@ import (
 )
 
 type BIOS struct {
-	Network   *Network
+	Network    *Network
 	SingleOnly bool
 
 	LaunchDisco  *disco.Discovery
@@ -382,22 +382,30 @@ func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 
 	bootNode := b.ShuffledProducers[0]
 
-	fmt.Printf("Polling..")
+	fmt.Printf("Polling...\n")
 	for {
 		time.Sleep(500 * time.Millisecond)
-		fmt.Printf(".")
 
 		genesisData, err := b.Network.PollGenesisTable(bootNode.Discovery.SeedNetworkAccountName)
 		if err != nil {
-			fmt.Printf("e")
+			fmt.Printf("- data not ready: %s\n", err)
 			continue
+		}
+
+		if len(genesisData) == 0 {
+			fmt.Printf("- data still empty\n")
 		}
 
 		err = json.Unmarshal([]byte(genesisData), &genesis)
 		if err != nil {
-			fmt.Printf("\ninvalid genesis data read from BIOS boot! (err=%s, content=%q)", err, genesisData)
+			fmt.Printf("- data not valid: %q (err=%s)\n", err, genesisData)
 			continue
 		}
+
+		fmt.Println("Got genesis data:")
+		fmt.Println("")
+		fmt.Println("    ", genesisData)
+		fmt.Println("")
 
 		return
 	}

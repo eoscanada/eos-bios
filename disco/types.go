@@ -19,6 +19,7 @@ type ContentRef struct {
 type Discovery struct {
 	SeedNetworkChainID                     eos.SHA256Bytes `json:"seed_network_chain_id"`
 	SeedNetworkAccountName                 eos.AccountName `json:"seed_network_account_name"`
+	SeedNetworkHTTPAddress                 string          `json:"seed_network_http_address"`
 	SeedNetworkPeers                       []*PeerLink     `json:"seed_network_peers"`
 	SeedNetworkLaunchBlock                 uint64          `json:"seed_network_launch_block"`
 	URLs                                   []string        `json:"urls"`
@@ -26,6 +27,7 @@ type Discovery struct {
 	TargetNetworkIsTest                    int8            `json:"target_network_is_test"`
 	TargetChainID                          eos.SHA256Bytes `json:"target_chain_id"`
 	TargetP2PAddress                       string          `json:"target_p2p_address"`
+	TargetHTTPAddress                      string          `json:"target_http_address"`
 	TargetAccountName                      eos.AccountName `json:"target_account_name"`
 	TargetAppointedBlockProducerSigningKey ecc.PublicKey   `json:"target_appointed_block_producer_signing_key"`
 	TargetInitialAuthority                 struct {
@@ -43,7 +45,6 @@ type GenesisRow struct {
 	ID                  eos.AccountName `json:"id"`
 	GenesisJSON         string          `json:"genesis_json"`
 	InitialP2PAddresses []string        `json:"initial_p2p_addresses"`
-	UpdatedAt           eos.Tstamp      `json:"updated_at"` // or JSONTime in 32 bits ?
 }
 
 type DiscoveryRow struct {

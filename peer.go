@@ -33,5 +33,5 @@ func (p *Peer) String() string {
 }
 
 func (p *Peer) Columns() string {
-	return fmt.Sprintf("%s | %s | %d", p.AccountName(), p.Discovery.TargetAccountName, p.TotalWeight)
+	return fmt.Sprintf("%s | %s | %d", p.Discovery.SeedNetworkAccountName, p.Discovery.TargetAccountName, p.TotalWeight)
 }

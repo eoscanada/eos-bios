@@ -114,6 +114,9 @@
           "name": "seed_network_account_name",
           "type": "account_name"
         },{
+          "name": "seed_network_http_address",
+          "type": "string"
+        },{
           "name": "seed_network_peers",
           "type": "peer_link[]"
         },{
@@ -133,6 +136,9 @@
           "type": "checksum256"
         },{
           "name": "target_p2p_address",
+          "type": "string"
+        },{
+          "name": "target_http_address",
           "type": "string"
         },{
           "name": "target_account_name",

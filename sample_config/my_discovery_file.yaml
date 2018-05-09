@@ -5,6 +5,7 @@
 #
 seed_network_chain_id: "0000000000000000000000000000000000000000000000000000000000000001"
 seed_network_account_name: eoscanadacom
+seed_network_http_address: http://stage0.eoscanada.com
 # These are your peers on the SEED network.  They must have published
 # their discovery in the seed network `eosio.disco` contract (with
 # `eos-bios publish`). Otherwise, your peer link here will be ignored.
@@ -16,18 +17,19 @@ seed_network_peers:
   comment: "They are better"
   weight: 20
 
-seed_network_launch_block: 5000  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
+seed_network_launch_block: 551  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
 
 urls:
 - https://website.com
 
 # To help organize schedules for rehearsals.
-gmt_offset: -0700  # in HourMinutes format
+gmt_offset: -700  # in HourMinutes format
 
 target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
 target_chain_id: "0000000000000000000000000000000000000000000000000000000000000002"
 target_p2p_address: stage1.example.com:9876
+target_http_address: http://stage1.eoscanada.com
 target_account_name: eosnextgen
 target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 target_initial_authority:
@@ -55,7 +57,7 @@ target_contents:
     comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
-    comment: "Snapshot at period 290."
+    comment: "Snapshot of period 290."
   #- name: snapshot_unregistered.csv
   #  ref: /ipfs/Qm...
   #  comment: ""
@@ -84,10 +86,10 @@ target_contents:
     ref: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
     comment: "Published by EOS Canada. Dawn3x release."
   - name: eosio.disco.abi
-    ref: /ipfs/QmRQ4v7cBPUeKHLFSNokmmKKCb8wRni4oUjNGfQB9Wr7Ma
+    ref: /ipfs/QmUmTuXUkLBNdxHSHtv2Pf7nos5ndcUfiK36qvge2wyMaB
     comment: "Published by EOS Canada. Dawn3x release."
   - name: eosio.disco.wasm
-    ref: /ipfs/QmNZYcQ3NbV1gfqKQQs4i6dMScveFaLFMLHbSMmP33TMSq
+    ref: /ipfs/QmePZXNe9SejcP24PiG4aEuE6GdPrQDXEkNftTUPVwHt5t
     comment: "Published by EOS Canada. Dawn3x release."
 
   # - name: eosio.unregd.abi
