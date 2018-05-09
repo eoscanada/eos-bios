@@ -63,8 +63,13 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 	// 	return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
 	// }
 
-	// TODO: ensure no  `http` is prefixed on the `target_p2p_address`
-	// rename `http_addres` to `http_endpoint` ?
+	if strings.Contains(discovery.TargetP2PAddress, "://") {
+		return fmt.Errorf("target_p2p_address should be of format ip:port, not prefixed with a protocol")
+	}
+
+	if !strings.Contains(discovery.TargetHTTPAddress, "://") {
+		return fmt.Errorf("target_http_address should include the protocol (like http:// or https://)")
+	}
 
 	// TODO: make sure it's not the DEFAULT key
 
