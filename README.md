@@ -185,6 +185,12 @@ TODO
 
 * Make sure `setprods` is called properly... and does affect the producer schedule.
 
+* How do we handle previous `genesis` entries in the blockchain ?
+  * Someone joining will be happy to get it.. but if the boot node restarts, everyone needs
+    to orchestrate *AFTER*..
+  * Clean-up ?
+    * We need a way to delete our data in the `eosio.disco` contract..
+
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
 ----       ------------  -----------   ------  ----------------  ------------
