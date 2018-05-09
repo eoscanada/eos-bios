@@ -15,6 +15,7 @@ It implements the following:
 The first you need to know is the **discovery protocol**. See an introduction here:
 
 [![The Disco Dance](https://i.ytimg.com/vi/8aNZ_ZnKS-A/hqdefault.jpg?sqp=-oaymwEZCNACELwBSFXyq4qpAwsIARUAAIhCGAFwAQ==&rs=AOn4CLCZeGSGv9Qix8mHX77R4-d0rzDkgA)](https://youtu.be/8aNZ_ZnKS-A)
+https://youtu.be/8aNZ_ZnKS-A
 
 Jump directly to the [sample configurations](./sample_config) if you
 know what you're doing.
