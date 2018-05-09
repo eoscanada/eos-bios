@@ -63,5 +63,13 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 	// 	return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
 	// }
 
+	// TODO: ensure no  `http` is prefixed on the `target_p2p_address`
+	// rename `http_addres` to `http_endpoint` ?
+
+	// TODO: make sure it's not the DEFAULT key
+
+	// TODO: boot node should orchestrate the PUBLICLY accessible thing..
+	//       so we don't need to have two `target_api_address`
+
 	return nil
 }

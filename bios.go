@@ -347,7 +347,9 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	fmt.Println("* This is the last step, and is done for the BIOS Boot node to prove it kept nothing to itself.")
 	fmt.Println("")
 
-	b.waitOnHandoff(b.Genesis)
+	if verify {
+		b.waitOnHandoff(b.Genesis)
+	}
 
 	return nil
 }
