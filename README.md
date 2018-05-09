@@ -61,8 +61,8 @@ team will be assigned a role deterministically:
 3. An _other participant_, which executes the equivalent of `eos-bios join`
 
 
-Practicing to join
-~~~~~~~~~~~~~~~~~~
+### Practicing to join
+
 
 Ask anyone on the [latest seed network](#seed-networks) to invite you. They will run:
 
@@ -90,8 +90,7 @@ Other notable fields:
 
 
 
-Practicing to boot
-~~~~~~~~~~~~~~~~~~
+### Practicing to boot
 
 Review your `my_discovery_file.yaml` (see previous section).  Then run:
 
