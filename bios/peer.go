@@ -3,7 +3,7 @@ package bios
 import (
 	"fmt"
 
-	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-bios/bios/disco"
 )
 
 type Peer struct {

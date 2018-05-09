@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/spf13/cobra"
 )
 

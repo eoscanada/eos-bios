@@ -49,7 +49,7 @@ func TestGetMeshList(t *testing.T) {
 }
 
 // To visually test the meshing, run
-// `go test -timeout 30s github.com/eoscanada/eos-bios -run ^TestGetMeshListToJson`
+// `go test -timeout 30s github.com/eoscanada/eos-bios/bios -run ^TestGetMeshListToJson`
 // `cd test-data/mesh/`
 // `python3 -m http.server`
 // open `http://localhost:8000?count=` + a number of nodes you want to visualize

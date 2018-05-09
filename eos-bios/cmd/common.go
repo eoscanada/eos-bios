@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/eoscanada/eos-bios"
+	"github.com/eoscanada/eos-bios/bios"
 	"github.com/eoscanada/eos-go"
 	"github.com/ipfs/go-ipfs-api"
 	"github.com/spf13/viper"

@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/ryanuber/columnize"
 )

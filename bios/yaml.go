@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	yaml2json "github.com/bronze1man/go-yaml2json"
-	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-bios/bios/disco"
 )
 
 func yamlUnmarshal(cnt []byte, v interface{}) error {

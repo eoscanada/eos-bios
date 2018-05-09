@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	bios "github.com/eoscanada/eos-bios"
+	"github.com/eoscanada/eos-bios/bios"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

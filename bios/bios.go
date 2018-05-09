@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eoscanada/eos-bios/disco"
+	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 )
