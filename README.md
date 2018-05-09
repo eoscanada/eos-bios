@@ -62,6 +62,9 @@ team will be assigned a role deterministically:
 2. An _Appointed Block Producer_, which executes the equivalent of `eos-bios join --verify`
 3. An _other participant_, which executes the equivalent of `eos-bios join`
 
+The orchestrate for all will wait the agreed upon
+`seed_network_launch_block`, and then do the dance.
+
 
 ### Practicing to join
 
