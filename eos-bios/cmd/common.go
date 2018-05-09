@@ -23,7 +23,7 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 	if seedNetHTTP == "" {
 		seedNetHTTP = discovery.SeedNetworkHTTPAddress
 	}
-	if seedNetHTTP == "" {
+	if seedNetHTTP == "" && !single {
 		return nil, fmt.Errorf("missing `seed_network_http_address` and no `--seednet-api` override provided")
 	}
 
