@@ -4,8 +4,8 @@
 # We call each network a stage. Ex: stage0, stage1, stage2, stage3, until "mainnet".
 #
 seed_network_chain_id: "0000000000000000000000000000000000000000000000000000000000000001"
-seed_network_account_name: exemplecom11
-seed_network_http_address: http://stage0.exemple.com
+seed_network_account_name: examplecom11
+seed_network_http_address: http://stage0.example.com
 # These are your peers on the SEED network.  They must have published
 # their discovery in the seed network `eosio.disco` contract (with
 # `eos-bios publish`). Otherwise, your peer link here will be ignored.
@@ -29,8 +29,8 @@ target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
 target_chain_id: "0000000000000000000000000000000000000000000000000000000000000002"
 target_p2p_address: stage1.example.com:9876
-target_http_address: http://stage1.exemple.com
-target_account_name: exemplecom12
+target_http_address: http://stage1.example.com
+target_account_name: examplecom12
 target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 target_initial_authority:
   owner:
@@ -54,7 +54,7 @@ target_initial_authority:
 target_contents:
   - name: boot_sequence.yaml
     ref: /ipfs/QmdNbPrn8zFPN3obHhddMzj9SMpw642AAe411gQYi4PSxW
-    comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/exemple/eos-bios/files/boot_sequence.yaml"
+    comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
     comment: "Snapshot of period 290."
