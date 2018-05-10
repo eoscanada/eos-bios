@@ -217,6 +217,8 @@ TODO
   * Clean-up ?
     * We need a way to delete our data in the `eosio.disco` contract..
 
+* Implement `-v` for verbose display, `discover` should simply show the table.
+
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
 ----       ------------  -----------   ------  ----------------  ------------

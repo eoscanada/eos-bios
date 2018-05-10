@@ -60,6 +60,8 @@ func (b *BIOS) Init() error {
 
 	b.LaunchDisco = launchDisco
 
+	// FIXME: we should call `setProducers()` after a call to `waitLaunchBlock()`, or call it again
+	// now that we have the shuffling ready..
 	if err := b.setProducers(); err != nil {
 		return err
 	}

@@ -122,7 +122,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 	}
 
 	if viper.GetBool("verbose") {
-		fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
+		fmt.Printf("- %q has %d peer(s)\n", discoFile.SeedNetworkAccountName, len(discoFile.SeedNetworkPeers))
 	}
 
 	for _, peerLink := range discoFile.SeedNetworkPeers {
@@ -142,7 +142,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 			if viper.GetBool("verbose") {
 				fmt.Printf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
 			}
-			return nil
+			continue
 		}
 		if viper.GetBool("verbose") {
 			fmt.Printf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
@@ -237,14 +237,7 @@ func (net *Network) calculateWeights() error {
 				continue
 			}
 
-			if peerLink.Weight > 100 {
-				if viper.GetBool("verbose") {
-					fmt.Println("weight overboard for peer", peerLink.Account, ".. skipping!")
-				}
-			} else {
-				if viper.GetBool("verbose") {
-					fmt.Println("adding weight to", peerLink.Account)
-				}
+			if peerLink.Weight <= 100 {
 				peerLinkPeer.TotalWeight += int(peerLink.Weight)
 			}
 		}

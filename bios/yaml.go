@@ -40,8 +40,8 @@ func ValidateDiscoveryFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	ValidateDiscovery(discovery)
-	return nil
+
+	return ValidateDiscovery(discovery)
 }
 
 func ValidateDiscovery(discovery *disco.Discovery) error {
@@ -71,7 +71,28 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 		return fmt.Errorf("target_http_address should include the protocol (like http:// or https://)")
 	}
 
-	// TODO: make sure it's not the DEFAULT key
+	// Make sure we have a non-zero weight in the initial authority
+	if len(discovery.TargetInitialAuthority.Owner.Keys) == 0 {
+		return fmt.Errorf("you need at least one owner key defined in target_initial_authority")
+	}
+
+	if len(discovery.TargetInitialAuthority.Active.Keys) == 0 {
+		return fmt.Errorf("you need at least one active key defined in target_initial_authority")
+	}
+
+	for _, kw := range discovery.TargetInitialAuthority.Owner.Keys {
+		if kw.Weight == 0 {
+			return fmt.Errorf("weight for owner authority cannot be 0")
+		}
+	}
+	for _, kw := range discovery.TargetInitialAuthority.Active.Keys {
+		if kw.Weight == 0 {
+			return fmt.Errorf("weight for owner authority cannot be 0")
+		}
+	}
+
+	// TODO: make sure it's not the DEFAULT key - yeah but that
+	// prevents a "clone and boot" scenario.. hmmm.
 
 	// TODO: boot node should orchestrate the PUBLICLY accessible thing..
 	//       so we don't need to have two `target_api_address`
