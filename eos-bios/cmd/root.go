@@ -60,8 +60,9 @@ func init() {
 	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and verification)")
 
 	RootCmd.PersistentFlags().StringP("cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
+	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose mode.  Causes eos-bios to print debugging messages about its progress.  This is helpful in debugging connection, authentication, and configuration problems.")
 
-	for _, flag := range []string{"cache-path", "my-discovery", "ipfs-gateway-address", "seednet-keys", "seednet-api", "target-api"} { // "seednet-contract",
+	for _, flag := range []string{"cache-path", "my-discovery", "ipfs-gateway-address", "seednet-keys", "seednet-api", "target-api", "verbose"} { // "seednet-contract",
 		if err := viper.BindPFlag(flag, RootCmd.PersistentFlags().Lookup(flag)); err != nil {
 			panic(err)
 		}

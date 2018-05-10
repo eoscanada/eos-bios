@@ -16,6 +16,7 @@ import (
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/ryanuber/columnize"
+	"github.com/spf13/viper"
 )
 
 type Network struct {
@@ -120,23 +121,32 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 		}
 	}
 
-	fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
+	if viper.GetBool("verbose") {
+		fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
+	}
 
 	for _, peerLink := range discoFile.SeedNetworkPeers {
-		fmt.Printf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
+		if viper.GetBool("verbose") {
+			fmt.Printf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
+		}
 
 		peerDisco, found := net.candidates[string(peerLink.Account)]
 		if !found {
-			fmt.Println("    - peer not found, won't weight in")
+			if viper.GetBool("verbose") {
+				fmt.Println("    - peer not found, won't weight in")
+			}
 			continue
 		}
 
 		if net.discoveredPeers[peerDisco.SeedNetworkAccountName] != nil {
-			fmt.Printf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
+			if viper.GetBool("verbose") {
+				fmt.Printf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
+			}
 			return nil
 		}
-
-		fmt.Printf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
+		if viper.GetBool("verbose") {
+			fmt.Printf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
+		}
 
 		if err := net.traversePeer(peerDisco); err != nil {
 			return err
@@ -212,7 +222,9 @@ func (net *Network) calculateWeights() error {
 	var allPeers []*Peer
 	for _, peer := range net.discoveredPeers {
 
-		fmt.Println("First level peer", peer.AccountName())
+		if viper.GetBool("verbose") {
+			fmt.Println("First level peer", peer.AccountName())
+		}
 		for _, peerLink := range peer.Discovery.SeedNetworkPeers {
 
 			if peer.Discovery.SeedNetworkAccountName == peerLink.Account {
@@ -226,9 +238,13 @@ func (net *Network) calculateWeights() error {
 			}
 
 			if peerLink.Weight > 100 {
-				fmt.Println("weight overboard for peer", peerLink.Account, ".. skipping!")
+				if viper.GetBool("verbose") {
+					fmt.Println("weight overboard for peer", peerLink.Account, ".. skipping!")
+				}
 			} else {
-				fmt.Println("adding weight to", peerLink.Account)
+				if viper.GetBool("verbose") {
+					fmt.Println("adding weight to", peerLink.Account)
+				}
 				peerLinkPeer.TotalWeight += int(peerLink.Weight)
 			}
 		}
@@ -299,6 +315,14 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 	}
 
 	return rows[0].GenesisJSON, nil
+}
+
+func (net *Network) PrintDiscoveryFiles() (err error) {
+	fmt.Println("List of all accounts that have published a discovery file:")
+	for _, cand := range net.candidates {
+		fmt.Printf("%s\n", cand.SeedNetworkAccountName)
+	}
+	return
 }
 
 func sha2(input []byte) string {
