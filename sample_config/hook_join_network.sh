@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # `join_network` hook:
 # $1 = genesis_json

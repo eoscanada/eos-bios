@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # `boot_publish_handoff` hook
 # $1 = public key

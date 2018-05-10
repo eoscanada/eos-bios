@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # `done` hook
 # $1 = operation ("join", "boot" or "orchestrate")

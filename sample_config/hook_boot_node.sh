@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # `boot_node` hook
 # $1 genesis JSON

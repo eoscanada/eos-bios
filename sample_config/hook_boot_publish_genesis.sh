@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # `boot_publish_genesis` hook
 # $1 = base64 encoded genesis json content

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # `boot_connect_mesh.sh` hook
 # $1 p2p-peer-address statements (like the `join_network` hook)
