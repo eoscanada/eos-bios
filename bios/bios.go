@@ -38,7 +38,7 @@ type BIOS struct {
 	MyPeers []*Peer
 
 	EphemeralPrivateKey *ecc.PrivateKey
-	EphemeralPublicKey  *ecc.PublicKey
+	EphemeralPublicKey  ecc.PublicKey
 }
 
 func NewBIOS(network *Network, targetAPI *eos.API) *BIOS {
@@ -276,48 +276,6 @@ func (b *BIOS) RunBootSequence() error {
 	return nil
 }
 
-type ActionMap map[string][]*eos.Action
-
-func (b *BIOS) fetchActions() (actions ActionMap, err error) {
-
-	accounts := []eos.AccountName{
-		eos.AccountName("eosio"),
-		eos.AccountName("eosio.msig"),
-		eos.AccountName("eosio.disco"),
-		eos.AccountName("eosio.token"),
-	}
-	actions = ActionMap{}
-	for _, account := range accounts {
-		fmt.Printf("Fecthing actions for account [%s]\n", account)
-		out, err := b.Network.SeedNetAPI.GetTransactions(account)
-		if err != nil {
-			err = fmt.Errorf("fectching transactions for [%s] account, %s", account, err)
-		}
-
-		fmt.Println("Transaction found: ", len(out.Transactions))
-		for _, tx := range out.Transactions {
-			for _, action := range tx.Transaction.Transaction.Actions {
-
-				key := hex.EncodeToString(action.HexData)
-				fmt.Printf("action [%s]\n", action.Name)
-				//fmt.Printf("action [%s] key : %s\n", action.Name, key)
-				//data, err := json.Marshal(action)
-				//assert.NoError(t, err)
-				//fmt.Println("Data  : ", string(data))
-				//if collision, ok := actions[key]; ok {
-				//	cdata, err := json.Marshal(collision)
-				//	assert.NoError(t, err)
-				//	fmt.Println("CData : ", string(cdata))
-				//	fmt.Println("Found a colision")
-				//}
-
-				actions[key] = append(actions[key], action)
-			}
-		}
-	}
-	return
-}
-
 func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if b.Genesis == nil {
 		if b.SingleOnly {
@@ -329,9 +287,9 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 	pubKey, err := ecc.NewPublicKey(b.Genesis.InitialKey)
 	if err != nil {
-		return fmt.Errorf("pulbic generation: %s", err)
+		return fmt.Errorf("invalid genesis public key: %s", err)
 	}
-	b.EphemeralPublicKey = &pubKey
+	b.EphemeralPublicKey = pubKey
 
 	// Create mesh network
 	otherPeers := b.computeMyMeshP2PAddresses()
@@ -346,7 +304,6 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 		seedActionMap, err := b.fetchActions()
 		if err != nil {
-			fmt.Errorf("err: %s", err)
 			return fmt.Errorf("verifing, fetching actions from seed, %s", err)
 		}
 
@@ -364,7 +321,7 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 				//fmt.Println("Verifying action type: ", reflect.TypeOf(stepAction.Data))
 				data, err := eos.MarshalBinary(stepAction.Data)
 				if err != nil {
-					fmt.Errorf("verifying, marshalBinary, %s", err)
+					return fmt.Errorf("verifying, marshalBinary, %s", err)
 				}
 				key := hex.EncodeToString(data)
 				//fmt.Println("verifying key : ", key)
@@ -515,6 +472,46 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 
 		return
 	}
+}
+
+type ActionMap map[string][]*eos.Action
+
+func (b *BIOS) fetchActions() (actions ActionMap, err error) {
+	accounts := []eos.AccountName{
+		eos.AccountName("eosio"),
+		eos.AccountName("eosio.msig"),
+		eos.AccountName("eosio.disco"),
+		eos.AccountName("eosio.token"),
+	}
+	actions = ActionMap{}
+	for _, account := range accounts {
+		fmt.Printf("Fecthing actions for account [%s]\n", account)
+		out, err := b.Network.SeedNetAPI.GetTransactions(account)
+		if err != nil {
+			err = fmt.Errorf("fectching transactions for [%s] account, %s", account, err)
+		}
+
+		for _, tx := range out.Transactions {
+			for _, action := range tx.Transaction.Transaction.Actions {
+
+				key := hex.EncodeToString(action.HexData)
+				fmt.Printf("action [%s]\n", action.Name)
+				//fmt.Printf("action [%s] key : %s\n", action.Name, key)
+				//data, err := json.Marshal(action)
+				//assert.NoError(t, err)
+				//fmt.Println("Data  : ", string(data))
+				//if collision, ok := actions[key]; ok {
+				//	cdata, err := json.Marshal(collision)
+				//	assert.NoError(t, err)
+				//	fmt.Println("CData : ", string(cdata))
+				//	fmt.Println("Found a colision")
+				//}
+
+				actions[key] = append(actions[key], action)
+			}
+		}
+	}
+	return
 }
 
 func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
