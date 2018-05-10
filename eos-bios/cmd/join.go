@@ -49,7 +49,7 @@ var joinCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(joinCmd)
 
-	joinCmd.Flags().BoolP("verify", "v", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
+	joinCmd.Flags().BoolP("verify", "", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
 
 	if err := viper.BindPFlag("verify", joinCmd.Flags().Lookup("verify")); err != nil {
 		panic(err)
