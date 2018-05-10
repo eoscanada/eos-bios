@@ -2,8 +2,11 @@ package bios
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	multihash "github.com/multiformats/go-multihash"
 )
 
 type IPFS struct {
@@ -20,7 +23,8 @@ func NewIPFS(gatewayAddress string) (out *IPFS) {
 }
 
 func (i *IPFS) Get(ref string) ([]byte, error) {
-	req, err := http.NewRequest("GET", i.GatewayAddressURL+ref, nil)
+	destURL := i.GatewayAddressURL + ref
+	req, err := http.NewRequest("GET", destURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -32,5 +36,22 @@ func (i *IPFS) Get(ref string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	return ioutil.ReadAll(resp.Body)
+	cnt, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if toMultihash(cnt) != ref {
+		if len(cnt) > 50 {
+			cnt = cnt[:50]
+		}
+		return nil, fmt.Errorf("contents of %s does not match its hash, content starts with %q, perhaps try a different --ipfs-gateway-address", destURL, string(cnt))
+	}
+
+	return cnt, nil
+}
+
+func toMultihash(cnt []byte) string {
+	hash, _ := multihash.Sum(cnt, multihash.SHA2_256, 32)
+	return fmt.Sprintf("/ipfs/%s", hash.B58String())
 }
