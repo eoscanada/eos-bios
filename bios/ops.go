@@ -115,15 +115,15 @@ type OpNewAccount struct {
 
 func (op *OpNewAccount) ResetTestnetOptions() { return }
 func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
-	pubkey := b.EphemeralPrivateKey.PublicKey()
+	pubKey := *b.EphemeralPublicKey
 	if op.Pubkey != "ephemeral" {
-		pubkey, err = ecc.NewPublicKey(op.Pubkey)
+		pubKey, err = ecc.NewPublicKey(op.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("reading pubkey: %s", err)
 		}
 	}
 
-	return append(out, system.NewNewAccount(op.Creator, op.NewAccount, pubkey)), nil
+	return append(out, system.NewNewAccount(op.Creator, op.NewAccount, pubKey)), nil
 }
 
 //
@@ -303,7 +303,7 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
 				Threshold: 1,
 				Keys: []eos.KeyWeight{
-					eos.KeyWeight{
+					{
 						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
 						Weight:    1,
 					},
@@ -312,7 +312,7 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{
 				Threshold: 1,
 				Keys: []eos.KeyWeight{
-					eos.KeyWeight{
+					{
 						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
 						Weight:    1,
 					},
