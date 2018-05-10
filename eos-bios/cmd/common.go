@@ -93,5 +93,8 @@ func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
 	keyBag := eos.NewKeyBag()
 	targetNetAPI.SetSigner(keyBag)
 
-	return bios.NewBIOS(net, targetNetAPI), nil
+	logger := bios.NewLogger()
+	logger.Debug = viper.GetBool("verbose")
+
+	return bios.NewBIOS(logger, net, targetNetAPI), nil
 }

@@ -20,6 +20,7 @@ import (
 
 type Network struct {
 	SingleOnly bool
+	Log        *Logger
 
 	MyPeer *Peer
 
@@ -120,23 +121,23 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 		}
 	}
 
-	fmt.Printf("- %q has %d peer(s)\n", discoFile.SeedNetworkAccountName, len(discoFile.SeedNetworkPeers))
+	net.Log.Debugf("- %q has %d peer(s)\n", discoFile.SeedNetworkAccountName, len(discoFile.SeedNetworkPeers))
 
 	for _, peerLink := range discoFile.SeedNetworkPeers {
-		fmt.Printf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
+		net.Log.Debugf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
 
 		peerDisco, found := net.candidates[string(peerLink.Account)]
 		if !found {
-			fmt.Println("    - peer not found, won't weight in")
+			net.Log.Debugln("    - peer not found, won't weight in")
 			continue
 		}
 
 		if net.discoveredPeers[peerDisco.SeedNetworkAccountName] != nil {
-			fmt.Printf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
+			net.Log.Debugf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
 			continue
 		}
 
-		fmt.Printf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
+		net.Log.Debugf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
 
 		if err := net.traversePeer(peerDisco); err != nil {
 			return err
@@ -303,14 +304,22 @@ func sha2(input []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+func (net *Network) PrintDiscoveryFiles() (err error) {
+	fmt.Println("List of all accounts that have published a discovery file:")
+	for _, cand := range net.candidates {
+		fmt.Printf("%s\n", cand.SeedNetworkAccountName)
+	}
+	return
+}
+
 func (net *Network) PrintOrderedPeers() {
 	fmt.Println("###############################################################################################")
 	fmt.Println("####################################    PEER NETWORK    #######################################")
 	fmt.Println("")
 
 	columns := []string{
-		"Role | Seed Account | Target Acct | Weight",
-		"---- | ------------ | ----------- | ------",
+		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block",
+		"---- | ------------ | ----------- | ------ | --- | ------------",
 	}
 	columns = append(columns, fmt.Sprintf("BIOS NODE | %s", net.orderedPeers[0].Columns()))
 	for i := 1; i < 22 && len(net.orderedPeers) > i; i++ {

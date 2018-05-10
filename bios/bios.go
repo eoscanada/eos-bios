@@ -19,6 +19,7 @@ import (
 type BIOS struct {
 	Network    *Network
 	SingleOnly bool
+	Log        *Logger
 
 	LaunchDisco  *disco.Discovery
 	TargetNetAPI *eos.API
@@ -41,10 +42,12 @@ type BIOS struct {
 	EphemeralPublicKey  ecc.PublicKey
 }
 
-func NewBIOS(network *Network, targetAPI *eos.API) *BIOS {
+func NewBIOS(logger *Logger, network *Network, targetAPI *eos.API) *BIOS {
+	network.Log = logger
 	b := &BIOS{
 		Network:      network,
 		TargetNetAPI: targetAPI,
+		Log:          logger,
 	}
 	return b
 }
