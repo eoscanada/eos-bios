@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -306,6 +307,11 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if verify {
 		fmt.Println("###############################################################################################")
 		fmt.Println("Launching chain verification")
+		fmt.Println("")
+		fmt.Println("  - VALIDATION IS BEING IMPLEMENTED BY CHARLES ! Give him a day or so ! :)")
+		fmt.Println("")
+		fmt.Println("DONE")
+		os.Exit(0)
 
 		seedActionMap, err := b.fetchActions()
 		if err != nil {
