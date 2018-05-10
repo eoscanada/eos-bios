@@ -15,7 +15,10 @@ type Logger struct {
 
 func NewLogger() *Logger {
 	fl, err := os.Create("output.log")
-	log.Fatalln("Couldn't open output.log:", err)
+	if err != nil {
+		log.Fatalln("Couldn't open output.log:", err)
+	}
+
 	return &Logger{
 		OutputFile:   fl,
 		OutputScreen: os.Stdout,

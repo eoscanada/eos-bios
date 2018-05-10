@@ -42,6 +42,9 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 
 	seedNetAPI.SetSigner(keyBag)
 
+	logger := bios.NewLogger()
+	logger.Debug = viper.GetBool("verbose")
+
 	net := bios.NewNetwork(
 		viper.GetString("cache-path"),
 		discovery,
@@ -49,6 +52,8 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 		seedNetworkContract, //	viper.GetString("seednet-contract"),
 		seedNetAPI,
 	)
+	net.Log = logger
+
 	net.SingleOnly = single
 
 	if err := net.UpdateGraph(); err != nil {
@@ -93,8 +98,5 @@ func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
 	keyBag := eos.NewKeyBag()
 	targetNetAPI.SetSigner(keyBag)
 
-	logger := bios.NewLogger()
-	logger.Debug = viper.GetBool("verbose")
-
-	return bios.NewBIOS(logger, net, targetNetAPI), nil
+	return bios.NewBIOS(net.Log, net, targetNetAPI), nil
 }

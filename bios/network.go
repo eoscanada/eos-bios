@@ -304,12 +304,11 @@ func sha2(input []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (net *Network) PrintDiscoveryFiles() (err error) {
+func (net *Network) PrintDiscoveryFiles() {
 	fmt.Println("List of all accounts that have published a discovery file:")
 	for _, cand := range net.candidates {
-		fmt.Printf("%s\n", cand.SeedNetworkAccountName)
+		fmt.Printf("- %s\n", cand.SeedNetworkAccountName)
 	}
-	return
 }
 
 func (net *Network) PrintOrderedPeers() {
