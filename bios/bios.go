@@ -209,7 +209,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	b.EphemeralPrivateKey = ephemeralPrivateKey
 	pubKey := ephemeralPrivateKey.PublicKey()
-	b.EphemeralPublicKey = &pubKey
+	b.EphemeralPublicKey = pubKey
 
 	// b.TargetNetAPI.Debug = true
 

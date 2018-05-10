@@ -115,7 +115,7 @@ type OpNewAccount struct {
 
 func (op *OpNewAccount) ResetTestnetOptions() { return }
 func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
-	pubKey := *b.EphemeralPublicKey
+	pubKey := b.EphemeralPublicKey
 	if op.Pubkey != "ephemeral" {
 		pubKey, err = ecc.NewPublicKey(op.Pubkey)
 		if err != nil {
