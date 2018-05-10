@@ -313,8 +313,8 @@ func (net *Network) PrintOrderedPeers() {
 	fmt.Println("")
 
 	columns := []string{
-		"Role | Seed Account | Target Acct | Weight",
-		"---- | ------------ | ----------- | ------",
+		"Role | Seed Account | Target Acct | Weight | Offset | Block Height",
+		"---- | ------------ | ----------- | ------ | ------ | ------------",
 	}
 	columns = append(columns, fmt.Sprintf("BIOS NODE | %s", net.orderedPeers[0].Columns()))
 	for i := 1; i < 22 && len(net.orderedPeers) > i; i++ {
