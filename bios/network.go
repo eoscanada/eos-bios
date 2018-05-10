@@ -212,7 +212,6 @@ func (net *Network) calculateWeights() error {
 	var allPeers []*Peer
 	for _, peer := range net.discoveredPeers {
 
-		fmt.Println("First level peer", peer.AccountName())
 		for _, peerLink := range peer.Discovery.SeedNetworkPeers {
 
 			if peer.Discovery.SeedNetworkAccountName == peerLink.Account {
@@ -225,10 +224,7 @@ func (net *Network) calculateWeights() error {
 				continue
 			}
 
-			if peerLink.Weight > 100 {
-				fmt.Println("weight overboard for peer", peerLink.Account, ".. skipping!")
-			} else {
-				fmt.Println("adding weight to", peerLink.Account)
+			if peerLink.Weight <= 100 {
 				peerLinkPeer.TotalWeight += int(peerLink.Weight)
 			}
 		}
