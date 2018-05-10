@@ -24,7 +24,7 @@ type Discovery struct {
 	SeedNetworkLaunchBlock                 uint64          `json:"seed_network_launch_block"`
 	URLs                                   []string        `json:"urls"`
 	GMTOffset                              int16           `json:"gmt_offset"`
-	TargetNetworkIsTest                    int8            `json:"target_network_is_test"`
+	TargetNetworkIsTest                    uint8           `json:"target_network_is_test"`
 	TargetChainID                          eos.SHA256Bytes `json:"target_chain_id"`
 	TargetP2PAddress                       string          `json:"target_p2p_address"`
 	TargetHTTPAddress                      string          `json:"target_http_address"`
