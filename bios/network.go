@@ -120,7 +120,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 		}
 	}
 
-	fmt.Printf("- has %d peer(s)\n", len(discoFile.SeedNetworkPeers))
+	fmt.Printf("- %q has %d peer(s)\n", discoFile.SeedNetworkAccountName, len(discoFile.SeedNetworkPeers))
 
 	for _, peerLink := range discoFile.SeedNetworkPeers {
 		fmt.Printf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
@@ -133,7 +133,7 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 
 		if net.discoveredPeers[peerDisco.SeedNetworkAccountName] != nil {
 			fmt.Printf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
-			return nil
+			continue
 		}
 
 		fmt.Printf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
