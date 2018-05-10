@@ -9,7 +9,7 @@ func NewUpdateDiscovery(account eos.AccountName, discovery *Discovery) *eos.Acti
 		Authorization: []eos.PermissionLevel{
 			{account, eos.PermissionName("active")},
 		},
-		Data: eos.NewActionData(UpdtDisco{
+		ActionData: eos.NewActionData(UpdtDisco{
 			Account:   account,
 			Discovery: discovery,
 		}),

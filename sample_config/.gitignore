@@ -4,3 +4,6 @@ genesis.json
 .eos-bios-cache
 .cache
 ipfs
+cbillett_config
+.idea
+

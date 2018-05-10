@@ -10,7 +10,7 @@ func NewUpdateGenesis(account eos.AccountName, genesisJSON string, initialP2PAdd
 		Authorization: []eos.PermissionLevel{
 			{account, eos.PermissionName("active")},
 		},
-		Data: eos.NewActionData(UpdtGenesis{
+		ActionData: eos.NewActionData(UpdtGenesis{
 			Account:             account,
 			GenesisJSON:         genesisJSON,
 			InitialP2PAddresses: initialP2PAddresses,

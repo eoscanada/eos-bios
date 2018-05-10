@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc64"
+	"log"
 	"math"
 	"math/rand"
 	"strings"
@@ -37,6 +38,7 @@ type BIOS struct {
 	MyPeers []*Peer
 
 	EphemeralPrivateKey *ecc.PrivateKey
+	EphemeralPublicKey  ecc.PublicKey
 }
 
 func NewBIOS(network *Network, targetAPI *eos.API) *BIOS {
@@ -69,6 +71,26 @@ func (b *BIOS) Init() error {
 	if err = b.setMyPeers(); err != nil {
 		return fmt.Errorf("error setting my producer definitions: %s", err)
 	}
+
+	// Load Boot Sequence...
+	bootseqFile, err := b.GetContentsCacheRef("boot_sequence.yaml")
+	if err != nil {
+		return err
+	}
+
+	rawBootSeq, err := b.Network.ReadFromCache(bootseqFile)
+	if err != nil {
+		return fmt.Errorf("reading boot_sequence file: %s", err)
+	}
+
+	var bootSeq struct {
+		BootSequence []*OperationType `json:"boot_sequence"`
+	}
+	if err := yamlUnmarshal(rawBootSeq, &bootSeq); err != nil {
+		return fmt.Errorf("loading boot sequence: %s", err)
+	}
+
+	b.BootSequence = bootSeq.BootSequence
 
 	return nil
 }
@@ -177,16 +199,22 @@ func (b *BIOS) PrintOrderedPeers() {
 func (b *BIOS) RunBootSequence() error {
 	fmt.Println("START BOOT SEQUENCE...")
 
+	// keys, _ := b.TargetNetAPI.Signer.(*eos.KeyBag).AvailableKeys()
+	// for _, key := range keys {
+	// 	fmt.Println("Available key in the KeyBag:", key)
+	// }
+
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
 		return err
 	}
 
 	b.EphemeralPrivateKey = ephemeralPrivateKey
+	pubKey := ephemeralPrivateKey.PublicKey()
+	b.EphemeralPublicKey = pubKey
 
 	// b.TargetNetAPI.Debug = true
 
-	pubKey := ephemeralPrivateKey.PublicKey().String()
 	privKey := ephemeralPrivateKey.String()
 
 	fmt.Printf("Generated ephemeral keys: pub=%s priv=%s..%s\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
@@ -196,15 +224,10 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
-	// keys, _ := b.TargetNetAPI.Signer.(*eos.KeyBag).AvailableKeys()
-	// for _, key := range keys {
-	// 	fmt.Println("Available key in the KeyBag:", key)
-	// }
-
-	genesisData := b.GenerateGenesisJSON(pubKey)
+	genesisData := b.GenerateGenesisJSON(pubKey.String())
 
 	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.SingleOnly {
-		_, err = b.Network.SeedNetAPI.SignPushActions(
+		_, err := b.Network.SeedNetAPI.SignPushActions(
 			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
 		)
 		if err != nil {
@@ -216,32 +239,13 @@ func (b *BIOS) RunBootSequence() error {
 		}
 	}
 
-	if err = b.DispatchBootNode(genesisData, pubKey, privKey); err != nil {
+	if err := b.DispatchBootNode(genesisData, pubKey.String(), privKey); err != nil {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
 	fmt.Println(b.TargetNetAPI.Signer.AvailableKeys())
 
-	// Load Boot Sequence...
-
-	bootseqFile, err := b.GetContentsCacheRef("boot_sequence.yaml")
-	if err != nil {
-		return err
-	}
-
-	rawBootSeq, err := b.Network.ReadFromCache(bootseqFile)
-	if err != nil {
-		return fmt.Errorf("reading boot_sequence file: %s", err)
-	}
-
-	var bootSeq struct {
-		BootSequence []*OperationType `json:"boot_sequence"`
-	}
-	if err := yamlUnmarshal(rawBootSeq, &bootSeq); err != nil {
-		return fmt.Errorf("loading boot sequence: %s", err)
-	}
-
-	for _, step := range bootSeq.BootSequence {
+	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
 		acts, err := step.Data.Actions(b)
@@ -263,11 +267,11 @@ func (b *BIOS) RunBootSequence() error {
 	time.Sleep(2 * time.Second)
 
 	otherPeers := b.someTopmostPeersAddresses()
-	if err = b.DispatchBootConnectMesh(otherPeers); err != nil {
+	if err := b.DispatchBootConnectMesh(otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
 	}
 
-	if err = b.DispatchBootPublishHandoff(); err != nil {
+	if err := b.DispatchBootPublishHandoff(); err != nil {
 		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
 	}
 
@@ -283,6 +287,12 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		}
 	}
 
+	pubKey, err := ecc.NewPublicKey(b.Genesis.InitialKey)
+	if err != nil {
+		return fmt.Errorf("invalid genesis public key: %s", err)
+	}
+	b.EphemeralPublicKey = pubKey
+
 	// Create mesh network
 	otherPeers := b.computeMyMeshP2PAddresses()
 
@@ -294,19 +304,49 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		fmt.Println("###############################################################################################")
 		fmt.Println("Launching chain verification")
 
-		// Grab all the Actions, serialize them.
+		seedActionMap, err := b.fetchActions()
+		if err != nil {
+			return fmt.Errorf("verifing, fetching actions from seed, %s", err)
+		}
+
+		fmt.Println("Seed actions found: ", len(seedActionMap))
+
+		for _, step := range b.BootSequence {
+			fmt.Printf("%s  [%s]\n", step.Label, step.Op)
+
+			acts, err := step.Data.Actions(b)
+			if err != nil {
+				return fmt.Errorf("verifing, getting actions for step %q: %s", step.Op, err)
+			}
+
+			for _, stepAction := range acts {
+				//fmt.Println("Verifying action type: ", reflect.TypeOf(stepAction.Data))
+				data, err := eos.MarshalBinary(stepAction.Data)
+				if err != nil {
+					return fmt.Errorf("verifying, marshalBinary, %s", err)
+				}
+				key := hex.EncodeToString(data)
+				//fmt.Println("verifying key : ", key)
+
+				if seedAction, ok := seedActionMap[key]; !ok {
+					//return fmt.Errorf("verify, step action [%s] does not validate", stepAction.Name)
+					fmt.Printf("✘ verify, step action [%s] does not validate\n", stepAction.Name)
+				} else {
+					fmt.Printf("✔ action [%s] verified\n", seedAction[0].Name)
+				}
+			}
+
+		}
+
+		//***********************************************************************
+		//***********************************************************************
+		log.Fatal("let's crash!")
+		//***********************************************************************
+		//***********************************************************************
+
 		// Grab all the blocks from the chain
 		// Compare each action, find it in our list
 		// Use an ordered map ?
-		// for _, step := range b.BootSequence {
-		// 	fmt.Printf("%s  [%s]\n", step.Label, step.Op)
-
-		// 	acts, err := step.Data.Actions(b)
-		// 	if err != nil {
-		// 		return fmt.Errorf("getting actions for step %q: %s", step.Op, err)
-		// 	}
-
-		// }
 
 		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
 		for {
@@ -434,6 +474,46 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 
 		return
 	}
+}
+
+type ActionMap map[string][]*eos.Action
+
+func (b *BIOS) fetchActions() (actions ActionMap, err error) {
+	accounts := []eos.AccountName{
+		eos.AccountName("eosio"),
+		eos.AccountName("eosio.msig"),
+		eos.AccountName("eosio.disco"),
+		eos.AccountName("eosio.token"),
+	}
+	actions = ActionMap{}
+	for _, account := range accounts {
+		fmt.Printf("Fecthing actions for account [%s]\n", account)
+		out, err := b.Network.SeedNetAPI.GetTransactions(account)
+		if err != nil {
+			err = fmt.Errorf("fectching transactions for [%s] account, %s", account, err)
+		}
+
+		for _, tx := range out.Transactions {
+			for _, action := range tx.Transaction.Transaction.Actions {
+
+				key := hex.EncodeToString(action.HexData)
+				fmt.Printf("action [%s]\n", action.Name)
+				//fmt.Printf("action [%s] key : %s\n", action.Name, key)
+				//data, err := json.Marshal(action)
+				//assert.NoError(t, err)
+				//fmt.Println("Data  : ", string(data))
+				//if collision, ok := actions[key]; ok {
+				//	cdata, err := json.Marshal(collision)
+				//	assert.NoError(t, err)
+				//	fmt.Println("CData : ", string(cdata))
+				//	fmt.Println("Found a colision")
+				//}
+
+				actions[key] = append(actions[key], action)
+			}
+		}
+	}
+	return
 }
 
 func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
