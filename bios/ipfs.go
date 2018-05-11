@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	multihash "github.com/multiformats/go-multihash"
 )
 
 type IPFS struct {
@@ -41,17 +39,11 @@ func (i *IPFS) Get(ref string) ([]byte, error) {
 		return nil, err
 	}
 
-	if toMultihash(cnt) != ref {
+	if resp.StatusCode != 200 {
 		if len(cnt) > 50 {
 			cnt = cnt[:50]
 		}
-		return nil, fmt.Errorf("contents of %s does not match its hash, content starts with %q, perhaps try a different --ipfs-gateway-address", destURL, string(cnt))
+		return nil, fmt.Errorf("couldn't get %s, return code: %d, server error: %q", destURL, resp.StatusCode, cnt)
 	}
-
 	return cnt, nil
-}
-
-func toMultihash(cnt []byte) string {
-	hash, _ := multihash.Sum(cnt, multihash.SHA2_256, 32)
-	return fmt.Sprintf("/ipfs/%s", hash.B58String())
 }

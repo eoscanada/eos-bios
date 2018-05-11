@@ -191,6 +191,26 @@ See the previous proposition in this repo in README.v0.md
 
 
 
+Readiness checklist
+-------------------
+
+* Did I update my `target_p2p_address` to reflect the IP of the NEW network we're booting ?
+* Did I update my `target_http_address` to point to my node, reachable from `eos-bios`'s machine ?
+*
+
+
+Troubleshooting
+---------------
+
+* Do your `PRIVKEY` and `PUBKEY` in `hook_join_network.sh` match what
+  you published in your discovery file under
+  `target_initial_authority` and `target_initial_block_signing_key` ?
+
+* Forked ? Did someone point to an old p2p address ? If so, removed
+  them from the network.
+
+
+
 TODO
 ----
 
@@ -229,6 +249,6 @@ ABP 03     eosguy        eosguy        1       1111111           572 (Fri Nov 8t
 ABP 04     eosbob        eosbob        1
 
 Contents disagreements:
-* About column 1: `boot_sequence.yaml`
+* About column 3: `boot_sequence.yaml`
   * eosmarc, eoscanadacom, eospouet says 1: /ipfs/Qmakjdsflakjdslfkjaldsfk
   * eosmama says 2: /ipfs/Qmhellkajdlakjdsflkj

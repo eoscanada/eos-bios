@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // listCmd represents the list command
@@ -16,7 +17,7 @@ var listCmd = &cobra.Command{
 			log.Fatalln("fetch network:", err)
 		}
 
-		net.PrintDiscoveryFiles()
+		net.PrintDiscoveryFiles(viper.GetBool("verbose"))
 	},
 }
 

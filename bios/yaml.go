@@ -71,6 +71,14 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 		return fmt.Errorf("target_http_address should include the protocol (like http:// or https://)")
 	}
 
+	if strings.Contains(discovery.TargetP2PAddress, " ") {
+		return fmt.Errorf("target_p2p_address should not contain spaces")
+	}
+
+	if strings.Contains(discovery.TargetHTTPAddress, " ") {
+		return fmt.Errorf("target_http_address should not contain spaces")
+	}
+
 	// Make sure we have a non-zero weight in the initial authority
 	if len(discovery.TargetInitialAuthority.Owner.Keys) == 0 {
 		return fmt.Errorf("you need at least one owner key defined in target_initial_authority")

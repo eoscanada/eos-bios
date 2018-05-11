@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -304,10 +305,17 @@ func sha2(input []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (net *Network) PrintDiscoveryFiles() {
-	fmt.Println("List of all accounts that have published a discovery file:")
-	for _, cand := range net.candidates {
-		fmt.Printf("- %s\n", cand.SeedNetworkAccountName)
+func (net *Network) PrintDiscoveryFiles(verbose bool) {
+	if verbose {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		enc.Encode(net.candidates)
+	} else {
+		fmt.Println("List of all accounts that have published a discovery file:")
+
+		for _, cand := range net.candidates {
+			fmt.Printf("- %s\n", cand.SeedNetworkAccountName)
+		}
 	}
 }
 
