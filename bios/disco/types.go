@@ -49,6 +49,6 @@ type GenesisRow struct {
 
 type DiscoveryRow struct {
 	ID        eos.AccountName `json:"id"`
-	Content   Discovery       `json:"content"`
-	UpdatedAt eos.Tstamp      `json:"updated_at"`
+	Content   *Discovery      `json:"content"`
+	UpdatedAt eos.JSONTime    `json:"updated_at"`
 }
