@@ -1,45 +1,98 @@
 package bios
 
-// Discovery is data published autonomously by Block Producer
-// candidates. LaunchData will contain the topology and build up the
-// graph.  Otherwise, this data is simply metadata about a BP.
-//type Discovery struct {
-//	// Testnet is true if this discovery file represents a testing
-//	// network.
-//	Testnet bool `json:"testnet"`
-//	// Mainnet is true if this discovery file represents the main net
-//	// (or a production network). One of Testnet and Mainnet must be
-//	// `true`, and are mutually exclusive.
-//	Mainnet bool `json:"mainnet"`
-//
-//	EOSIOAccountName      string        `json:"eosio_account_name"`
-//	EOSIOP2P              string        `json:"eosio_p2p"`
-//	EOSIOHTTP             string        `json:"eosio_http"`
-//	EOSIOHTTPS            string        `json:"eosio_https"`
-//	EOSIOABPSigningKey    ecc.PublicKey `json:"eosio_appointed_block_producer_signing_key"`
-//	EOSIOInitialAuthority struct {
-//		Owner    eos.Authority `json:"owner"`
-//		Active   eos.Authority `json:"active"`
-//		Recovery eos.Authority `json:"recovery"`
-//	} `json:"eosio_initial_authority"`
-//
-//	Website             string `json:"website"`
-//	IntroductionPostURL string `json:"introduction_post_url"`
-//	SocialFacebook      string `json:"social_facebook"`
-//	SocialTwitter       string `json:"social_twitter"`
-//	SocialYouTube       string `json:"social_youtube"`
-//	SocialTelegram      string `json:"social_telegram"`
-//	SocialWeChat        string `json:"social_wechat"`
-//	SocialSlack         string `json:"social_slack"`
-//	SocialSteemIt       string `json:"social_steemit"`
-//	SocialSteem         string `json:"social_steem"`
-//	SocialGitHub        string `json:"social_github"`
-//	SocialKeybase       string `json:"social_keybase"`
-//
-//	OrganizationName    string `json:"organization_name"`
-//	OrganizationTagline string `json:"organization_tagline"`
-//
-//	LaunchData LaunchData `json:"launch_data"`
-//
-//	ClonedFrom string `json:"-"`
-//}
+import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"strings"
+
+	"github.com/eoscanada/eos-bios/bios/disco"
+)
+
+func LoadDiscoveryFromFile(fileName string) (discovery *disco.Discovery, err error) {
+	cnt, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return
+	}
+
+	err = yamlUnmarshal(cnt, &discovery)
+	if err != nil {
+		return
+	}
+
+	err = ValidateDiscovery(discovery)
+	return
+}
+
+func ValidateDiscoveryFile(filename string) error {
+	discovery, err := LoadDiscoveryFromFile(filename)
+	if err != nil {
+		return err
+	}
+
+	return ValidateDiscovery(discovery)
+}
+
+func ValidateDiscovery(discovery *disco.Discovery) error {
+	for _, peer := range discovery.SeedNetworkPeers {
+		if peer.Weight > 100 || peer.Weight < 0 {
+			return fmt.Errorf("peer %q weight must be between 0 and 100", peer.Account)
+		}
+	}
+
+	if discovery.TargetAccountName == "" {
+		return errors.New("target_account_name is missing")
+	}
+
+	if !strings.Contains(discovery.TargetP2PAddress, ":") {
+		return errors.New("target_p2p_address doesn't contain port number")
+	}
+
+	// if strings.Contains(discovery.TargetP2PAddress, "example.com") {
+	// 	return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
+	// }
+
+	if strings.Contains(discovery.TargetP2PAddress, "://") {
+		return fmt.Errorf("target_p2p_address should be of format ip:port, not prefixed with a protocol")
+	}
+
+	if !strings.Contains(discovery.TargetHTTPAddress, "://") {
+		return fmt.Errorf("target_http_address should include the protocol (like http:// or https://)")
+	}
+
+	if strings.Contains(discovery.TargetP2PAddress, " ") {
+		return fmt.Errorf("target_p2p_address should not contain spaces")
+	}
+
+	if strings.Contains(discovery.TargetHTTPAddress, " ") {
+		return fmt.Errorf("target_http_address should not contain spaces")
+	}
+
+	// Make sure we have a non-zero weight in the initial authority
+	if len(discovery.TargetInitialAuthority.Owner.Keys) == 0 {
+		return fmt.Errorf("you need at least one owner key defined in target_initial_authority")
+	}
+
+	if len(discovery.TargetInitialAuthority.Active.Keys) == 0 {
+		return fmt.Errorf("you need at least one active key defined in target_initial_authority")
+	}
+
+	for _, kw := range discovery.TargetInitialAuthority.Owner.Keys {
+		if kw.Weight == 0 {
+			return fmt.Errorf("weight for owner authority cannot be 0")
+		}
+	}
+	for _, kw := range discovery.TargetInitialAuthority.Active.Keys {
+		if kw.Weight == 0 {
+			return fmt.Errorf("weight for owner authority cannot be 0")
+		}
+	}
+
+	// TODO: make sure it's not the DEFAULT key - yeah but that
+	// prevents a "clone and boot" scenario.. hmmm.
+
+	// TODO: boot node should orchestrate the PUBLICLY accessible thing..
+	//       so we don't need to have two `target_api_address`
+
+	return nil
+}
