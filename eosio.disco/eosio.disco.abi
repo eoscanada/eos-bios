@@ -62,6 +62,17 @@
         }
       ]
     },{
+      "name": "wait_weight",
+      "base": "",
+      "fields": [{
+          "name": "wait_sec",
+          "type": "uint32"
+        },{
+          "name": "weight",
+          "type": "weight_type"
+        }
+      ]
+    },{
       "name": "authority",
       "base": "",
       "fields": [{
@@ -75,7 +86,7 @@
           "type": "permission_level_weight[]"
         },{
           "name": "waits",
-          "type": "permission_level_weight[]"
+          "type": "wait_weight[]"
         }
       ]
     },{

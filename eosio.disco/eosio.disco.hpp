@@ -31,11 +31,16 @@ namespace eosiosystem {
     EOSLIB_SERIALIZE( key_weight, (key)(weight) )
   };
 
+  struct wait_weight {
+    uint32_t wait_sec;
+    uint16_t weight;
+  };
+
   struct authority {
     uint32_t                              threshold;
     std::vector<key_weight>               keys;
     std::vector<permission_level_weight>  accounts;
-    std::vector<permission_level_weight>  waits;
+    std::vector<wait_weight>  waits;
 
     EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
   };
