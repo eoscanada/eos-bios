@@ -60,6 +60,10 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 		return nil, fmt.Errorf("updating graph: %s", err)
 	}
 
+	if err := net.DownloadReferences(); err != nil {
+		return nil, fmt.Errorf("downloading content: %s", err)
+	}
+
 	return net, nil
 }
 

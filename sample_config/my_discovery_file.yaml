@@ -43,13 +43,6 @@ target_initial_authority:
     keys:
     - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
-  recovery:
-    threshold: 1
-    accounts:
-    - permission:
-        actor: eosio
-        permission: active
-      weight: 1
 
 target_contents:
   - name: boot_sequence.yaml
@@ -57,40 +50,40 @@ target_contents:
     comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
-    comment: "Snapshot of period 290."
-  #- name: snapshot_unregistered.csv
-  #  ref: /ipfs/Qm...
-  #  comment: ""
+    comment: "Snapshot at period 290."
+  - name: snapshot_unregistered.csv
+    ref: /ipfs/QmSxed6nhtDQ5EZqGXYuzTUyW4rLPcaffrYZPkPQbZMW58
+    comment: "Published by EOS Canada. Period 320."
   - name: eosio.bios.abi
-    ref: /ipfs/QmbZATGSuN1rwfX4WMHaVHCroZgKwHZjvvEQg93HtcpSk4
-    comment: "Published by EOS Canada. From dawn3x release tag"
+    ref: /ipfs/QmW9qDWMy3fHKD4Y6GGgkErwm6jYWBUMNV9Bav5T1jRVB4
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.bios.wasm
-    ref: /ipfs/QmVNzTLXSegBdpDxUMrKMVpFBbwnpu2j45iRrFkBtxuQby
-    comment: "Published by EOS Canada. From dawn3x release."
+    ref: /ipfs/QmW7rfu2kYk5NruE29mm3nCXaVDdh9ux5SzSwRMSFQkHMC
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.system.abi
-    ref: /ipfs/QmPxEwukXL4tsMiqKtGozLUDzrc6ckwcVjgf68YQyGD5Fu
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmVEPwn5F3L71f2oaqoVoX5i5621pLPi1YmNK3Etwq2Mcy
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.system.wasm
-    ref: /ipfs/QmQaMSL54PDxQZZFmXK2TXcV7oHCBocCZ6i4D98CNDSBd8
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmY17qqyjamvAwjoX1J9SgXThk5AUJBwhyPfnaNeHKpZjv
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.msig.abi
-    ref: /ipfs/Qmdbo2jFGLH1mBGYTiktpEmizwK4ZVSxjtfh9o38AAQquw
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmQUAuex2LQ6tanLDXhgL3kSAsUU9uVLjYBkZfD8NgA6vV
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.msig.wasm
-    ref: /ipfs/QmbXo3nTe3obzQdKYqj9pe5Abf1Er5pqtFL2DsVSQKyF4p
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmXDoVaiH9QZkMriNgsp6urFUy2PT4x782wvryBhQbpaJY
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.token.abi
-    ref: /ipfs/QmZpmcrfWAEUU4KG6hRPrBRTJ2X63sTrQsBRogiKZA7aP6
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmWV3ZRVpxhACDFbgupMnEtm5gvMErfX2FGXXTg2YEh86N
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.token.wasm
-    ref: /ipfs/QmTe5K1eR8Vbmz4mxEJSGyus9PrHymjL9hX31x1B5pchJT
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmYz7ZaMYkKfo3RhDofmxKVguNiPHQHo3AWbK7obgkGSxm
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.disco.abi
-    ref: /ipfs/QmUmTuXUkLBNdxHSHtv2Pf7nos5ndcUfiK36qvge2wyMaB
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmdtgEzi9qbiMLBv8cm5CeMFWUPDWuJFpgfnCMjqsdKHwz
+    comment: "Published by EOS Canada. eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"
   - name: eosio.disco.wasm
-    ref: /ipfs/QmePZXNe9SejcP24PiG4aEuE6GdPrQDXEkNftTUPVwHt5t
-    comment: "Published by EOS Canada. Dawn3x release."
+    ref: /ipfs/QmUNo5jMFn1BqT8msuw7ZtW37d1FP2PJSeWu7fDQ7H4Syn
+    comment: "Published by EOS Canada. eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"
 
   # - name: eosio.unregd.abi
   #   ref: /ipfs/Qm...

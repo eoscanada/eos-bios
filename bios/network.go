@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,11 +27,19 @@ type Network struct {
 	SeedNetAPI      *eos.API
 	seedNetContract string
 
-	ipfs            *IPFS
-	cachePath       string
 	discoveredPeers map[eos.AccountName]*Peer
 	orderedPeers    []*Peer
 	candidates      map[string]*disco.Discovery
+
+	ipfs           *IPFS
+	ipfsReferences []ipfsRef
+	cachePath      string
+}
+
+type ipfsRef struct {
+	Name          string
+	Reference     string
+	SourceAccount string
 }
 
 func NewNetwork(cachePath string, myDiscovery *disco.Discovery, ipfs *IPFS, seedNetContract string, seedNetAPI *eos.API) *Network {
@@ -47,53 +54,14 @@ func NewNetwork(cachePath string, myDiscovery *disco.Discovery, ipfs *IPFS, seed
 	}
 }
 
-func (net *Network) ensureExists() error {
-	return os.MkdirAll(net.cachePath, 0777)
-}
-
 func (net *Network) UpdateGraph() error {
 	net.discoveredPeers = map[eos.AccountName]*Peer{}
 	net.candidates = make(map[string]*disco.Discovery)
 
-	var rows []struct {
-		ID            eos.AccountName  `json:"id"`
-		DiscoveryFile *disco.Discovery `json:"content"`
-		UpdatedAt     eos.JSONTime     `json:"updated_at"`
-	}
-
 	if !net.SingleOnly {
-		fmt.Println("Updating network graph")
-		rowsJSON, err := net.SeedNetAPI.GetTableRows(
-			eos.GetTableRowsRequest{
-				JSON:     true,
-				Scope:    net.seedNetContract,
-				Code:     net.seedNetContract,
-				Table:    "discovery",
-				TableKey: "id",
-				//LowerBound: "",
-				//UpperBound: "",
-				Limit: 1000,
-			},
-		)
-		if err != nil {
-			return fmt.Errorf("get discovery rows: %s", err)
+		if err := net.fetchGraphFromSeedNetwork(); err != nil {
+			return err
 		}
-
-		if err := rowsJSON.JSONToStructs(&rows); err != nil {
-			return fmt.Errorf("reading discovery from table: %s", err)
-		}
-	}
-
-	for _, cand := range rows {
-		// TODO: verify their discovery file.. the values in there.. do we simply skip those with invalid weights for example ?? They're excluded from the graph?
-
-		cand.DiscoveryFile.UpdatedAt = cand.UpdatedAt
-		cand.DiscoveryFile.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
-		net.candidates[string(cand.ID)] = cand.DiscoveryFile
-	}
-
-	if err := net.ensureExists(); err != nil {
-		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
 	if err := net.traversePeer(net.MyPeer.Discovery); err != nil {
@@ -102,6 +70,44 @@ func (net *Network) UpdateGraph() error {
 
 	if err := net.calculateWeights(); err != nil {
 		return fmt.Errorf("calculating weights: %s", err)
+	}
+
+	return nil
+}
+
+func (net *Network) fetchGraphFromSeedNetwork() error {
+	fmt.Println("Updating network graph")
+	rowsJSON, err := net.SeedNetAPI.GetTableRows(
+		eos.GetTableRowsRequest{
+			JSON:     true,
+			Scope:    net.seedNetContract,
+			Code:     net.seedNetContract,
+			Table:    "discovery",
+			TableKey: "id",
+			//LowerBound: "",
+			//UpperBound: "",
+			Limit: 1000,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("get discovery rows: %s", err)
+	}
+
+	var rows []struct {
+		ID            eos.AccountName  `json:"id"`
+		DiscoveryFile *disco.Discovery `json:"content"`
+		UpdatedAt     eos.JSONTime     `json:"updated_at"`
+	}
+	if err := rowsJSON.JSONToStructs(&rows); err != nil {
+		return fmt.Errorf("reading discovery from table: %s", err)
+	}
+
+	for _, cand := range rows {
+		// TODO: verify their discovery file.. the values in there.. do we simply skip those with invalid weights for example ?? They're excluded from the graph?
+
+		cand.DiscoveryFile.UpdatedAt = cand.UpdatedAt
+		cand.DiscoveryFile.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
+		net.candidates[string(cand.ID)] = cand.DiscoveryFile
 	}
 
 	return nil
@@ -117,9 +123,21 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 	net.discoveredPeers[discoFile.SeedNetworkAccountName] = &Peer{Discovery: discoFile}
 
 	for _, contentRef := range discoFile.TargetContents {
-		if err := net.DownloadIPFSRef(contentRef.Ref); err != nil {
-			return fmt.Errorf("content %q: %s", contentRef.Name, err)
+		if contentRef.Ref == "" {
+			net.Log.Debugf("  - WARN: %q has an empty ipfs ref for name=%q\n", discoFile.SeedNetworkAccountName, contentRef.Name)
+			continue
 		}
+
+		if !strings.HasPrefix(contentRef.Ref, "/ipfs/") {
+			net.Log.Debugf("  - WARN: %q has a ref that doesn't start with '/ipfs/' for name=%q\n", discoFile.SeedNetworkAccountName, contentRef.Name)
+			continue
+		}
+
+		net.ipfsReferences = append(net.ipfsReferences, ipfsRef{
+			Name:          contentRef.Name,
+			Reference:     contentRef.Ref,
+			SourceAccount: string(discoFile.SeedNetworkAccountName),
+		})
 	}
 
 	net.Log.Debugf("- %q has %d peer(s)\n", discoFile.SeedNetworkAccountName, len(discoFile.SeedNetworkPeers))
@@ -148,14 +166,28 @@ func (net *Network) traversePeer(discoFile *disco.Discovery) error {
 	return nil
 }
 
-func (net *Network) DownloadIPFSRef(ref string) error {
-	if ref == "" {
-		return errors.New("no hash provided")
-	}
-	if !strings.HasPrefix(ref, "/ipfs/") {
-		return fmt.Errorf("ipfs ref should start with'/ipfs/': %q", ref)
+//
+// Assets download and caching
+//
+
+func (net *Network) DownloadReferences() error {
+	if err := net.ensureCacheExists(); err != nil {
+		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
+	for _, contentRef := range net.ipfsReferences {
+		if err := net.DownloadIPFSRef(contentRef.Reference); err != nil {
+			return fmt.Errorf("content %q: %s", contentRef.Name, err)
+		}
+	}
+	return nil
+}
+
+func (net *Network) ensureCacheExists() error {
+	return os.MkdirAll(net.cachePath, 0777)
+}
+
+func (net *Network) DownloadIPFSRef(ref string) error {
 	if net.isInCache(string(ref)) {
 		//fmt.Printf("ipfs ref: %q in cache\n", ref)
 		return nil
@@ -167,7 +199,7 @@ func (net *Network) DownloadIPFSRef(ref string) error {
 		return err
 	}
 
-	if err := net.writeToCache(string(ref), cnt); err != nil {
+	if err := net.writeToCache(ref, cnt); err != nil {
 		return err
 	}
 
@@ -208,6 +240,10 @@ func (net *Network) ChainID() []byte {
 	// have a value be voted for ?
 	return make([]byte, 32, 32)
 }
+
+//
+// Graph weighting...
+//
 
 func (net *Network) calculateWeights() error {
 	// build a second map with discoveryURLs alongside account_names...

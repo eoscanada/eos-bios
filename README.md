@@ -216,12 +216,9 @@ TODO
 
 * In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
 
-* output.log -> output EVERYTHING to a file, hook a Tee on `os.Stderr`
-  and `os.Stdout`.
-
-* Find out what we do for the chain_id.. do we vote for it too ?
-  Top 20% must agree on the chain_id ?
-  Top 20% must agree on the constitution ?
+  * Find out what we do for the chain_id.. do we vote for it too ?
+    Top 20% must agree on the chain_id ?
+    Top 20% must agree on the constitution ?
 
 * boot_connect_mesh: Make sure we don't mesh with the first BIOS boot..
   it's most probably not running..
@@ -229,15 +226,8 @@ TODO
 * Do connectivity checks when doing `discovery`.. and get a report upon orchestration
   that the peers are up ?
 
-* Make sure `setprods` is called properly... and does affect the producer schedule.
+* Implement `eos-bios boot --reset` or something.. through eosio.disco::delgenesis
 
-* How do we handle previous `genesis` entries in the blockchain ?
-  * Someone joining will be happy to get it.. but if the boot node restarts, everyone needs
-    to orchestrate *AFTER*..
-  * Clean-up ?
-    * We need a way to delete our data in the `eosio.disco` contract..
-
-* Implement `-v` for verbose display, `discover` should simply show the table.
 
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
