@@ -20,6 +20,14 @@ namespace eosio {
     }
   }
 
+  void disco::deldisco(const uint64_t account) {
+    require_auth(account);
+
+    auto disco_itr = discovery_tbl.find(account);
+    eosio_assert(disco_itr != discovery_tbl.end(), "entry not found");
+    discovery_tbl.erase(disco_itr);
+  }
+
   void disco::updtgenesis(const account_name account, const string genesis_json, const vector<string> initial_p2p_addresses) {
     require_auth(account);
 
@@ -38,9 +46,18 @@ namespace eosio {
     }
   }
 
+  void disco::delgenesis(const account_name account) {
+    require_auth(account);
+
+    auto genesis_itr = genesis_tbl.find(account);
+    eosio_assert(genesis_itr != genesis_tbl.end(), "entry not found");
+
+    genesis_tbl.erase(genesis_itr);
+  }
+
 } // namespace eosio
 
-EOSIO_ABI(eosio::disco, (updtgenesis)(updtdisco))
+EOSIO_ABI(eosio::disco, (updtgenesis)(updtdisco)(deldisco)(delgenesis))
 
 
 // GENESIS DATA: genesis_json, initial_p2p_list

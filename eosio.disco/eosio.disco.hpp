@@ -35,8 +35,9 @@ namespace eosiosystem {
     uint32_t                              threshold;
     std::vector<key_weight>               keys;
     std::vector<permission_level_weight>  accounts;
+    std::vector<permission_level_weight>  waits;
 
-    EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts) )
+    EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
   };
 }
 
@@ -61,9 +62,8 @@ namespace eosio {
   struct authority_map {
     eosiosystem::authority owner;
     eosiosystem::authority active;
-    eosiosystem::authority recovery;
 
-    EOSLIB_SERIALIZE(authority_map, (owner)(active)(recovery))
+    EOSLIB_SERIALIZE(authority_map, (owner)(active))
   };
 
   //@abi type
@@ -99,7 +99,11 @@ namespace eosio {
     //@abi action
     void updtdisco(const account_name account, const discovery_file& disco);
     //@abi action
+    void deldisco(const account_name account);
+    //@abi action
     void updtgenesis(const account_name account, const string genesis_json, const vector<string> initial_p2p_addresses);
+    //@abi action
+    void delgenesis(const account_name account);
 
   private:
     //@abi table genesis i64
