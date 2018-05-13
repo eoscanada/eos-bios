@@ -32,9 +32,8 @@ type Discovery struct {
 	TargetAccountName                      eos.AccountName `json:"target_account_name"`
 	TargetAppointedBlockProducerSigningKey ecc.PublicKey   `json:"target_appointed_block_producer_signing_key"`
 	TargetInitialAuthority                 struct {
-		Owner    eos.Authority `json:"owner"`
-		Active   eos.Authority `json:"active"`
-		Recovery eos.Authority `json:"recovery"`
+		Owner  eos.Authority `json:"owner"`
+		Active eos.Authority `json:"active"`
 	} `json:"target_initial_authority"`
 
 	TargetContents []ContentRef `json:"target_contents"`

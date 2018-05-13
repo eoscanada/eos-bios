@@ -182,7 +182,8 @@ func (op *OpCreateProducers) ResetTestnetOptions() {
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
 		newAccount := system.NewNewAccount(AN("eosio"), AN(prod.AccountName()), ecc.PublicKey{}) // pubkey overridden just below
-		newAccount.Data = eos.NewActionData(system.NewAccount{
+
+		newAccount.ActionData = eos.NewActionData(system.NewAccount{
 			Creator: AN("eosio"),
 			Name:    AN(prod.AccountName()),
 			Owner:   prod.Discovery.TargetInitialAuthority.Owner,
