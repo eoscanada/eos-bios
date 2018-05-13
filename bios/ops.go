@@ -181,13 +181,12 @@ func (op *OpCreateProducers) ResetTestnetOptions() {
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
-		newAccount := system.NewNewAccount(AN("eosio"), AN(prod.AccountName()), nil)
+		newAccount := system.NewNewAccount(AN("eosio"), AN(prod.AccountName()), ecc.PublicKey{}) // pubkey overridden just below
 		newAccount.Data = eos.NewActionData(system.NewAccount{
-			Creator:  AN("eosio"),
-			Name:     AN(prod.AccountName()),
-			Owner:    prod.Discovery.TargetInitialAuthority.Owner,
-			Active:   prod.Discovery.TargetInitialAuthority.Active,
-			Recovery: prod.Discovery.TargetInitialAuthority.Recovery,
+			Creator: AN("eosio"),
+			Name:    AN(prod.AccountName()),
+			Owner:   prod.Discovery.TargetInitialAuthority.Owner,
+			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
 
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
@@ -276,7 +275,7 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 			break
 		}
 	}
-	out = append(out, system.NewSetProds(0, prodkeys))
+	out = append(out, system.NewSetProds(prodkeys))
 
 	return
 }
@@ -298,13 +297,14 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 		return
 	}
 
+	nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
 	for _, acct := range op.Accounts {
 		out = append(out,
 			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
 				Threshold: 1,
 				Keys: []eos.KeyWeight{
 					{
-						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
+						PublicKey: nullKey,
 						Weight:    1,
 					},
 				},
@@ -313,7 +313,7 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 				Threshold: 1,
 				Keys: []eos.KeyWeight{
 					{
-						PublicKey: ecc.PublicKey(make([]byte, 34, 34)),
+						PublicKey: nullKey,
 						Weight:    1,
 					},
 				},

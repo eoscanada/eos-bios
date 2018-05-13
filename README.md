@@ -249,6 +249,6 @@ ABP 03     eosguy        eosguy        1       1111111           572 (Fri Nov 8t
 ABP 04     eosbob        eosbob        1
 
 Contents disagreements:
-* About column 3: `boot_sequence.yaml`
+* About column 4: `boot_sequence.yaml`
   * eosmarc, eoscanadacom, eospouet says 1: /ipfs/Qmakjdsflakjdslfkjaldsfk
   * eosmama says 2: /ipfs/Qmhellkajdlakjdsflkj

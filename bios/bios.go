@@ -94,6 +94,8 @@ func (b *BIOS) Init() error {
 		return fmt.Errorf("loading boot sequence: %s", err)
 	}
 
+	// TODO: we need to RELOAD the boot sequence from the selected
+	// decided upon, once the Launch Block is reached.
 	b.BootSequence = bootSeq.BootSequence
 
 	return nil

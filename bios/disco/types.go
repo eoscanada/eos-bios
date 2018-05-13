@@ -10,6 +10,7 @@ type PeerLink struct {
 	Comment string          `json:"comment"`
 	Weight  uint8           `json:"weight"`
 }
+
 type ContentRef struct {
 	Name    string `json:"name"`
 	Ref     string `json:"ref"`
@@ -39,6 +40,11 @@ type Discovery struct {
 	TargetContents []ContentRef `json:"target_contents"`
 
 	UpdatedAt eos.JSONTime `json:"-"` // injected in `UpdatedGraph`
+}
+
+func (d Discovery) ID() int64 {
+	id, _ := eos.StringToName(string(d.SeedNetworkAccountName))
+	return int64(id)
 }
 
 type GenesisRow struct {
