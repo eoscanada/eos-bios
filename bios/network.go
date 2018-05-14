@@ -301,6 +301,9 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Printf("PollGenesisTable account [%s] Scope[%s]\n", account, net.seedNetContract)
+
 	accountInt := binary.LittleEndian.Uint64(accountRaw)
 	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{

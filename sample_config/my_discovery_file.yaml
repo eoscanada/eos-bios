@@ -5,17 +5,14 @@
 #
 seed_network_chain_id: "0000000000000000000000000000000000000000000000000000000000000001"
 seed_network_account_name: examplecom11
-seed_network_http_address: http://stage0.example.com
+seed_network_http_address: http://stage2.eoscanada.com
 # These are your peers on the SEED network.  They must have published
 # their discovery in the seed network `eosio.disco` contract (with
 # `eos-bios publish`). Otherwise, your peer link here will be ignored.
 seed_network_peers:
-- account: eosexample
+- account: eoscanadacom
   comment: "They are good"
   weight: 10  # Weights are between 0 and 100 (INT value)
-- account: eosmore
-  comment: "They are better"
-  weight: 20
 
 seed_network_launch_block: 551  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
 
@@ -28,8 +25,8 @@ gmt_offset: -700  # in HourMinutes format
 target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
 # You can only link with peers that target the same chain_id
 target_chain_id: "0000000000000000000000000000000000000000000000000000000000000002"
-target_p2p_address: stage1.example.com:9876
-target_http_address: http://stage1.example.com
+target_p2p_address: 35.203.4.97:9876
+target_http_address: http://35.203.4.97
 target_account_name: examplecom12
 target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 target_initial_authority:

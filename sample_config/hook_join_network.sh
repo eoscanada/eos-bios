@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -xe
 
 # `join_network` hook:
 # $1 = genesis_json
@@ -21,7 +21,8 @@ PRIVKEY=5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 
 
 echo "Killing running nodes"
-killall nodeos
+#killall nodeos
+killall nodeos || true
 
 echo "Removing old nodeos data (you might be asked for your sudo password)..."
 sudo rm -rf /tmp/nodeos-data
