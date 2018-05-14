@@ -261,9 +261,15 @@ func (b *BIOS) RunBootSequence() error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range chunkifyActions(acts, 400) { // transfers max out resources higher than ~400
-				_, err = b.TargetNetAPI.SignPushActions(chunk...)
+				err := retry(5, 500*time.Millisecond, func() error {
+					_, err = b.TargetNetAPI.SignPushActions(chunk...)
+					if err != nil {
+						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+					}
+					return nil
+				})
 				if err != nil {
-					return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+					return err
 				}
 			}
 		}

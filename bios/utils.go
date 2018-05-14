@@ -3,8 +3,11 @@ package bios
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
+	"log"
 	"os"
 	"strings"
+	"time"
 
 	eos "github.com/eoscanada/eos-go"
 )
@@ -43,4 +46,22 @@ func flipEndianness(in uint64) (out uint64) {
 	buf := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	binary.LittleEndian.PutUint64(buf, in)
 	return binary.BigEndian.Uint64(buf)
+}
+
+func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
+	for i := 0; ; i++ {
+		err = callback()
+		if err == nil {
+			return
+		}
+
+		if i >= (attempts - 1) {
+			break
+		}
+
+		time.Sleep(sleep)
+
+		log.Println("retrying after error:", err)
+	}
+	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }

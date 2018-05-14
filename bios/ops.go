@@ -11,6 +11,24 @@ import (
 	"github.com/eoscanada/eos-go/token"
 )
 
+type Operation interface {
+	Actions(b *BIOS) ([]*eos.Action, error)
+	ResetTestnetOptions() // TODO: implement the DISABLING of all testnet options when `mainnet` is voted in the `discovery`.
+}
+
+var operationsRegistry = map[string]Operation{
+	"system.setcode":            &OpSetCode{},
+	"system.setram":             &OpSetRAM{},
+	"system.newaccount":         &OpNewAccount{},
+	"system.setpriv":            &OpSetPriv{},
+	"token.create":              &OpCreateToken{},
+	"token.issue":               &OpIssueToken{},
+	"producers.create_accounts": &OpCreateProducers{},
+	"system.setprods":           &OpSetProds{},
+	"snapshot.inject":           &OpInjectSnapshot{},
+	"system.destroy_accounts":   &OpDestroyAccounts{},
+}
+
 type OperationType struct {
 	Op    string
 	Label string
@@ -58,23 +76,6 @@ func (o *OperationType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type Operation interface {
-	Actions(b *BIOS) ([]*eos.Action, error)
-	ResetTestnetOptions() // TODO: implement the DISABLING of all testnet options when `mainnet` is voted in the `discovery`.
-}
-
-var operationsRegistry = map[string]Operation{
-	"system.setcode":            &OpSetCode{},
-	"system.newaccount":         &OpNewAccount{},
-	"system.setpriv":            &OpSetPriv{},
-	"token.create":              &OpCreateToken{},
-	"token.issue":               &OpIssueToken{},
-	"producers.create_accounts": &OpCreateProducers{},
-	"system.setprods":           &OpSetProds{},
-	"snapshot.inject":           &OpInjectSnapshot{},
-	"system.destroy_accounts":   &OpDestroyAccounts{},
-}
-
 //
 
 type OpSetCode struct {
@@ -103,6 +104,17 @@ func (op *OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
 	}
 
 	return setCode.Actions, nil
+}
+
+//
+
+type OpSetRAM struct {
+	MaxRAMSize uint64 `json:"max_ram_size"`
+}
+
+func (op *OpSetRAM) ResetTestnetOptions() { return }
+func (op *OpSetRAM) Actions(b *BIOS) (out []*eos.Action, err error) {
+	return append(out, system.NewSetRAM(op.MaxRAMSize)), nil
 }
 
 //
