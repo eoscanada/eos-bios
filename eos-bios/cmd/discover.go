@@ -16,13 +16,15 @@ package cmd
 import (
 	"log"
 
+	"github.com/eoscanada/eos-bios/bios"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // discoverCmd represents the discovery command
 var discoverCmd = &cobra.Command{
 	Use:   "discover",
-	Short: "Discover and update info about all peers listed in the seed network, based on your discovery file.",
+	Short: "Discover fetches the network you are participating in on the `eosio.disco` contract.  It does not show networks you are not participating in. Use `list` for that.",
 	Run: func(cmd *cobra.Command, args []string) {
 		net, err := fetchNetwork(false)
 		if err != nil {
@@ -30,9 +32,18 @@ var discoverCmd = &cobra.Command{
 		}
 
 		net.PrintOrderedPeers()
+
+		if viper.GetBool("serve") {
+			bios.Serve(net)
+		}
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(discoverCmd)
+	discoverCmd.Flags().BoolP("serve", "", false, "Serve the discovery visualization on http://localhost:10101")
+
+	if err := viper.BindPFlag("serve", discoverCmd.Flags().Lookup("serve")); err != nil {
+		panic(err)
+	}
 }

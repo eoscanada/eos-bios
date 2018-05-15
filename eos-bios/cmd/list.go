@@ -10,7 +10,7 @@ import (
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List the published discovery file for every BP account",
+	Short: "List shows all the networks discovered from the source contract, not only the one you are participating with.",
 	Run: func(cmd *cobra.Command, args []string) {
 		net, err := fetchNetwork(false)
 		if err != nil {
