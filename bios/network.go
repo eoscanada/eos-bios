@@ -315,7 +315,7 @@ func (net *Network) calculateNetworkWeights() {
 		for _, node := range network.Nodes() {
 			var totalWeight int
 			for _, inwardNode := range network.To(node.ID()) {
-				edge := network.WeightedEdge(node.ID(), inwardNode.ID())
+				edge := network.WeightedEdge(inwardNode.ID(), node.ID())
 				totalWeight += int(edge.Weight())
 			}
 			node.(*Peer).TotalWeight = totalWeight
