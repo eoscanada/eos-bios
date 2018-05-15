@@ -249,6 +249,12 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for idx, hodler := range snapshotData {
 		flipped := flipEndianness(uint64(idx + 1))
 		destAccount := AN("genesis." + eos.NameToString(flipped))
+
+		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
+			// the undelegatebw action does special unvesting for the b1 account
+			destAccount = "b1"
+		}
+
 		fmt.Println("Transfer", hodler, destAccount)
 
 		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
@@ -256,6 +262,16 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
 
 		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
+
+		firstHalf := hodler.Balance
+		secondHalf := hodler.Balance
+
+		firstHalf.Amount = firstHalf.Amount / 2
+		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
+
+		delBW := system.NewDelegateBW(destAccount, AN("eosio"), firstHalf, secondHalf, false)
+		delBW.Authorization[0].Actor = eos.AN("eosio")
+		out = append(out, delBW)
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {

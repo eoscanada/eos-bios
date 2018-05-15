@@ -228,6 +228,13 @@ TODO
 
 * Implement `eos-bios boot --reset` or something.. through eosio.disco::delgenesis
 
+* create the "RAM" currency, issue an initial base ? is it with `setram` ?
+* call `setram`, agree on it.. start with 32GB ?
+
+* delegatebw, from/to eosio, do the transfer with it ?
+
+* undelegatebw never removes my "voters" entry.. sunk forever ?
+
 
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)

@@ -94,9 +94,9 @@ func (net *Network) fetchGraphFromSeedNetwork() error {
 	}
 
 	var rows []struct {
-		ID            eos.AccountName  `json:"id"`
-		DiscoveryFile *disco.Discovery `json:"content"`
-		UpdatedAt     eos.JSONTime     `json:"updated_at"`
+		ID        eos.AccountName  `json:"id"`
+		Discovery *disco.Discovery `json:"content"`
+		UpdatedAt eos.JSONTime     `json:"updated_at"`
 	}
 	if err := rowsJSON.JSONToStructs(&rows); err != nil {
 		return fmt.Errorf("reading discovery from table: %s", err)
@@ -105,9 +105,9 @@ func (net *Network) fetchGraphFromSeedNetwork() error {
 	for _, cand := range rows {
 		// TODO: verify their discovery file.. the values in there.. do we simply skip those with invalid weights for example ?? They're excluded from the graph?
 
-		cand.DiscoveryFile.UpdatedAt = cand.UpdatedAt
-		cand.DiscoveryFile.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
-		net.candidates[string(cand.ID)] = cand.DiscoveryFile
+		cand.Discovery.UpdatedAt = cand.UpdatedAt
+		cand.Discovery.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
+		net.candidates[string(cand.ID)] = cand.Discovery
 	}
 
 	return nil

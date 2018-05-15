@@ -11,6 +11,17 @@ type PeerLink struct {
 	Weight  uint8           `json:"weight"`
 }
 
+type peerLinkEdge struct {
+	SourceAccount *Discovery
+	DestAccount   *Discovery
+	PeerLink      *PeerLink
+}
+
+func (e peerLinkEdge) From() int64 {
+	id, _ := eos.StringToName(string(d.SeedNetworkAccountName))
+	return int64(id)
+}
+
 type ContentRef struct {
 	Name    string `json:"name"`
 	Ref     string `json:"ref"`
@@ -41,6 +52,7 @@ type Discovery struct {
 	UpdatedAt eos.JSONTime `json:"-"` // injected in `UpdatedGraph`
 }
 
+// ID serves as a `graph.Node` implementation.
 func (d Discovery) ID() int64 {
 	id, _ := eos.StringToName(string(d.SeedNetworkAccountName))
 	return int64(id)
