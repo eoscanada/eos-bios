@@ -65,3 +65,8 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 	}
 	return fmt.Errorf("after %d attempts, last error: %s", attempts, err)
 }
+
+func AccountToNodeID(acct eos.AccountName) int64 {
+	id, _ := eos.StringToName(string(acct))
+	return int64(id)
+}

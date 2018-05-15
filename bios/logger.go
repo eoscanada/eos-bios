@@ -26,6 +26,10 @@ func NewLogger() *Logger {
 }
 
 func (l *Logger) Debugln(args ...interface{}) {
+	if l == nil {
+		return
+	}
+
 	if l.Debug {
 		fmt.Fprintln(l.OutputScreen, args...)
 	}
@@ -33,11 +37,19 @@ func (l *Logger) Debugln(args ...interface{}) {
 }
 
 func (l *Logger) Println(args ...interface{}) {
+	if l == nil {
+		return
+	}
+
 	fmt.Fprintln(l.OutputScreen, args...)
 	fmt.Fprintln(l.OutputFile, args...)
 }
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
+	if l == nil {
+		return
+	}
+
 	if l.Debug {
 		fmt.Fprintf(l.OutputScreen, format, args...)
 	}
@@ -45,6 +57,10 @@ func (l *Logger) Debugf(format string, args ...interface{}) {
 }
 
 func (l *Logger) Printf(format string, args ...interface{}) {
+	if l == nil {
+		return
+	}
+
 	fmt.Fprintf(l.OutputScreen, format, args...)
 	fmt.Fprintf(l.OutputFile, format, args...)
 }

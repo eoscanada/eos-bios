@@ -18,7 +18,12 @@ import (
 )
 
 type BIOS struct {
-	Network    *Network
+	Network *Network
+	// MyPeers represent the peers my local node will handle. It is
+	// plural because when launching a 3-node network, your peer will
+	// be cloned a few time to have a full schedule of 21 producers.
+	MyPeers []*Peer
+
 	SingleOnly bool
 	Log        *Logger
 
@@ -31,13 +36,8 @@ type BIOS struct {
 
 	// ShuffledProducers is an ordered list of producers according to
 	// the shuffled peers.
-	ShuffledProducers []*Peer
 	RandSource        rand.Source
-
-	// MyPeers represent the peers my local node will handle. It is
-	// plural because when launching a 3-node network, your peer will
-	// be cloned a few time to have a full schedule of 21 producers.
-	MyPeers []*Peer
+	ShuffledProducers []*Peer
 
 	EphemeralPrivateKey *ecc.PrivateKey
 	EphemeralPublicKey  ecc.PublicKey
@@ -58,6 +58,13 @@ func (b *BIOS) SetGenesis(gen *GenesisJSON) {
 }
 
 func (b *BIOS) Init() error {
+
+	// HAVE TWO init sequences:
+	// * a first that does BASIC inits
+	// * a second that can be recalled just after receiving the Launch Block, which
+	//   might change the bootsequence we've agreed upon, might change the network,
+	//   topology, etc..
+
 	// Load launch data
 	launchDisco, err := b.Network.ConsensusDiscovery()
 	if err != nil {
@@ -105,7 +112,7 @@ func (b *BIOS) StartOrchestrate() error {
 	fmt.Println("Starting Orchestraion process", time.Now())
 
 	fmt.Println("Showing pre-randomized network discovered:")
-	b.Network.PrintOrderedPeers()
+	b.PrintProducerSchedule()
 
 	b.RandSource = b.waitLaunchBlock()
 
@@ -115,11 +122,11 @@ func (b *BIOS) StartOrchestrate() error {
 	fmt.Println("Seed network block used to seed randomization, updating graph one last time...")
 
 	if err := b.Network.UpdateGraph(); err != nil {
-		return fmt.Errorf("orchestrate: update graph: %s", err)
+		return fmt.Errorf("update graph: %s", err)
 	}
 
 	fmt.Println("Network used for launch:")
-	b.Network.PrintOrderedPeers()
+	b.PrintProducerSchedule()
 
 	if err := b.DispatchInit("orchestrate"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -128,15 +135,15 @@ func (b *BIOS) StartOrchestrate() error {
 	switch b.MyRole() {
 	case RoleBootNode:
 		if err := b.RunBootSequence(); err != nil {
-			return fmt.Errorf("orchestrate boot: %s", err)
+			return fmt.Errorf("as boot node: %s", err)
 		}
 	case RoleABP:
 		if err := b.RunJoinNetwork(true, true); err != nil {
-			return fmt.Errorf("orchestrate join: %s", err)
+			return fmt.Errorf("as abp: %s", err)
 		}
 	default:
 		if err := b.RunJoinNetwork(true, false); err != nil {
-			return fmt.Errorf("orchestrate participate: %s", err)
+			return fmt.Errorf("as participant: %s", err)
 		}
 	}
 
@@ -146,14 +153,14 @@ func (b *BIOS) StartOrchestrate() error {
 func (b *BIOS) StartJoin(verify bool) error {
 	fmt.Println("Starting network join process", time.Now())
 
-	b.Network.PrintOrderedPeers()
+	b.PrintProducerSchedule()
 
 	if err := b.DispatchInit("join"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
 	if err := b.RunJoinNetwork(verify, false); err != nil {
-		return fmt.Errorf("boot network: %s", err)
+		return fmt.Errorf("join network: %s", err)
 	}
 
 	return b.DispatchDone("join")
@@ -162,39 +169,31 @@ func (b *BIOS) StartJoin(verify bool) error {
 func (b *BIOS) StartBoot() error {
 	fmt.Println("Starting network join process", time.Now())
 
-	b.Network.PrintOrderedPeers()
+	b.PrintProducerSchedule()
 
 	if err := b.DispatchInit("boot"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
 	if err := b.RunBootSequence(); err != nil {
-		return fmt.Errorf("run boot sequence: %s", err)
+		return fmt.Errorf("run bios boot: %s", err)
 	}
 
 	return b.DispatchDone("boot")
 }
 
-func (b *BIOS) PrintOrderedPeers() {
-	fmt.Println("###############################################################################################")
-	fmt.Println("###################################  SHUFFLING RESULTS  #######################################")
-	fmt.Println("")
+func (b *BIOS) PrintProducerSchedule() {
+	b.Network.PrintOrderedPeers()
 
-	fmt.Printf("BIOS NODE: %s\n", b.ShuffledProducers[0].AccountName())
-	for i := 1; i < 22 && len(b.ShuffledProducers) > i; i++ {
-		fmt.Printf("ABP %02d:    %s\n", i, b.ShuffledProducers[i].AccountName())
-	}
 	fmt.Println("")
 	fmt.Println("###############################################################################################")
-	fmt.Println("########################################  BOOTING  ############################################")
 	fmt.Println("")
 	if b.AmIBootNode() {
-		fmt.Println("I AM THE BOOT NODE! Let's get the ball rolling.")
-
+		fmt.Println("                              MY ROLE: BIOS BOOT NODE")
 	} else if b.AmIAppointedBlockProducer() {
-		fmt.Println("I am NOT the BOOT NODE, but I AM ONE of the Appointed Block Producers. Stay tuned and watch the Boot node's media properties.")
+		fmt.Println("                              MY ROLE: APPOINTED BLOCK PRODUCER")
 	} else {
-		fmt.Println("Okay... I'm not part of the Appointed Block Producers, we'll wait and be ready to join")
+		fmt.Println("                              MY ROLE: JOINING NETWORK")
 	}
 	fmt.Println("")
 
@@ -278,7 +277,9 @@ func (b *BIOS) RunBootSequence() error {
 	fmt.Println("Flushing transactions into blocks")
 	time.Sleep(2 * time.Second)
 
-	otherPeers := b.someTopmostPeersAddresses()
+	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
+
+	otherPeers := b.someTopmostPeersAddresses(orderedPeers)
 	if err := b.DispatchBootConnectMesh(otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
 	}
@@ -587,11 +588,12 @@ func (b *BIOS) GetContentsCacheRef(filename string) (string, error) {
 }
 
 func (b *BIOS) setProducers() error {
-	b.ShuffledProducers = b.Network.OrderedPeers()
+	network := b.Network.MyNetwork()
+	orderedPeers := b.Network.OrderedPeers(network)
 
-	if b.RandSource != nil {
-		b.shuffleProducers()
-	}
+	b.ShuffledProducers = orderedPeers
+
+	b.shuffleProducers() // conditionally
 
 	// We'll multiply the other producers as to have a full schedule
 	if len(b.ShuffledProducers) > 1 {
@@ -606,11 +608,13 @@ func (b *BIOS) setProducers() error {
 				fromPeer := b.ShuffledProducers[1+count%cloneCount]
 				count++
 
-				clonedProd := &Peer{
-					ClonedAccountName: accountVariation(fromPeer.AccountName(), count),
-					Discovery:         fromPeer.Discovery,
+				clonedDisco := *fromPeer.Discovery
+				clonedDisco.TargetAccountName = accountVariation(fromPeer.Discovery.TargetAccountName, count)
+				clonedPeer := &Peer{
+					Discovery: &clonedDisco,
+					UpdatedAt: fromPeer.UpdatedAt,
 				}
-				b.ShuffledProducers = append(b.ShuffledProducers, clonedProd)
+				b.ShuffledProducers = append(b.ShuffledProducers, clonedPeer)
 			}
 		}
 	}
@@ -619,6 +623,11 @@ func (b *BIOS) setProducers() error {
 }
 
 func (b *BIOS) shuffleProducers() {
+	if b.RandSource == nil {
+		fmt.Println("Random source not set, skipping producer shuffling")
+		return
+	}
+
 	fmt.Println("Shuffling producers listed in the launch file")
 	r := rand.New(b.RandSource)
 	// shuffle top 25%, capped to 5
@@ -706,9 +715,12 @@ func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action)
 	return
 }
 
-func accountVariation(name string, variation int) string {
+func accountVariation(acct eos.AccountName, variation int) eos.AccountName {
+	name := string(acct)
 	if len(name) > 10 {
 		name = name[:10]
 	}
-	return name + "." + string([]byte{'a' + byte(variation-1)})
+	variedName := name + "." + string([]byte{'a' + byte(variation-1)})
+
+	return eos.AccountName(variedName)
 }

@@ -52,7 +52,7 @@ func (b *BIOS) computeMyMeshP2PAddresses() []string {
 }
 
 func (b *BIOS) allExceptBootP2PAddresses() (out []string) {
-	for _, el := range b.Network.discoveredPeers {
+	for _, el := range b.Network.OrderedPeers(b.Network.MyNetwork()) {
 		if el.Discovery.SeedNetworkAccountName == b.Network.MyPeer.Discovery.SeedNetworkAccountName {
 			continue
 		}
@@ -64,24 +64,22 @@ func (b *BIOS) allExceptBootP2PAddresses() (out []string) {
 	return
 }
 
-func (b *BIOS) getPeersForBootNode(randSource rand.Source) (out []*Peer) {
+func (b *BIOS) getPeersForBootNode(orderedPeers []*Peer, randSource rand.Source) (out []*Peer) {
 	r := rand.New(randSource)
 
-	original := b.Network.OrderedPeers()
-
-	if len(original) < 26 {
-		return original
+	if len(orderedPeers) < 26 {
+		return orderedPeers
 	}
-	if len(original) > 50 {
-		top := shuffle(original[:20], 15, r)
-		part2 := shuffle(original[20:45], 5, r)
-		part3 := shuffle(original[45:], 5, r)
+	if len(orderedPeers) > 50 {
+		top := shuffle(orderedPeers[:20], 15, r)
+		part2 := shuffle(orderedPeers[20:45], 5, r)
+		part3 := shuffle(orderedPeers[45:], 5, r)
 		top = append(top, part2...)
 		return append(top, part3...)
 
 	}
 
-	return shuffle(original, 25, r)
+	return shuffle(orderedPeers, 25, r)
 }
 
 func shuffle(slice []*Peer, count int, r rand.Source) []*Peer {
@@ -95,8 +93,8 @@ func shuffle(slice []*Peer, count int, r rand.Source) []*Peer {
 	return ret
 }
 
-func (b *BIOS) someTopmostPeersAddresses() []string {
-	listOfPeers := b.getPeersForBootNode(rand.NewSource(time.Now().UTC().UnixNano()))
+func (b *BIOS) someTopmostPeersAddresses(peers []*Peer) []string {
+	listOfPeers := b.getPeersForBootNode(peers, rand.NewSource(time.Now().UTC().UnixNano()))
 	otherPeers := []string{}
 	for _, peer := range listOfPeers {
 		otherPeers = append(otherPeers, peer.Discovery.TargetP2PAddress)

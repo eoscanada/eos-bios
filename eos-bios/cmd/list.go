@@ -17,7 +17,7 @@ var listCmd = &cobra.Command{
 			log.Fatalln("fetch network:", err)
 		}
 
-		net.PrintDiscoveryFiles(viper.GetBool("verbose"))
+		net.ListNetworks(viper.GetBool("verbose"))
 	},
 }
 

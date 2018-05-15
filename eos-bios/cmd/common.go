@@ -54,7 +54,9 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 	)
 	net.Log = logger
 
-	net.SingleOnly = single
+	if single {
+		net.SetLocalNetwork()
+	}
 
 	if err := net.UpdateGraph(); err != nil {
 		return nil, fmt.Errorf("updating graph: %s", err)

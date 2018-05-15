@@ -21,6 +21,24 @@ https://youtu.be/8aNZ_ZnKS-A
 Jump directly to the [sample configurations](./sample_config) if you
 know what you're doing.
 
+Other **videos** explaining the different concepts of `eos-bios`:
+
+| Description | Link |
+| ----------- | ----:|
+| Details of the Discovery file  | https://youtu.be/uE5J7LCqcUc |
+| Network meshing algorithm  | https://youtu.be/I-PrnlmLNnQ |
+| The boot sequence | https://youtu.be/SbVzINnqWAE |
+| Code review of the core flow  | https://youtu.be/p1B6jvx25O0 |
+| The hooks to integrate with your infrastructure  | https://youtu.be/oZNV6fUoyqM |
+
+Some Q&A related to `eos-bios`:
+
+| Description | Link |
+| ----------- | ----:|
+| Are accounts carried over from stage to stage?  | https://youtu.be/amyMm5gVpLg |
+| How block producers agree on the content of the chain? | https://youtu.be/WIR7nab40qk |
+
+
 
 Local development environment
 -----------------------------
@@ -140,11 +158,9 @@ network.
 Seed networks
 -------------
 
-| Seed network endpoint | Stage | Booted |
-| --------------------- | -----:| ------:|
-| http://stage0.eoscanada.com | 0 | May 9th 2018 |
-| http://stage1.eoscanada.com | 1 | May 9th 2018 |
+We keep an updated list of the different stages launched with `eos-bios` here:
 
+https://stages.eoscanada.com
 
 
 

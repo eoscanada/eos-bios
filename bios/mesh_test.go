@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eoscanada/eos-bios/bios/disco"
+	eos "github.com/eoscanada/eos-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,15 +101,11 @@ func TestGetPeersForBootNode(t *testing.T) {
 	for _, test := range tests {
 		var peers []*Peer
 		for i := 0; i < test.numPeers; i++ {
-			peers = append(peers, &Peer{ClonedAccountName: fmt.Sprintf("p%d", i)})
+			peers = append(peers, &Peer{Discovery: &disco.Discovery{SeedNetworkAccountName: eos.AccountName(fmt.Sprintf("p%d", i))}})
 		}
-		b := &BIOS{
-			Network: &Network{
-				orderedPeers: peers,
-			},
-		}
+		b := &BIOS{}
 
-		listOfPeers := b.getPeersForBootNode(rand.NewSource(test.seed))
+		listOfPeers := b.getPeersForBootNode(peers, rand.NewSource(test.seed))
 		expectedPeers := strings.Split(test.out, ",")
 		for idx, el := range expectedPeers {
 			assert.Equal(t, el, listOfPeers[idx].AccountName())

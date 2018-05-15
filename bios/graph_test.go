@@ -44,10 +44,15 @@ func TestNetGraph(t *testing.T) {
 		}
 		fmt.Printf("\n")
 	}
+
+	fmt.Println("Nodes order:")
+	for _, node := range g.Nodes() {
+		fmt.Println("-", node.ID())
+	}
 }
 
-func newDisco(g *simple.DirectedGraph, name string) *disco.Discovery {
-	d := &disco.Discovery{SeedNetworkAccountName: eos.AN(name)}
+func newDisco(g *simple.DirectedGraph, name string) *Peer {
+	d := &Peer{Discovery: &disco.Discovery{SeedNetworkAccountName: eos.AN(name)}}
 	g.AddNode(d)
 	return d
 }

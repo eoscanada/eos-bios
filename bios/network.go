@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,24 +11,28 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/ryanuber/columnize"
+	"gonum.org/v1/gonum/graph/simple"
+	"gonum.org/v1/gonum/graph/topo"
 )
 
 type Network struct {
-	SingleOnly bool
-	Log        *Logger
+	Log *Logger
 
 	MyPeer *Peer
 
 	SeedNetAPI      *eos.API
 	seedNetContract string
 
-	discoveredPeers map[eos.AccountName]*Peer
-	orderedPeers    []*Peer
-	candidates      map[string]*disco.Discovery
+	// nodes format
+	allNodes          *simple.WeightedDirectedGraph
+	allNodesFetchFunc func() error
+	allNetworks       []*simple.WeightedDirectedGraph
+	myNetwork         *simple.WeightedDirectedGraph
 
 	ipfs           *IPFS
 	ipfsReferences []ipfsRef
@@ -43,34 +46,55 @@ type ipfsRef struct {
 }
 
 func NewNetwork(cachePath string, myDiscovery *disco.Discovery, ipfs *IPFS, seedNetContract string, seedNetAPI *eos.API) *Network {
-	return &Network{
+	net := &Network{
 		SeedNetAPI:      seedNetAPI,
 		ipfs:            ipfs,
 		cachePath:       cachePath,
 		seedNetContract: seedNetContract,
 		MyPeer: &Peer{
 			Discovery: myDiscovery,
+			UpdatedAt: time.Now(),
 		},
 	}
+	net.allNodesFetchFunc = net.fetchGraphFromSeedNetwork
+	return net
+}
+
+func (net *Network) SetLocalNetwork() {
+	net.allNodesFetchFunc = net.fetchSingleNode
 }
 
 func (net *Network) UpdateGraph() error {
-	net.discoveredPeers = map[eos.AccountName]*Peer{}
-	net.candidates = make(map[string]*disco.Discovery)
+	net.allNodes = simple.NewWeightedDirectedGraph(0, 0)
 
-	if !net.SingleOnly {
-		if err := net.fetchGraphFromSeedNetwork(); err != nil {
-			return err
+	if err := net.allNodesFetchFunc(); err != nil {
+		return err
+	}
+
+	for _, node := range net.allNodes.Nodes() {
+		peer := node.(*Peer)
+		if err := net.loadTargetContentsRefs(peer); err != nil {
+			return fmt.Errorf("loading target contents refs: %s", err)
+		}
+
+		if err := net.traversePeers(peer); err != nil {
+			return fmt.Errorf("traversing peers: %s", err)
 		}
 	}
 
-	if err := net.traversePeer(net.MyPeer.Discovery); err != nil {
-		return fmt.Errorf("traversing graph: %s", err)
-	}
+	net.isolateNetworks()
 
-	if err := net.calculateWeights(); err != nil {
-		return fmt.Errorf("calculating weights: %s", err)
+	net.calculateNetworkWeights()
+
+	return nil
+}
+
+func (net *Network) fetchSingleNode() error {
+	newPeer := &Peer{
+		UpdatedAt: time.Now(),
+		Discovery: net.MyPeer.Discovery,
 	}
+	net.allNodes.AddNode(newPeer)
 
 	return nil
 }
@@ -103,67 +127,106 @@ func (net *Network) fetchGraphFromSeedNetwork() error {
 	}
 
 	for _, cand := range rows {
-		// TODO: verify their discovery file.. the values in there.. do we simply skip those with invalid weights for example ?? They're excluded from the graph?
+		if err := ValidateDiscovery(cand.Discovery); err != nil {
+			fmt.Printf("Skipping invalid discovery file from %q: %s\n", cand.ID, err)
+			continue
+		}
 
-		cand.Discovery.UpdatedAt = cand.UpdatedAt
+		// cand.Discovery.UpdatedAt = cand.UpdatedAt
 		cand.Discovery.SeedNetworkAccountName = cand.ID // we override what they think, we use what they *signed* for..
-		net.candidates[string(cand.ID)] = cand.Discovery
+
+		newPeer := &Peer{
+			UpdatedAt: cand.UpdatedAt.Time,
+			Discovery: cand.Discovery,
+		}
+		if !net.allNodes.Has(newPeer.ID()) { // rows can't have duplicate key anyway
+			net.allNodes.AddNode(newPeer)
+		}
 	}
 
 	return nil
 }
 
-func (net *Network) traversePeer(discoFile *disco.Discovery) error {
-	// TODO: should we simply remove the peer if its discovery file is invalid ?
-	// flag it as such? and zero its weights everywhere ?
-	if err := ValidateDiscovery(discoFile); err != nil {
-		return err
-	}
-
-	net.discoveredPeers[discoFile.SeedNetworkAccountName] = &Peer{Discovery: discoFile}
-
-	for _, contentRef := range discoFile.TargetContents {
+func (net *Network) loadTargetContentsRefs(peer *Peer) error {
+	for _, contentRef := range peer.Discovery.TargetContents {
 		if contentRef.Ref == "" {
-			net.Log.Debugf("  - WARN: %q has an empty ipfs ref for name=%q\n", discoFile.SeedNetworkAccountName, contentRef.Name)
+			net.Log.Debugf("  - WARN: %q has an empty ipfs ref for name=%q\n", peer.Discovery.SeedNetworkAccountName, contentRef.Name)
 			continue
 		}
 
 		if !strings.HasPrefix(contentRef.Ref, "/ipfs/") {
-			net.Log.Debugf("  - WARN: %q has a ref that doesn't start with '/ipfs/' for name=%q\n", discoFile.SeedNetworkAccountName, contentRef.Name)
+			net.Log.Debugf("  - WARN: %q has a ref that doesn't start with '/ipfs/' for name=%q\n", peer.Discovery.SeedNetworkAccountName, contentRef.Name)
 			continue
 		}
 
 		net.ipfsReferences = append(net.ipfsReferences, ipfsRef{
 			Name:          contentRef.Name,
 			Reference:     contentRef.Ref,
-			SourceAccount: string(discoFile.SeedNetworkAccountName),
+			SourceAccount: string(peer.Discovery.SeedNetworkAccountName),
 		})
 	}
 
-	net.Log.Debugf("- %q has %d peer(s)\n", discoFile.SeedNetworkAccountName, len(discoFile.SeedNetworkPeers))
+	return nil
+}
 
-	for _, peerLink := range discoFile.SeedNetworkPeers {
+func (net *Network) traversePeers(fromPeer *Peer) error {
+	net.Log.Debugf("- %q has %d peer(s)\n", fromPeer.Discovery.SeedNetworkAccountName, len(fromPeer.Discovery.SeedNetworkPeers))
+
+	for _, peerLink := range fromPeer.Discovery.SeedNetworkPeers {
 		net.Log.Debugf("  - peer %s comment=%q, weight=%d\n", peerLink.Account, peerLink.Comment, peerLink.Weight)
 
-		peerDisco, found := net.candidates[string(peerLink.Account)]
-		if !found {
+		peerID := AccountToNodeID(peerLink.Account)
+		if !net.allNodes.Has(peerID) {
 			net.Log.Debugln("    - peer not found, won't weight in")
 			continue
 		}
 
-		if net.discoveredPeers[peerDisco.SeedNetworkAccountName] != nil {
-			net.Log.Debugf("    - already added %q\n", peerDisco.SeedNetworkAccountName)
+		toPeer := net.allNodes.Node(peerID).(*Peer)
+		peerEdge := &PeerEdge{
+			FromPeer: fromPeer,
+			ToPeer:   toPeer,
+			PeerLink: peerLink,
+		}
+
+		if fromPeer == toPeer {
+			net.Log.Debugf("    - no self-ref allowed\n")
 			continue
 		}
 
-		net.Log.Debugf("    - adding %q\n", peerDisco.SeedNetworkAccountName)
-
-		if err := net.traversePeer(peerDisco); err != nil {
-			return err
+		if net.allNodes.HasEdgeFromTo(fromPeer.ID(), toPeer.ID()) {
+			net.Log.Debugf("    - duplicate link to %q\n", toPeer.Discovery.SeedNetworkAccountName)
+			continue
 		}
+
+		net.Log.Debugf("    - adding %q\n", toPeer.Discovery.SeedNetworkAccountName)
+
+		net.allNodes.SetWeightedEdge(peerEdge)
 	}
 
 	return nil
+}
+
+func (net *Network) isolateNetworks() {
+	net.allNetworks = make([]*simple.WeightedDirectedGraph, 0, 0)
+	// myAccount := net.MyPeer.Discovery.SeedNetworkAccountName
+
+	for _, subnet := range topo.TarjanSCC(net.allNodes) {
+		subGraph := simple.NewWeightedDirectedGraph(0, 0)
+
+		// Grab the nodes
+		for _, node := range subnet {
+			subGraph.AddNode(node)
+		}
+
+		// Grab only the edges that fit the subgraph
+		for _, edge := range net.allNodes.WeightedEdges() {
+			if subGraph.Has(edge.From().ID()) && subGraph.Has(edge.To().ID()) {
+				subGraph.SetWeightedEdge(edge)
+			}
+		}
+
+		net.allNetworks = append(net.allNetworks, subGraph)
+	}
 }
 
 //
@@ -245,46 +308,49 @@ func (net *Network) ChainID() []byte {
 // Graph weighting...
 //
 
-func (net *Network) calculateWeights() error {
-	// build a second map with discoveryURLs alongside account_names...
-	var allPeers []*Peer
-	for _, peer := range net.discoveredPeers {
+func (net *Network) calculateNetworkWeights() {
+	// For all networks
+	for _, network := range net.allNetworks {
 
-		for _, peerLink := range peer.Discovery.SeedNetworkPeers {
-
-			if peer.Discovery.SeedNetworkAccountName == peerLink.Account {
-				// Can't vote for yourself
-				continue
+		for _, node := range network.Nodes() {
+			var totalWeight int
+			for _, inwardNode := range network.To(node.ID()) {
+				edge := network.WeightedEdge(node.ID(), inwardNode.ID())
+				totalWeight += int(edge.Weight())
 			}
-
-			peerLinkPeer, found := net.discoveredPeers[peerLink.Account]
-			if !found {
-				continue
-			}
-
-			if peerLink.Weight <= 100 {
-				peerLinkPeer.TotalWeight += int(peerLink.Weight)
-			}
+			node.(*Peer).TotalWeight = totalWeight
 		}
-
-		allPeers = append(allPeers, peer)
 	}
+}
 
-	// Sort the `orderedPeers`
-	sort.Slice(allPeers, func(i, j int) bool {
-		if allPeers[i].TotalWeight == allPeers[j].TotalWeight {
-			return allPeers[i].AccountName() < allPeers[j].AccountName()
+func (net *Network) NetworkThatIncludes(networkAccount eos.AccountName) *simple.WeightedDirectedGraph {
+	for _, network := range net.allNetworks {
+		if !network.Has(AccountToNodeID(networkAccount)) {
+			continue // not my network Jack !
 		}
-		return allPeers[i].TotalWeight > allPeers[j].TotalWeight
-	})
-
-	net.orderedPeers = allPeers
+		return network
+	}
 
 	return nil
 }
 
-func (net *Network) OrderedPeers() []*Peer {
-	return net.orderedPeers
+func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*Peer) {
+	if network == nil {
+		return
+	}
+
+	for _, node := range network.Nodes() {
+		out = append(out, node.(*Peer))
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].TotalWeight == out[j].TotalWeight {
+			return out[i].AccountName() < out[j].AccountName()
+		}
+		return out[i].TotalWeight > out[j].TotalWeight
+	})
+
+	return
 }
 
 func (net *Network) GetBlockHeight(height uint64) (blockhash string, err error) {
@@ -341,18 +407,34 @@ func sha2(input []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func (net *Network) PrintDiscoveryFiles(verbose bool) {
-	if verbose {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(net.candidates)
-	} else {
-		fmt.Println("List of all accounts that have published a discovery file:")
+func (net *Network) ListNetworks(verbose bool) {
+	fmt.Println("Networks formed by published discovery files:")
 
-		for _, cand := range net.candidates {
-			fmt.Printf("- %s\n", cand.SeedNetworkAccountName)
+	for idx, network := range net.allNetworks {
+		fmt.Printf("%d.\n", idx+1)
+		orderedPeers := net.OrderedPeers(network)
+		for _, peer := range orderedPeers {
+			fmt.Printf("  - %s (total weight: %d)\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight)
 		}
 	}
+}
+
+func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
+	network := net.NetworkThatIncludes(net.MyPeer.Discovery.SeedNetworkAccountName)
+	if network == nil {
+		if len(net.MyPeer.Discovery.SeedNetworkPeers) == 0 {
+			fmt.Println("You are part of no network. Either define a `seed_network_peers` to point to some peers in a network, or ask to be pointed to by someone in a network")
+			os.Exit(1)
+		}
+
+		network = net.NetworkThatIncludes(net.MyPeer.Discovery.SeedNetworkPeers[0].Account)
+		if network == nil {
+			fmt.Println("You're part of no network, and your first peer in `seed_network_peers` isn't either (!!)")
+			os.Exit(1)
+		}
+	}
+
+	return network
 }
 
 func (net *Network) PrintOrderedPeers() {
@@ -360,16 +442,22 @@ func (net *Network) PrintOrderedPeers() {
 	fmt.Println("####################################    PEER NETWORK    #######################################")
 	fmt.Println("")
 
+	network := net.MyNetwork()
+	orderedPeers := net.OrderedPeers(network)
+
+	contentAgreement := ComputeContentsAgreement(orderedPeers)
+	peerContent := ComputePeerContentsColumn(contentAgreement, orderedPeers)
+
 	columns := []string{
-		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block",
-		"---- | ------------ | ----------- | ------ | --- | ------------",
+		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block | Contents",
+		"---- | ------------ | ----------- | ------ | --- | ------------ | --------",
 	}
-	columns = append(columns, fmt.Sprintf("BIOS NODE | %s", net.orderedPeers[0].Columns()))
-	for i := 1; i < 22 && len(net.orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("ABP %02d | %s", i, net.orderedPeers[i].Columns()))
+	columns = append(columns, fmt.Sprintf("BIOS NODE | %s | %s", orderedPeers[0].Columns(), peerContent[0]))
+	for i := 1; i < 22 && len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("ABP %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
 	}
-	for i := 22; len(net.orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("Part. %02d | %s", i, net.orderedPeers[i].Columns()))
+	for i := 22; len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("Part. %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
 	}
 	fmt.Println(columnize.SimpleFormat(columns))
 
@@ -395,5 +483,7 @@ func (net *Network) ConsensusDiscovery() (*disco.Discovery, error) {
 	// Will that work ? Will that make sense ?
 	//
 	// Cycle through the top peers, take the most vetted
-	return net.orderedPeers[0].Discovery, nil
+
+	orderedPeers := net.OrderedPeers(net.MyNetwork())
+	return orderedPeers[0].Discovery, nil
 }

@@ -5,27 +5,11 @@ import (
 	"github.com/eoscanada/eos-go/ecc"
 )
 
+// PeerLink is the struct specified by the user
 type PeerLink struct {
 	Account eos.AccountName `json:"account"`
 	Comment string          `json:"comment"`
 	Weight  uint8           `json:"weight"`
-}
-
-type peerLinkEdge struct {
-	SourceAccount *Discovery
-	DestAccount   *Discovery
-	PeerLink      *PeerLink
-}
-
-func (e peerLinkEdge) From() int64 {
-	id, _ := eos.StringToName(string(d.SeedNetworkAccountName))
-	return int64(id)
-}
-
-type ContentRef struct {
-	Name    string `json:"name"`
-	Ref     string `json:"ref"`
-	Comment string `json:"comment"`
 }
 
 type Discovery struct {
@@ -48,24 +32,24 @@ type Discovery struct {
 	} `json:"target_initial_authority"`
 
 	TargetContents []ContentRef `json:"target_contents"`
-
-	UpdatedAt eos.JSONTime `json:"-"` // injected in `UpdatedGraph`
 }
 
-// ID serves as a `graph.Node` implementation.
-func (d Discovery) ID() int64 {
-	id, _ := eos.StringToName(string(d.SeedNetworkAccountName))
-	return int64(id)
+type ContentRef struct {
+	Name    string `json:"name"`
+	Ref     string `json:"ref"`
+	Comment string `json:"comment"`
 }
 
-type GenesisRow struct {
-	ID                  eos.AccountName `json:"id"`
-	GenesisJSON         string          `json:"genesis_json"`
-	InitialP2PAddresses []string        `json:"initial_p2p_addresses"`
-}
-
+// DiscoveryRow represents a row in the `eosio.disco` contract, for the `discovery` table.
 type DiscoveryRow struct {
 	ID        eos.AccountName `json:"id"`
 	Content   *Discovery      `json:"content"`
 	UpdatedAt eos.JSONTime    `json:"updated_at"`
+}
+
+// GenesisRow represents a row in the `eosio.disco` contract, for the `genesis` table.
+type GenesisRow struct {
+	ID                  eos.AccountName `json:"id"`
+	GenesisJSON         string          `json:"genesis_json"`
+	InitialP2PAddresses []string        `json:"initial_p2p_addresses"`
 }
