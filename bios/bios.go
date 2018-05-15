@@ -14,7 +14,6 @@ import (
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
-	"github.com/eoscanada/eos-go/p2p"
 )
 
 type BIOS struct {
@@ -318,15 +317,9 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if verify {
 		fmt.Println("###############################################################################################")
 		fmt.Println("Launching chain verification")
-		//fmt.Println("")
-		//fmt.Println("  - VALIDATION IS BEING IMPLEMENTED BY CHARLES ! Give him a day or so ! :)")
-		//fmt.Println("")
-		//fmt.Println("DONE")
-		//os.Exit(0)
 
 		bootSeqActionMap := ActionMap{}
 		bootSeqActionHexList := []string{}
-		i := 0
 		for _, step := range b.BootSequence {
 
 			acts, err := step.Data.Actions(b)
@@ -336,11 +329,6 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 			for _, stepAction := range acts {
 				//fmt.Println("Verifying action type: ", reflect.TypeOf(stepAction.Data))
-				if i == 15 {
-					eos.Debug = true
-				} else {
-					eos.Debug = false
-				}
 				data, err := eos.MarshalBinary(stepAction)
 				if err != nil {
 					return fmt.Errorf("load boot seq, marshalBinary action [%s], %s", stepAction.Name, err)
@@ -348,23 +336,15 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 				stepAction.SetToServer(false)
 				key := hex.EncodeToString(data)
 
-				if i == 15 {
-					fmt.Println("###############################")
-					fmt.Println("###############################")
-					fmt.Println("ACtion.data : ", stepAction.Data)
-					fmt.Println("ACtion.hex : ", stepAction.HexData)
-					json, err := json.Marshal(stepAction)
+				//jsonData, err := json.Marshal(stepAction)
+				//if err != nil {
+				//	return fmt.Errorf("step action json marshalling, %s", err)
+				//}
+				//fmt.Println("Action Name: ", stepAction.Name)
+				//fmt.Println("    json: ", string(jsonData))
+				//fmt.Println("    hex data: ", key)
+				//fmt.Println("    ----")
 
-					if err != nil {
-						log.Fatalln(err)
-					}
-					fmt.Println(key)
-					fmt.Println(string(json))
-					fmt.Println("###############################")
-					fmt.Println("###############################")
-				}
-				i++
-				//eos.Debug = true
 				bootSeqActionHexList = append(bootSeqActionHexList, key)
 				if _, ok := bootSeqActionMap[key]; ok {
 					log.Fatalf("Collision detected action [%s] with key [%s]\n", stepAction.Name, key)
@@ -375,14 +355,11 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 		err := b.validateBootSeqActions(bootSeqActionMap, bootSeqActionHexList)
 		if err != nil {
-			return fmt.Errorf("verifing, fetching actions from seed, %s", err)
+			return fmt.Errorf("- boot sequence verification endded with errors.\n%s", err)
+
 		}
 
-		//***********************************************************************
-		//***********************************************************************
-		log.Fatal("let's crash!")
-		//***********************************************************************
-		//***********************************************************************
+		fmt.Println("- Boot sequence verification passed")
 
 		// Grab all the blocks from the chain
 		// Compare each action, find it in our list
@@ -516,148 +493,109 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 	}
 }
 
+type ValidationError struct {
+	BlockNumber       int
+	Action            eos.Action
+	Index             int
+	ActionHexData     string
+	PackedTransaction eos.PackedTransaction
+}
+
+func (e ValidationError) Error() string {
+	s := fmt.Sprintf("Action [%d][%s] from block not found in boot sequences\n", e.Index, e.Action.Name)
+
+	data, err := json.Marshal(e.Action)
+	if err != nil {
+		s += fmt.Sprintf("    json generation err : %s\n", err)
+	} else {
+		s += fmt.Sprintf("    json data : %s\n", string(data))
+	}
+	s += fmt.Sprintf("    hex data : %s\n", e.ActionHexData)
+	//s += fmt.Sprintf("    packed transaction hex data : %s\n", hex.EncodeToString(e.PackedTransaction.PackedTransaction))
+
+	return s
+}
+
+type ValidationErrors struct {
+	Errors []error
+}
+
+func (v ValidationErrors) Error() string {
+
+	s := ""
+	for _, err := range v.Errors {
+		s += ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
+		s += err.Error()
+		s += "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"
+	}
+
+	return s
+}
+
 func (b *BIOS) validateBootSeqActions(bootSeqActionMap ActionMap, bootSeqActionHexList []string) (err error) {
 
-	//todo: fix version!
-
-	done := make(chan bool)
-	errorChan := make(chan error)
-	blockNumChan := make(chan uint32)
-	//eos.Debug = true
-	client := p2p.NewClient(b.Network.MyPeer.Discovery.TargetP2PAddress, p2p.DecodeHex(b.Genesis.InitialChainID), 25431)
-	//client := p2p.NewClient("localhost:8902", b.TargetNetAPI, p2p.DecodeHex(b.Genesis.InitialChainID), 25431)
-	//client.RegisterHandler(p2p.LoggerHandler)
-
 	actionCount := 0
+	blockCount := 1
 	expectedActionCount := len(bootSeqActionHexList)
+	validationErrors := make([]error, 0)
+	//b.TargetNetAPI.Debug = true
 
-	client.RegisterHandler(p2p.HandlerFunc(func(processable p2p.PostProcessable) {
-		p2pMsg := processable.P2PMessageEnvelope.P2PMessage
+	for actionCount < expectedActionCount {
 
-		switch p2pMsg.GetType() {
-		case eos.SignedBlockMessageType:
-			sbm := p2pMsg.(*eos.SignedBlockMessage)
-
-			for _, packedTransaction := range sbm.InputTransactions {
-				signedTransaction, err := packedTransaction.Unpack()
-				if err != nil {
-					errorChan <- fmt.Errorf("unpacking transaction, %s", err)
-				}
-
-				for _, action := range signedTransaction.Actions {
-					data, err := eos.MarshalBinary(action)
-					if err != nil {
-						errorChan <- fmt.Errorf("creating key with action, %s", err)
-					}
-					hexData := hex.EncodeToString(data)
-
-					//if _, ok := bootSeqActionMap[hexData]; !ok {
-					seqHexData := bootSeqActionHexList[actionCount]
-					if seqHexData != hexData {
-
-						jsonData, err := json.Marshal(action)
-						if err != nil {
-							log.Fatal(err)
-						}
-						seqAction := bootSeqActionMap[seqHexData]
-						seqAction.SetToServer(false)
-						jsonSeqData, err := json.Marshal(seqAction)
-						if err != nil {
-							log.Fatal(err)
-						}
-						fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-						fmt.Println("Action index : ", actionCount)
-						//fmt.Println("Message hex : ", hex.EncodeToString(processable.P2PMessageEnvelope.Payload))
-						fmt.Println("Server data : ", hexData)
-						fmt.Println("Seq data    : ", seqHexData)
-						fmt.Println("Server json : ", string(jsonData))
-						fmt.Println("Seq json    : ", string(jsonSeqData))
-						fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-						//errorChan <- fmt.Errorf("action [%s] not found in boot sequence with hex: %s", action.Name, hexData)
-						fmt.Printf("BAD action [%s] not found in boot sequence with hex: %s\n", action.Name, hexData)
-					}
-
-					actionCount++
-					fmt.Printf("Block : %d\n", signedTransaction.RefBlockNum)
-					fmt.Printf("Verified action [%s] %d of %d\n", action.Name, actionCount, expectedActionCount)
-
-					if actionCount >= expectedActionCount {
-						done <- true
-					}
-				}
-			}
-
-			blockNumChan <- sbm.BlockNumber()
-			return
-		}
-	}))
-
-	err = client.Connect()
-	if err != nil {
-		return
-	}
-
-	lastKnownBlock := uint32(0)
-	requestedBlock := uint32(10)
-	client.SendSyncRequest(lastKnownBlock, requestedBlock)
-
-	for {
-		select {
-		case blockNum := <-blockNumChan:
-			lastKnownBlock = blockNum
-			//fmt.Println("Last known block: ", lastKnownBlock)
-			if blockNum == requestedBlock {
-				requestedBlock = lastKnownBlock + 10
-				fmt.Println("Requesting block up to height: ", requestedBlock)
-				client.SendSyncRequest(lastKnownBlock+1, requestedBlock)
-			}
-		case err := <-errorChan:
+		block, err := b.TargetNetAPI.GetBlockByNum(uint64(blockCount))
+		if err != nil {
 			return err
-		case <-done:
-			fmt.Println("done")
-			return
 		}
-	}
-	return
+		for _, blockTransaction := range block.Transactions {
 
-	//accounts := []eos.AccountName{
-	//	eos.AccountName("eosio"),
-	//	eos.AccountName("eosio.msig"),
-	//	eos.AccountName("eosio.disco"),
-	//	eos.AccountName("eosio.token"),
-	//}
-	//actions = ActionMap{}
-	//for _, account := range accounts {
-	//	fmt.Printf("Fecthing actions for account [%s]\n", account)
-	//	//out, err := b.Network.SeedNetAPI.GetTransactions(account)
-	//	out, err := b.TargetNetAPI.GetTransactions(account)
-	//	if err != nil {
-	//		err = fmt.Errorf("fectching transactions for [%s] account, %s", account, err)
-	//	}
-	//
-	//	for _, tx := range out.Transactions {
-	//		for _, action := range tx.Transaction.Transaction.Actions {
-	//
-	//			key := hex.EncodeToString(action.HexData)
-	//			fmt.Printf("action [%s]\n", action.Name)
-	//			if action.Name == "setcode" {
-	//				fmt.Printf("action [%s] key : %s\n", action.Name, key)
-	//			}
-	//			//data, err := json.Marshal(action)
-	//			//assert.NoError(t, err)
-	//			//fmt.Println("Data  : ", string(data))
-	//			//if collision, ok := actions[key]; ok {
-	//			//	cdata, err := json.Marshal(collision)
-	//			//	assert.NoError(t, err)
-	//			//	fmt.Println("CData : ", string(cdata))
-	//			//	fmt.Println("Found a colision")
-	//			//}
-	//
-	//			actions[key] = append(actions[key], action)
-	//		}
-	//	}
-	//}
-	//return
+			patchData := blockTransaction.Trx[1]
+			var packedTransaction eos.PackedTransaction
+			fmt.Println("Packed Trx: ", packedTransaction)
+			err := json.Unmarshal(patchData, &packedTransaction)
+			if err != nil {
+				return fmt.Errorf("patching tx, %s", err)
+			}
+			signedTransaction, err := packedTransaction.Unpack()
+
+			if err != nil {
+				return fmt.Errorf("unpacking transaction, %s", err)
+			}
+
+			for _, action := range signedTransaction.Actions {
+
+				data, err := eos.MarshalBinary(action)
+				if err != nil {
+					return fmt.Errorf("creating key with action, %s", err)
+				}
+
+				hexData := hex.EncodeToString(data)
+
+				if _, ok := bootSeqActionMap[hexData]; !ok {
+
+					validationErrors = append(validationErrors, ValidationError{
+						BlockNumber:       blockCount,
+						PackedTransaction: packedTransaction,
+						Action:            *action,
+						ActionHexData:     hexData,
+						Index:             actionCount,
+					})
+				}
+
+				actionCount++
+
+				fmt.Printf("Verifing action [%s] [%d] of [%d] from block [%d]\n", action.Name, actionCount, expectedActionCount, blockCount)
+			}
+		}
+
+		blockCount++
+
+	}
+
+	if len(validationErrors) > 0 {
+		return ValidationErrors{Errors: validationErrors}
+	}
+
+	return nil
 }
 
 func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
