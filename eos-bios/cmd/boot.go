@@ -42,6 +42,7 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 		}
 
 		b.SingleOnly = viper.GetBool("single")
+		b.OverrideBootSequenceFile = viper.GetString("override-bootseq")
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
@@ -57,8 +58,13 @@ func init() {
 	RootCmd.AddCommand(bootCmd)
 
 	bootCmd.Flags().BoolP("single", "s", false, "Don't try to discover the world, just boot a local instance.")
+	bootCmd.Flags().StringP("override-bootseq", "", "", "Override the boot_sequence.yaml file with a local file path (don't used the published one)")
 
 	if err := viper.BindPFlag("single", bootCmd.Flags().Lookup("single")); err != nil {
+		panic(err)
+	}
+
+	if err := viper.BindPFlag("override-bootseq", bootCmd.Flags().Lookup("override-bootseq")); err != nil {
 		panic(err)
 	}
 }

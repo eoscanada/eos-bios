@@ -193,20 +193,22 @@ func (op *OpCreateProducers) ResetTestnetOptions() {
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
-		newAccount := system.NewNewAccount(AN("eosio"), AN(prod.AccountName()), ecc.PublicKey{}) // pubkey overridden just below
-
+		prodName := AN(prod.AccountName())
+		newAccount := system.NewNewAccount(AN("eosio"), prodName, ecc.PublicKey{}) // overridden just below
 		newAccount.ActionData = eos.NewActionData(system.NewAccount{
 			Creator: AN("eosio"),
 			Name:    AN(prod.AccountName()),
 			Owner:   prod.Discovery.TargetInitialAuthority.Owner,
 			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
+		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
+		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(1000), eos.NewEOSAsset(1000), false)
 
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
 		// fmt.Println("Some JSON", string(mama))
 
 		fmt.Printf("- Creating new account %q\n", prod.AccountName())
-		out = append(out, newAccount)
+		out = append(out, newAccount, buyRAMBytes, delegateBW)
 
 		if op.TestnetEnrichProducers {
 			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName())

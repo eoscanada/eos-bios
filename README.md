@@ -244,8 +244,11 @@ TODO
 
 * Implement `eos-bios boot --reset` or something.. through eosio.disco::delgenesis
 
+* Dedupe the p2p-address in join and mesh..
+
 * create the "RAM" currency, issue an initial base ? is it with `setram` ?
 * call `setram`, agree on it.. start with 32GB ?
+* what happens if you `buyrambytes` and there's no `RAM` curreny ? what's the state of it ?
 
 * delegatebw, from/to eosio, do the transfer with it ?
 

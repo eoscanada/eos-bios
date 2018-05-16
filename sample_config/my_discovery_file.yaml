@@ -46,8 +46,8 @@ target_initial_authority:
 
 target_contents:
   - name: boot_sequence.yaml
-    ref: /ipfs/QmdNbPrn8zFPN3obHhddMzj9SMpw642AAe411gQYi4PSxW
-    comment: "Includes eosio.disco. Does kill accounts at the end. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
+    ref: /ipfs/QmeYU9FUpBiudQktqUTGetdWjmGEvg42agnZJoSAJu1LGB
+    comment: "Includes eosio.disco. Does kill accounts at the end. Sets RAM. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
     comment: "Snapshot at period 290."
@@ -61,8 +61,8 @@ target_contents:
     ref: /ipfs/QmW7rfu2kYk5NruE29mm3nCXaVDdh9ux5SzSwRMSFQkHMC
     comment: "Published by EOS Canada. Tag dawn-v4.0.0"
   - name: eosio.system.abi
-    ref: /ipfs/QmVEPwn5F3L71f2oaqoVoX5i5621pLPi1YmNK3Etwq2Mcy
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    ref: /ipfs/QmRHMynNSDwKAuCyHXk9Eb1MsFMMWJvFauFfNmU5zmiDaA
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0. Patched with fixes in b2c417bfe9ca and 27cf18be5a19e."
   - name: eosio.system.wasm
     ref: /ipfs/QmY17qqyjamvAwjoX1J9SgXThk5AUJBwhyPfnaNeHKpZjv
     comment: "Published by EOS Canada. Tag dawn-v4.0.0"

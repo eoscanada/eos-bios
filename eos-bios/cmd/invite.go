@@ -52,6 +52,49 @@ var inviteCmd = &cobra.Command{
 				eos.AccountName(args[0]),
 				publicKey,
 			),
+			system.NewDelegateBW(
+				eos.AccountName(net.MyPeer.Discovery.SeedNetworkAccountName),
+				eos.AccountName(args[0]),
+				eos.NewEOSAsset(1000),
+				eos.NewEOSAsset(1000),
+				false,
+			),
+			/* "actions": [
+      {
+        "account": "eosio",
+        "name": "newaccount",
+        "authorization": [
+          {
+            "actor": "eoscanadacom",
+            "permission": "active"
+          }
+        ],
+        "data": "202932c94c833055000000d3757730550100000001000264d39e1bb1fc7f2519046f1c35329f49e21c832eb3fd00a0b1e3433b2323d8b7010000000100000001000264d39e1bb1fc7f2519046f1c35329f49e21c832eb3fd00a0b1e3433b2323d8b701000000"
+      },
+      {
+        "account": "eosio",
+        "name": "buyrambytes",
+        "authorization": [
+          {
+            "actor": "eoscanadacom",
+            "permission": "active"
+          }
+        ],
+        "data": "202932c94c833055000000d37577305500200000"
+      },
+      {
+        "account": "eosio",
+        "name": "delegatebw",
+        "authorization": [
+          {
+            "actor": "eoscanadacom",
+            "permission": "active"
+          }
+        ],
+        "data": "202932c94c833055000000d375773055102700000000000004454f5300000000102700000000000004454f530000000001"
+      }
+    ],
+ */
 		)
 		if err != nil {
 			log.Fatalln("creating account:", err)

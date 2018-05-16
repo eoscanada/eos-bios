@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc64"
+	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
@@ -24,8 +25,9 @@ type BIOS struct {
 	// be cloned a few time to have a full schedule of 21 producers.
 	MyPeers []*Peer
 
-	SingleOnly bool
-	Log        *Logger
+	SingleOnly               bool
+	OverrideBootSequenceFile string
+	Log                      *Logger
 
 	LaunchDisco  *disco.Discovery
 	TargetNetAPI *eos.API
@@ -89,9 +91,19 @@ func (b *BIOS) Init() error {
 		return err
 	}
 
-	rawBootSeq, err := b.Network.ReadFromCache(bootseqFile)
-	if err != nil {
-		return fmt.Errorf("reading boot_sequence file: %s", err)
+	var rawBootSeq []byte
+	if b.OverrideBootSequenceFile != "" {
+		fmt.Printf("Using overridden boot sequence from %q\n", b.OverrideBootSequenceFile)
+
+		rawBootSeq, err = ioutil.ReadFile(b.OverrideBootSequenceFile)
+		if err != nil {
+			return fmt.Errorf("reading overridden boot_sequence file: %s", err)
+		}
+	} else {
+		rawBootSeq, err = b.Network.ReadFromCache(bootseqFile)
+		if err != nil {
+			return fmt.Errorf("reading boot_sequence file: %s", err)
+		}
 	}
 
 	var bootSeq struct {
@@ -250,6 +262,8 @@ func (b *BIOS) RunBootSequence() error {
 
 	fmt.Println(b.TargetNetAPI.Signer.AvailableKeys())
 
+	// eos.Debug = true
+
 	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
@@ -261,9 +275,11 @@ func (b *BIOS) RunBootSequence() error {
 		if len(acts) != 0 {
 			for idx, chunk := range chunkifyActions(acts, 400) { // transfers max out resources higher than ~400
 				err := retry(5, 500*time.Millisecond, func() error {
-					_, err = b.TargetNetAPI.SignPushActions(chunk...)
+					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
-						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+						if !strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
+							return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+						}
 					}
 					return nil
 				})

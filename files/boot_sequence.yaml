@@ -58,16 +58,25 @@ boot_sequence:
   label: Creating the EOS currency symbol
   data:
     account: eosio
-    amount: 1000000000.0000 EOS
+    amount: 2500000000.0000 EOS  # Accounting for 5% inflation, for the next 50 years (end of uint32 block_num).
     can_whitelist: false
     can_freeze: false
     can_recall: false
+
+- op: token.create
+  label: Creating the RAM currency symbol
+  data:
+    account: eosio
+    amount: "35184372088832 RAM"  # 32 TB RAM max supply.. we'll see how that goes.
+    can_whitelist: false
+    can_freeze: false
+    can_recall: true
 
 - op: token.issue
   label: Issuing initial EOS monetary base
   data:
     account: eosio
-    amount: 1000000000.0000 EOS
+    amount: 1000000000.0000 EOS  # 1B coins, as per distribution model.
     memo: "Initial issuance"
 
 - op: producers.create_accounts
@@ -88,6 +97,11 @@ boot_sequence:
   data:
     account: eosio
     contract_name_ref: eosio.system
+
+- op: system.setram
+  label: Set initial RAM available
+  data:
+    max_ram_size: 25769803776  # 24 GB
 
 - op: system.destroy_accounts
   label: Disabling authorization for system accounts
