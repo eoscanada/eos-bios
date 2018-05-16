@@ -353,13 +353,22 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 	return
 }
 
-func (net *Network) GetBlockHeight(height uint64) (blockhash string, err error) {
-	resp, err := net.SeedNetAPI.GetBlockByNum(height)
+func (net *Network) GetBlockHeight(height uint32) (blockhash string, err error) {
+	resp, err := net.SeedNetAPI.GetBlockByNum(uint64(height))
 	if err != nil {
 		return "", err
 	}
 
 	return resp.ID, nil
+}
+
+func (net *Network) GetLastBlockNum() (blockNum uint32, err error) {
+	info, err := net.SeedNetAPI.GetInfo()
+	if err != nil {
+		return 0, err
+	}
+
+	return info.HeadBlockNum, nil
 }
 
 func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err error) {

@@ -29,22 +29,21 @@ func numConnectionsRequired(numberOfNodes int) int {
 func (b *BIOS) computeMyMeshP2PAddresses() []string {
 	otherPeers := []string{}
 	otherPeersMap := map[string]bool{}
-	if len(b.MyPeers) > 0 {
-		myFirstPeer := b.MyPeers[0]
-		myPosition := -1
-		for idx, peer := range b.ShuffledProducers {
-			if myFirstPeer.AccountName() == peer.AccountName() {
-				myPosition = idx
-			}
+	myPosition := -1
+	for idx, peer := range b.ShuffledProducers {
+		// TODO: fix this.. are we checking seednetwork peers or target network peers ?
+		// I guess it doesn't really matter here?
+		if b.Network.MyPeer.AccountName() == peer.AccountName() {
+			myPosition = idx
 		}
-		if myPosition != -1 {
-			peerIDs := getPeerIndexesToMeshWith(len(b.ShuffledProducers), myPosition)
-			for idx, peer := range b.ShuffledProducers {
-				p2pAddr := peer.Discovery.TargetP2PAddress
-				if peerIDs[idx] && !otherPeersMap[p2pAddr] {
-					otherPeers = append(otherPeers, p2pAddr)
-					otherPeersMap[p2pAddr] = true
-				}
+	}
+	if myPosition != -1 {
+		peerIDs := getPeerIndexesToMeshWith(len(b.ShuffledProducers), myPosition)
+		for idx, peer := range b.ShuffledProducers {
+			p2pAddr := peer.Discovery.TargetP2PAddress
+			if peerIDs[idx] && !otherPeersMap[p2pAddr] {
+				otherPeers = append(otherPeers, p2pAddr)
+				otherPeersMap[p2pAddr] = true
 			}
 		}
 	}

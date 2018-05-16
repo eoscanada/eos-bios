@@ -234,7 +234,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	privKey := ephemeralPrivateKey.String()
 
-	fmt.Printf("Generated ephemeral keys: pub=%s priv=%s..%s\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
+	fmt.Printf("Generated ephemeral keys:\n\tPublic key: %s\n\tPrivate key: %s..%s\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
@@ -244,12 +244,16 @@ func (b *BIOS) RunBootSequence() error {
 	genesisData := b.GenerateGenesisJSON(pubKey.String())
 
 	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.SingleOnly {
+
+		fmt.Printf("Publishing genesis data to the seed network... ")
 		_, err := b.Network.SeedNetAPI.SignPushActions(
 			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
 		)
 		if err != nil {
+			fmt.Println("")
 			return fmt.Errorf("updating genesis on seednet: %s", err)
 		}
+		fmt.Println(" done")
 
 		if err = b.DispatchBootPublishGenesis(genesisData); err != nil {
 			return fmt.Errorf("dispatch boot_publish_genesis hook: %s", err)
@@ -273,7 +277,7 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts, 400) { // transfers max out resources higher than ~400
+			for idx, chunk := range chunkifyActions(acts, 250) { // transfers max out resources higher than ~400
 				err := retry(5, 500*time.Millisecond, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
@@ -440,28 +444,36 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 }
 
 func (b *BIOS) waitLaunchBlock() rand.Source {
-	for {
-		// GET INFO and check if the block is the right height, otherwise, give a prediction of
-		// when it will arrive :) countdown!
-		hash, err := b.Network.GetBlockHeight(b.LaunchDisco.SeedNetworkLaunchBlock)
-		if err != nil {
-			fmt.Println("couldn't fetch seed network block:", err)
-		} else {
+	targetBlockNum := uint32(b.LaunchDisco.SeedNetworkLaunchBlock)
 
-			if hash == "" {
-				fmt.Println("block", b.LaunchDisco.SeedNetworkLaunchBlock, "not produced yet..")
-			} else {
-				bytes, err := hex.DecodeString(hash)
-				if err != nil {
-					fmt.Printf("block id is invalid hex: %q\n", hash)
-				} else {
-					chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
-					return rand.NewSource(int64(chksum))
-				}
-			}
+	fmt.Println("Polling seed network until launch block, target:", targetBlockNum)
+
+	for {
+		lastBlockNum, err := b.Network.GetLastBlockNum()
+		if err != nil {
+			fmt.Println("error fetching seed network's latest block num:", err)
 		}
 
-		time.Sleep(2 * time.Second)
+		if lastBlockNum < targetBlockNum {
+			fmt.Printf("- not yet, %d seconds to go\n", (targetBlockNum-lastBlockNum)/2)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// GET INFO and check if the block is the right height, otherwise, give a prediction of
+		// when it will arrive :) countdown!
+		hash, err := b.Network.GetBlockHeight(targetBlockNum)
+		if err != nil {
+			fmt.Println("error fetching seed network's target block height:", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		fmt.Println("- got block", targetBlockNum, "- hash is", hash)
+		bytes, _ := hex.DecodeString(hash)
+		chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
+		return rand.NewSource(int64(chksum))
+
 	}
 }
 

@@ -42,7 +42,7 @@ func (b *BIOS) DispatchBootConnectMesh(otherPeers []string) error {
 func (b *BIOS) DispatchJoinNetwork(genesis *GenesisJSON, peerDefs []*Peer, otherPeers []string) error {
 	var names []string
 	for _, peer := range peerDefs {
-		names = append(names, peer.AccountName())
+		names = append(names, string(peer.Discovery.TargetAccountName))
 	}
 
 	cnt, err := json.Marshal(genesis)
