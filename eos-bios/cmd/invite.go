@@ -52,6 +52,10 @@ var inviteCmd = &cobra.Command{
 				eos.AccountName(args[0]),
 				publicKey,
 			),
+			system.NewBuyRAMBytes(
+				eos.AccountName(net.MyPeer.Discovery.SeedNetworkAccountName),
+				eos.AccountName(args[0]),
+				8192),
 			system.NewDelegateBW(
 				eos.AccountName(net.MyPeer.Discovery.SeedNetworkAccountName),
 				eos.AccountName(args[0]),
