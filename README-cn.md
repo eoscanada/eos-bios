@@ -1,6 +1,9 @@
 基于EOS.IO的区块链网络启动工具
 --------------------------------------------------------
 
+#### v1.0 ZhaoYu from EosLaoMao
+#### v1.1 Ian(Yahuang Wu) from MEET.ONE
+
 [Click me switch to English version](./README.md)
 
 `eos-bios` 是一个命令行工具，给那些想要启动基于EOS.IO的区块链网络的人而准备.
