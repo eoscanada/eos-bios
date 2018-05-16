@@ -2,7 +2,7 @@
 --------------------------------------------------------
 
 #### v1.0 ZhaoYu from EosLaoMao
-#### v1.1 Ian(Yahuang Wu) from MEET.ONE
+#### v2.0 Ian(Yahuang Wu) from MEET.ONE
 
 [Click me switch to English version](./README.md)
 
@@ -123,7 +123,7 @@ target_http_address: http://localhost:8888
 
     ./eos-bios discover
 
-将会打印出节点的信息, 权重等.
+将会打印出节点的信息, 比如节点权重等.
 
 
 Network peers
@@ -169,93 +169,44 @@ Example flow and interventions in the orchestrated launch
 
 
 
-Install / Download
+安装 / 下载
 ------------------
 
-You can download the latest release here:
-https://github.com/eoscanada/eos-bios/releases .. it is a single
-binary that you can download on all major platforms. Simply make
-executable and run. It has zero dependencies.
+你可以在这里下载到最新的版本: https://github.com/eoscanada/eos-bios/releases 该工具是一个单独的二进制文件，支持主流的操作系统。该工具没有其他依赖，只需被赋予可执行权限，即可运行。
 
-Alternatively, you can build from source with:
+当然，你也可以自行编译（Go 语言）：:
 
     go get -v github.com/eoscanada/eos-bios/eos-bios
 
-This will install the binary in `~/go/bin` provided you have the Go
-tool installed (quick install at https://golang.org/dl)
+编译成功之后，可执行文件将默认安装到 ~/go/bin 目录下（安装Go请查阅https://golang.org/dl）
 
 
 
-Join the discussion
+
+加入讨论
 -------------------
 
-On Telegram through this invite link:
-https://t.me/joinchat/GSUv1UaI5QIuifHZs8k_eA (EOSIO BIOS Boot channel)
+加入我们的电报群: https://t.me/joinchat/GSUv1UaI5QIuifHZs8k_eA (EOSIO BIOS Boot channel)
 
 
 
-Previous proposition
+以前的想法
 --------------------
 
-See the previous proposition in this repo in README.v0.md
+可以在README.v0.md找到之前的一些想法.
 
 
 
-Readiness checklist
+准备启动前的检查事项
 -------------------
 
-* Did I update my `target_p2p_address` to reflect the IP of the NEW network we're booting ?
-* Did I update my `target_http_address` to point to my node, reachable from `eos-bios`'s machine ?
-*
+* `target_p2p_address`是否指向我准备要运行的节点?
+* `target_http_address`是否指向我的节点，执行`eos-bios`的节点可以正常连接吗？
 
 
-Troubleshooting
+疑难杂症
 ---------------
 
-* Do your `PRIVKEY` and `PUBKEY` in `hook_join_network.sh` match what
-  you published in your discovery file under
-  `target_initial_authority` and `target_initial_block_signing_key` ?
+* `hook_join_network.sh`中的`PRIVKEY`和`PUBKEY`是否跟`discovery_file.yaml`文件中的`target_initial_authority` and `target_initial_block_signing_key`匹配?
 
-* Forked ? Did someone point to an old p2p address ? If so, removed
-  them from the network.
-
-
-
-TODO
-----
-
-* In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
-
-  * Find out what we do for the chain_id.. do we vote for it too ?
-    Top 20% must agree on the chain_id ?
-    Top 20% must agree on the constitution ?
-
-* boot_connect_mesh: Make sure we don't mesh with the first BIOS boot..
-  it's most probably not running..
-
-* Do connectivity checks when doing `discovery`.. and get a report upon orchestration
-  that the peers are up ?
-
-* Implement `eos-bios boot --reset` or something.. through eosio.disco::delgenesis
-
-* create the "RAM" currency, issue an initial base ? is it with `setram` ?
-* call `setram`, agree on it.. start with 32GB ?
-
-* delegatebw, from/to eosio, do the transfer with it ?
-
-* undelegatebw never removes my "voters" entry.. sunk forever ?
-
-
-
-Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
-----       ------------  -----------   ------  ----------------  ------------
-BIOS NODE  eosmama       eoscanadacom  10      1112211           500 (Fri Nov 7th 23:36, local time)
-ABP 01     eosmarc       eosmarc       5       1111112           572 (Fri Nov 8th 00:25, local time)
-ABP 02     eosrita       eosrita       2       1111111           572 (Fri Nov 8th 00:25, local time)
-ABP 03     eosguy        eosguy        1       1111111           572 (Fri Nov 8th 00:25, local time)
-ABP 04     eosbob        eosbob        1
-
-Contents disagreements:
-* About column 4: `boot_sequence.yaml`
-  * eosmarc, eoscanadacom, eospouet says 1: /ipfs/Qmakjdsflakjdslfkjaldsfk
-  * eosmama says 2: /ipfs/Qmhellkajdlakjdsflkj
+* 是否指向了一个旧的P2P地址?
