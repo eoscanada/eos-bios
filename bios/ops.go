@@ -295,11 +295,11 @@ type OpSetProds struct{}
 
 func (op *OpSetProds) ResetTestnetOptions() {}
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
-	prodkeys := []system.ProducerKey{system.ProducerKey{
-		ProducerName:    AN("eosio"),
-		BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
-	}}
-	// prodkeys := []system.ProducerKey{}
+	// prodkeys := []system.ProducerKey{system.ProducerKey{
+	// 	ProducerName:    AN("eosio"),
+	// 	BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
+	// }}
+	prodkeys := []system.ProducerKey{}
 	for _, prod := range b.ShuffledProducers {
 		prodkeys = append(prodkeys, system.ProducerKey{prod.Discovery.TargetAccountName, prod.Discovery.TargetAppointedBlockProducerSigningKey})
 		if len(prodkeys) >= 21 {

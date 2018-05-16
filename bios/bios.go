@@ -264,12 +264,14 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
+	fmt.Println("In-memory keys:")
 	fmt.Println(b.TargetNetAPI.Signer.AvailableKeys())
+	fmt.Println("")
 
 	// eos.Debug = true
 
 	for _, step := range b.BootSequence {
-		fmt.Printf("%s  [%s]\n", step.Label, step.Op)
+		fmt.Printf("%s  [%s] ", step.Label, step.Op)
 
 		acts, err := step.Data.Actions(b)
 		if err != nil {
@@ -289,8 +291,10 @@ func (b *BIOS) RunBootSequence() error {
 					return nil
 				})
 				if err != nil {
+					fmt.Printf(" error\n")
 					return err
 				}
+				fmt.Printf(" done\n")
 			}
 		}
 	}
