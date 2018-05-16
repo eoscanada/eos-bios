@@ -7,3 +7,5 @@ sample_config/env.sh
 eosio.disco/copy.sh
 /stage*
 cbillett_config
+.idea/
+
