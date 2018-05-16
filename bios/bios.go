@@ -234,7 +234,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	privKey := ephemeralPrivateKey.String()
 
-	fmt.Printf("Generated ephemeral keys:\n\tPublic key: %s\n\tPrivate key: %s..%s\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
+	fmt.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
@@ -281,9 +281,10 @@ func (b *BIOS) RunBootSequence() error {
 				err := retry(5, 500*time.Millisecond, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
-						if !strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
-							return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
+							return nil
 						}
+						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 					}
 					return nil
 				})
