@@ -81,7 +81,7 @@ target_http_address: http://localhost:8888
 ### 练习加入网络
 
 
-让[种子网络](#seed-networks)里面的任何一个人邀请你，他们会执行:
+让[种子网络](#seed-networks)里面的任何一个人邀请你，他们需要执行:
 
     ./eos-bios invite [youraccount] [your pubkey]
 
@@ -99,7 +99,7 @@ target_http_address: http://localhost:8888
 * `target_http_address` 你当前正在启动的节点HTTP地址.
 * `target_p2p_address` 你当前正在启动的节点P2P地址.
 * `target_appointed_block_producer_signing_key` and `target_initial_authority`: 这两个是跟你账户相关的授权信息.
-* `seed_network_peers` [点击查看细节](#network-peers).
+* `seed_network_peers` [点击查看细节](#network-peers)
 
 其他比较重要的字段:
 * `seed_network_launch_block` 种子网络启动时的区块高度.
@@ -141,7 +141,7 @@ seed_network_peers:
   weight: 20
 ```
 这个代表着你同意跟`eosexample`(10%的权重),`eosmore`(20%的权重)一起启动网络,`eos-bios`将会基于这些信息计算出网络结构.
-这两个账户都是种子网络中用来启动网络的。
+这两个账户都是种子网络中的。
 
 
 种子网络
@@ -149,18 +149,6 @@ seed_network_peers:
 
 这个列表是`eos-bios`启动的不同阶段的种子网络，我们会持续更新.
 https://stages.eoscanada.com
-
-
-
-Example flow and interventions in the orchestrated launch
----------------------------------------------------------
-
-1. Everyone runs `eos-bios orchestrate`.
-1. `eos-bios` downloads the network topology pointed to by your `my_discovery_file.yaml`, as does everyone.
-1. The network topology is sorted by weight according to how people voted in their `peers` section.
-1. The `launch_ethereum_block` is taken from the top 20% in the topology: if they all agree, with continue with that number. Otherwise, we wait until they do (and periodically retraverse the network graph)
-
-
 
 
 安装 / 下载
