@@ -254,6 +254,10 @@ TODO
 
 * undelegatebw never removes my "voters" entry.. sunk forever ?
 
+* Display time of the launch block (or delta)
+
+* If launch block doesn't exist, give me the last :)
+
 
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)

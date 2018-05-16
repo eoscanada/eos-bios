@@ -460,28 +460,30 @@ func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 
 	bootNode := b.ShuffledProducers[0]
 
-	fmt.Printf("Polling...\n")
+	fmt.Printf("Polling..")
 	for {
 		time.Sleep(500 * time.Millisecond)
 
+		fmt.Printf(".")
 		genesisData, err := b.Network.PollGenesisTable(bootNode.Discovery.SeedNetworkAccountName)
 		if err != nil {
-			fmt.Printf("- data not ready: %s\n", err)
+			b.Log.Debugf("\n- data not ready: %s", err)
 			continue
 		}
 
 		if len(genesisData) == 0 {
-			fmt.Printf("- data still empty\n")
+			b.Log.Debugf("\n- data still empty")
+			continue
 		}
 
 		err = json.Unmarshal([]byte(genesisData), &genesis)
 		if err != nil {
-			fmt.Printf("- data not valid: %q (err=%s)\n", err, genesisData)
+			b.Log.Debugf("\n- data not valid: %q (err=%s)", err, genesisData)
 			continue
 		}
 
-		fmt.Println("Got genesis data:")
 		fmt.Println("")
+		fmt.Println("Got genesis data:")
 		fmt.Println("    ", genesisData)
 		fmt.Println("")
 
