@@ -46,7 +46,7 @@ target_initial_authority:
 
 target_contents:
   - name: boot_sequence.yaml
-    ref: /ipfs/QmeYU9FUpBiudQktqUTGetdWjmGEvg42agnZJoSAJu1LGB
+    ref: /ipfs/QmYvDaKwNTTRXUNUqUPmmTXUuanfQ7GqA6Ps45e96Hw96p
     comment: "Includes eosio.disco. Does kill accounts at the end. Sets RAM. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
