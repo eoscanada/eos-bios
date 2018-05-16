@@ -126,10 +126,10 @@ target_http_address: http://localhost:8888
 将会打印出节点的信息, 比如节点权重等.
 
 
-Network peers
+网络同步
 -------------
 
-The `seed_network_peers` section of your discovery file looks like this:
+discovery文件中的`seed_network_peers`段落看起来是这样的:
 
 ```
 seed_network_peers:
@@ -140,20 +140,14 @@ seed_network_peers:
   comment: "They are better"
   weight: 20
 ```
-
-This means you are comfortable launching the network with both
-`eosexample` (at 10% vote weight), and `eosmore` (at 20%). `eos-bios`
-will compute a graph of the network based on that peering information.
-
-These are all account names on the seed network used to boot a new
-network.
+这个代表着你同意跟`eosexample`(10%的权重),`eosmore`(20%的权重)一起启动网络,`eos-bios`将会基于这些信息计算出网络结构.
+这两个账户都是种子网络中用来启动网络的。
 
 
-Seed networks
+种子网络
 -------------
 
-We keep an updated list of the different stages launched with `eos-bios` here:
-
+这个列表是`eos-bios`启动的不同阶段的种子网络，我们会持续更新.
 https://stages.eoscanada.com
 
 
