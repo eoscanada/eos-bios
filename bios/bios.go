@@ -307,6 +307,15 @@ func (b *BIOS) RunBootSequence() error {
 	return nil
 }
 
+func (b *BIOS) getMyPeerVariations() (out []*Peer) {
+	for _, prod := range b.ShuffledProducers {
+		if prod.Discovery.SeedNetworkAccountName == b.Network.MyPeer.Discovery.SeedNetworkAccountName {
+			out = append(out, prod)
+		}
+	}
+	return
+}
+
 func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if b.Genesis == nil {
 		if b.SingleOnly {
@@ -325,7 +334,7 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	// Create mesh network
 	otherPeers := b.computeMyMeshP2PAddresses()
 
-	if err := b.DispatchJoinNetwork(b.Genesis, b.MyPeers, otherPeers); err != nil {
+	if err := b.DispatchJoinNetwork(b.Genesis, b.getMyPeerVariations(), otherPeers); err != nil {
 		return fmt.Errorf("dispatch join_network hook: %s", err)
 	}
 
@@ -432,6 +441,8 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 func (b *BIOS) waitLaunchBlock() rand.Source {
 	for {
+		// GET INFO and check if the block is the right height, otherwise, give a prediction of
+		// when it will arrive :) countdown!
 		hash, err := b.Network.GetBlockHeight(b.LaunchDisco.SeedNetworkLaunchBlock)
 		if err != nil {
 			fmt.Println("couldn't fetch seed network block:", err)

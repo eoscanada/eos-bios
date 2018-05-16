@@ -193,11 +193,11 @@ func (op *OpCreateProducers) ResetTestnetOptions() {
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
-		prodName := AN(prod.AccountName())
+		prodName := prod.Discovery.TargetAccountName
 		newAccount := system.NewNewAccount(AN("eosio"), prodName, ecc.PublicKey{}) // overridden just below
 		newAccount.ActionData = eos.NewActionData(system.NewAccount{
 			Creator: AN("eosio"),
-			Name:    AN(prod.AccountName()),
+			Name:    prodName,
 			Owner:   prod.Discovery.TargetInitialAuthority.Owner,
 			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
@@ -207,12 +207,12 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
 		// fmt.Println("Some JSON", string(mama))
 
-		fmt.Printf("- Creating new account %q\n", prod.AccountName())
+		fmt.Printf("- Creating new account %q\n", prodName)
 		out = append(out, newAccount, buyRAMBytes, delegateBW)
 
 		if op.TestnetEnrichProducers {
-			fmt.Printf("  DEBUG: Enriching producer %q\n", prod.AccountName())
-			out = append(out, token.NewTransfer(AN("eosio"), AN(prod.AccountName()), eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
+			fmt.Printf("  DEBUG: Enriching producer %q\n", prodName)
+			out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
 		}
 	}
 	return
@@ -301,7 +301,7 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	}}
 	// prodkeys := []system.ProducerKey{}
 	for _, prod := range b.ShuffledProducers {
-		prodkeys = append(prodkeys, system.ProducerKey{AN(prod.AccountName()), prod.Discovery.TargetAppointedBlockProducerSigningKey})
+		prodkeys = append(prodkeys, system.ProducerKey{prod.Discovery.TargetAccountName, prod.Discovery.TargetAppointedBlockProducerSigningKey})
 		if len(prodkeys) >= 21 {
 			break
 		}
