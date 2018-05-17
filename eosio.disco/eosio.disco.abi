@@ -175,7 +175,7 @@
           "type": "discovery_file"
         },{
           "name": "updated_at",
-          "type": "time"
+          "type": "time_point_sec"
         }
       ]
     },
