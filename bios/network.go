@@ -91,9 +91,11 @@ func (net *Network) UpdateGraph() error {
 }
 
 func (net *Network) fetchSingleNode() error {
+	eosioDisco := *net.MyPeer.Discovery
+	eosioDisco.TargetAccountName = eos.AccountName("eosio")
 	newPeer := &Peer{
 		UpdatedAt: time.Now(),
-		Discovery: net.MyPeer.Discovery,
+		Discovery: &eosioDisco,
 	}
 	net.allNodes.AddNode(newPeer)
 

@@ -85,8 +85,8 @@ target_contents:
     comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
 
   - name: eosio.disco.abi
-    ref: /ipfs/QmdtgEzi9qbiMLBv8cm5CeMFWUPDWuJFpgfnCMjqsdKHwz
-    comment: "Published by EOS Canada. eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"
+    ref: /ipfs/QmRMmJwo78CVuqUhM6qivfMX96fdgRcFvv6xN9Fnq6Yccm
+    comment: "Published by EOS Canada. eos-bios revision 3a486e3f70157fd75557cebcfb420115e049651e"
   - name: eosio.disco.wasm
     ref: /ipfs/QmUNo5jMFn1BqT8msuw7ZtW37d1FP2PJSeWu7fDQ7H4Syn
     comment: "Published by EOS Canada. eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"

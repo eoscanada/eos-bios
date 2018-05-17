@@ -9,7 +9,6 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"os"
 	"strings"
 	"time"
 
@@ -350,80 +349,39 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	if verify {
 		fmt.Println("###############################################################################################")
 		fmt.Println("Launching chain verification")
-		fmt.Println("")
-		fmt.Println("  - VALIDATION IS BEING IMPLEMENTED BY CHARLES ! Give him a day or so ! :)")
-		fmt.Println("")
-		fmt.Println("DONE")
-		os.Exit(0)
 
-		seedActionMap, err := b.fetchActions()
-		if err != nil {
-			return fmt.Errorf("verifing, fetching actions from seed, %s", err)
-		}
-
-		fmt.Println("Seed actions found: ", len(seedActionMap))
+		bootSeqActionMap := ActionMap{}
+		bootSeqActionHexList := []string{}
 
 		for _, step := range b.BootSequence {
-			fmt.Printf("%s  [%s]\n", step.Label, step.Op)
 
 			acts, err := step.Data.Actions(b)
 			if err != nil {
-				return fmt.Errorf("verifing, getting actions for step %q: %s", step.Op, err)
+				return fmt.Errorf("verifing: getting actions for step %q: %s", step.Op, err)
 			}
 
 			for _, stepAction := range acts {
-				//fmt.Println("Verifying action type: ", reflect.TypeOf(stepAction.Data))
-				data, err := eos.MarshalBinary(stepAction.Data)
+				data, err := eos.MarshalBinary(stepAction)
 				if err != nil {
-					return fmt.Errorf("verifying, marshalBinary, %s", err)
+					return fmt.Errorf("verifying: binary marshalling: %s", err)
 				}
+				stepAction.SetToServer(false)
 				key := hex.EncodeToString(data)
-				//fmt.Println("verifying key : ", key)
 
-				if seedAction, ok := seedActionMap[key]; !ok {
-					//return fmt.Errorf("verify, step action [%s] does not validate", stepAction.Name)
-					fmt.Printf("✘ verify, step action [%s] does not validate\n", stepAction.Name)
-				} else {
-					fmt.Printf("✔ action [%s] verified\n", seedAction[0].Name)
+				bootSeqActionHexList = append(bootSeqActionHexList, key)
+				if _, ok := bootSeqActionMap[key]; ok {
+					// TODO: don't fatal here plz :)
+					log.Fatalf("Collision detected action [%s] with key [%s]\n", stepAction.Name, key)
 				}
+				bootSeqActionMap[key] = stepAction
 			}
 
-		}
-
-		//***********************************************************************
-		//***********************************************************************
-		log.Fatal("let's crash!")
-		//***********************************************************************
-		//***********************************************************************
-
-		// Grab all the blocks from the chain
-		// Compare each action, find it in our list
-		// Use an ordered map ?
-
-		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
-		for {
-			time.Sleep(1 * time.Second)
-			acct, err := b.TargetNetAPI.GetAccount(AN("eosio"))
+			err := b.validateBootSeqActions(bootSeqActionMap, bootSeqActionHexList)
 			if err != nil {
-				fmt.Printf("e")
-				continue
+				return fmt.Errorf("BOOT SEQUENCE VALIDATION FAILED: %s", err)
 			}
-
-			if len(acct.Permissions) != 2 || acct.Permissions[0].RequiredAuth.Threshold != 0 || acct.Permissions[1].RequiredAuth.Threshold != 0 {
-				// FIXME: perhaps check that there are no keys and
-				// accounts.. that the account is *really* disabled.  we
-				// can check elsewhere though.
-				fmt.Printf(".")
-				continue
-			}
-
-			fmt.Println(" OKAY")
-			break
 		}
 
-		fmt.Println("Chain sync'd!")
-
-		// IMPLEMENT THE BOOT SEQUENCE VERIFICATION.
 		fmt.Println("")
 		fmt.Println("All good! Chain verificaiton succeeded!")
 		fmt.Println("")
@@ -431,7 +389,7 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		fmt.Println("")
 		fmt.Println("Not doing validation, the Appointed Block Producer will have done it.")
 		fmt.Println("")
-	}
+ 	}
 
 	// TODO: loop operations, check all actions against blocks that you can fetch from here.
 	// Check ALL actions, should match the orchestrated launch data:

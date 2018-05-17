@@ -194,6 +194,10 @@ func (op *OpCreateProducers) ResetTestnetOptions() {
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
 		prodName := prod.Discovery.TargetAccountName
+		if prodName == AN("eosio") {
+			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
+		}
+
 		newAccount := system.NewNewAccount(AN("eosio"), prodName, ecc.PublicKey{}) // overridden just below
 		newAccount.ActionData = eos.NewActionData(system.NewAccount{
 			Creator: AN("eosio"),
@@ -202,7 +206,7 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
 		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
-		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(1000), eos.NewEOSAsset(1000), false)
+		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(10000), eos.NewEOSAsset(10000), true)
 
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
 		// fmt.Println("Some JSON", string(mama))
@@ -301,7 +305,12 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// }}
 	prodkeys := []system.ProducerKey{}
 	for _, prod := range b.ShuffledProducers {
-		prodkeys = append(prodkeys, system.ProducerKey{prod.Discovery.TargetAccountName, prod.Discovery.TargetAppointedBlockProducerSigningKey})
+		targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
+		targetAcct := prod.Discovery.TargetAccountName
+		if targetAcct == AN("eosio") {
+			targetKey = b.EphemeralPublicKey
+		}
+		prodkeys = append(prodkeys, system.ProducerKey{targetAcct, targetKey})
 		if len(prodkeys) >= 21 {
 			break
 		}
