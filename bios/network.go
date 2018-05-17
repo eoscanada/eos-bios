@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/abourget/llerrgroup"
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/ryanuber/columnize"
@@ -238,11 +239,24 @@ func (net *Network) DownloadReferences() error {
 		return fmt.Errorf("error creating cache path: %s", err)
 	}
 
+	eg := llerrgroup.New(10)
 	for _, contentRef := range net.ipfsReferences {
-		if err := net.DownloadIPFSRef(contentRef.Reference); err != nil {
-			return fmt.Errorf("content %q: %s", contentRef.Name, err)
+		if eg.Stop() {
+			continue
 		}
+
+		contentRef := contentRef
+		eg.Go(func() error {
+			if err := net.DownloadIPFSRef(contentRef.Reference); err != nil {
+				return fmt.Errorf("content %q: %s", contentRef.Name, err)
+			}
+			return nil
+		})
 	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
