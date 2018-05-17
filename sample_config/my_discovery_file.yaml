@@ -48,36 +48,42 @@ target_contents:
   - name: boot_sequence.yaml
     ref: /ipfs/QmYvDaKwNTTRXUNUqUPmmTXUuanfQ7GqA6Ps45e96Hw96p
     comment: "Includes eosio.disco. Does kill accounts at the end. Sets RAM. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
+
   - name: snapshot.csv
     ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
     comment: "Snapshot at period 290."
   - name: snapshot_unregistered.csv
     ref: /ipfs/QmSxed6nhtDQ5EZqGXYuzTUyW4rLPcaffrYZPkPQbZMW58
     comment: "Published by EOS Canada. Period 320."
+
   - name: eosio.bios.abi
     ref: /ipfs/QmW9qDWMy3fHKD4Y6GGgkErwm6jYWBUMNV9Bav5T1jRVB4
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0. Unchanged in DAWN-2018-05-16"
   - name: eosio.bios.wasm
     ref: /ipfs/QmW7rfu2kYk5NruE29mm3nCXaVDdh9ux5SzSwRMSFQkHMC
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.0.0. Unchanged in DAWN-2018-05-16"
+
   - name: eosio.system.abi
-    ref: /ipfs/QmRHMynNSDwKAuCyHXk9Eb1MsFMMWJvFauFfNmU5zmiDaA
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0. Patched with fixes in b2c417bfe9ca and 27cf18be5a19e."
+    ref: /ipfs/Qmc8YY5NaVFntTszHhLjfkKHnWsh15B5vbRern4kLKfyhK
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
   - name: eosio.system.wasm
-    ref: /ipfs/QmY17qqyjamvAwjoX1J9SgXThk5AUJBwhyPfnaNeHKpZjv
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    ref: /ipfs/QmRK9gtyRpPgdeSUKYKD37S8nQcw12naaFaB6jpbgGiztb
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
+
   - name: eosio.msig.abi
-    ref: /ipfs/QmQUAuex2LQ6tanLDXhgL3kSAsUU9uVLjYBkZfD8NgA6vV
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    ref: /ipfs/QmVrFiGv4kJJRQJpUKyd2HeT35sKEmn6emjTqstuajGjta
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
   - name: eosio.msig.wasm
-    ref: /ipfs/QmXDoVaiH9QZkMriNgsp6urFUy2PT4x782wvryBhQbpaJY
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    ref: /ipfs/QmeHRWzwmKE73zafR4sZCKH8LeFGM42TAYfGCmhD1itXLs
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
+
   - name: eosio.token.abi
     ref: /ipfs/QmWV3ZRVpxhACDFbgupMnEtm5gvMErfX2FGXXTg2YEh86N
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
   - name: eosio.token.wasm
-    ref: /ipfs/QmYz7ZaMYkKfo3RhDofmxKVguNiPHQHo3AWbK7obgkGSxm
-    comment: "Published by EOS Canada. Tag dawn-v4.0.0"
+    ref: /ipfs/QmXxZ9uDH3KWBQ4zGYmjFKBwecExPzypYqKmPXV5fxanAe
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-16"
+
   - name: eosio.disco.abi
     ref: /ipfs/QmdtgEzi9qbiMLBv8cm5CeMFWUPDWuJFpgfnCMjqsdKHwz
     comment: "Published by EOS Canada. eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"

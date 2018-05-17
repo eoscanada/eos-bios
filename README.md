@@ -239,24 +239,16 @@ TODO
 * boot_connect_mesh: Make sure we don't mesh with the first BIOS boot..
   it's most probably not running..
 
-* Do connectivity checks when doing `discovery`.. and get a report upon orchestration
-  that the peers are up ?
-
 * Implement `eos-bios boot --reset` or something.. through eosio.disco::delgenesis
 
 * Dedupe the p2p-address in join and mesh..
 
 * create the "RAM" currency, issue an initial base ? is it with `setram` ?
-* call `setram`, agree on it.. start with 32GB ?
-* what happens if you `buyrambytes` and there's no `RAM` curreny ? what's the state of it ?
 
 * delegatebw, from/to eosio, do the transfer with it ?
 
-* undelegatebw never removes my "voters" entry.. sunk forever ?
-
 * Display time of the launch block (or delta)
 
-* If launch block doesn't exist, give me the last :)
 
 
 
