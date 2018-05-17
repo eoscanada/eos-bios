@@ -21,7 +21,7 @@ PRIVKEY=5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 
 
 echo "Killing running nodes"
-killall nodeos || true
+docker killall nodeos || true
 
 echo "Removing old nodeos data (you might be asked for your sudo password)..."
 sudo rm -rf /tmp/nodeos-data
