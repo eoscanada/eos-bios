@@ -101,7 +101,7 @@ func (net *Network) fetchSingleNode() error {
 }
 
 func (net *Network) fetchGraphFromSeedNetwork() error {
-	fmt.Println("Updating network graph")
+	fmt.Println("Updating network graph from", net.SeedNetAPI.BaseURL)
 	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{
 			JSON:     true,
