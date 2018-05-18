@@ -281,6 +281,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
+	fmt.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
@@ -289,7 +290,7 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 			destAccount = "b1b1b1b1b1b1" // TODO: CONTRACT SHOULD CHANGE TOO
 		}
 
-		fmt.Println("Transfer", hodler, destAccount)
+		// fmt.Println("Transfer", hodler, destAccount)
 
 		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 

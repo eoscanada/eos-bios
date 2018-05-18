@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -312,10 +313,15 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
 	}
 
-	// FIXME: don't always do chain validation
-	// if err := b.RunChainValidation(); err != nil {
-	// 	return fmt.Errorf("chain validation: %s", err)
-	// }
+	// FIXME: don't do chain validation here..
+	isValid, err := b.RunChainValidation()
+	if err != nil {
+		return fmt.Errorf("chain validation: %s", err)
+	}
+	if !isValid {
+		fmt.Println("WARNING: chain invalid, destroying network if possible")
+		os.Exit(0)
+	}
 
 	if err := b.DispatchBootPublishHandoff(); err != nil {
 		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
@@ -359,8 +365,13 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		fmt.Println("###############################################################################################")
 		fmt.Println("Launching chain validation")
 
-		if err := b.RunChainValidation(); err != nil {
+		isValid, err := b.RunChainValidation()
+		if err != nil {
 			return fmt.Errorf("chain validation: %s", err)
+		}
+		if !isValid {
+			fmt.Println("WARNING: chain invalid, destroying network if possible")
+			os.Exit(0)
 		}
 	} else {
 		fmt.Println("")
@@ -383,9 +394,9 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 	return nil
 }
 
-func (b *BIOS) RunChainValidation() error {
+func (b *BIOS) RunChainValidation() (bool, error) {
 	bootSeqMap := ActionMap{}
-	bootSeqRaw := []string{}
+	bootSeq := []*eos.Action{}
 
 	for _, step := range b.BootSequence {
 		if b.LaunchDisco.TargetNetworkIsTest == 0 {
@@ -394,37 +405,38 @@ func (b *BIOS) RunChainValidation() error {
 
 		acts, err := step.Data.Actions(b)
 		if err != nil {
-			return fmt.Errorf("verifing: getting actions for step %q: %s", step.Op, err)
+			return false, fmt.Errorf("verifing: getting actions for step %q: %s", step.Op, err)
 		}
 
 		for _, stepAction := range acts {
 			data, err := eos.MarshalBinary(stepAction)
 			if err != nil {
-				return fmt.Errorf("verifying: binary marshalling: %s", err)
+				return false, fmt.Errorf("verifying: binary marshalling: %s", err)
 			}
 			stepAction.SetToServer(false)
 			key := sha2(data) // TODO: compute a hash here..
 
-			bootSeqRaw = append(bootSeqRaw, key)
 			if _, ok := bootSeqMap[key]; ok {
 				// TODO: don't fatal here plz :)
 				log.Fatalf("Same action detected twice [%s] with key [%s]\n", stepAction.Name, key)
 			}
 			bootSeqMap[key] = stepAction
+			bootSeq = append(bootSeq, stepAction)
 		}
 
 	}
 
-	err := b.validateBootSeqActions(bootSeqMap, bootSeqRaw)
+	err := b.validateBootSeqActions(bootSeqMap, bootSeq)
 	if err != nil {
-		return fmt.Errorf("BOOT SEQUENCE VALIDATION FAILED: %s", err)
+		fmt.Printf("BOOT SEQUENCE VALIDATION FAILED:\n%s", err)
+		return false, nil
 	}
 
 	fmt.Println("")
 	fmt.Println("All good! Chain verificaiton succeeded!")
 	fmt.Println("")
 
-	return nil
+	return true, nil
 }
 
 type ActionMap map[string]*eos.Action
@@ -468,20 +480,21 @@ func (v ValidationErrors) Error() string {
 	return s
 }
 
-func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeqActionHexList []string) (err error) {
-
-	actionCount := 0
-	blockCount := 1
-	expectedActionCount := len(bootSeqActionHexList)
+func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
+	expectedActionCount := len(bootSeq)
 	validationErrors := make([]error, 0)
-	//b.TargetNetAPI.Debug = true
+	b.TargetNetAPI.Debug = true
 
+	fmt.Println("FIRST ACTIONS", bootSeq[:3])
+
+	blockCount := 1
+	actionCount := 0
 	for actionCount < expectedActionCount {
-
 		block, err := b.TargetNetAPI.GetBlockByNum(uint64(blockCount))
 		if err != nil {
 			return err
 		}
+
 		for _, blockTransaction := range block.Transactions {
 
 			patchData := blockTransaction.Trx[1]
