@@ -3,6 +3,7 @@ package bios
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/crc64"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
+	"github.com/eoscanada/eos-go/p2p"
 )
 
 type BIOS struct {
@@ -283,8 +285,8 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts, 50) { // transfers max out resources higher than ~400
-				err := retry(5, 500*time.Millisecond, func() error {
+			for idx, chunk := range chunkifyActions(acts, 33) { // transfers max out resources higher than ~400
+				err := retry(10, 500*time.Millisecond, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
@@ -442,24 +444,26 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 type ActionMap map[string]*eos.Action
 
 type ValidationError struct {
+	Err               error
 	BlockNumber       int
-	Action            eos.Action
+	Action            *eos.Action
+	RawAction         []byte
 	Index             int
 	ActionHexData     string
 	PackedTransaction eos.PackedTransaction
 }
 
 func (e ValidationError) Error() string {
-	s := fmt.Sprintf("Action [%d][%s] from block not found in boot sequences\n", e.Index, e.Action.Name)
+	s := fmt.Sprintf("Action [%d][%s::%s] from block not found in boot sequences\n", e.Index, e.Action.Account, e.Action.Name)
 
 	data, err := json.Marshal(e.Action)
 	if err != nil {
-		s += fmt.Sprintf("    json generation err : %s\n", err)
+		s += fmt.Sprintf("    json generation err: %s\n", err)
 	} else {
-		s += fmt.Sprintf("    json data : %s\n", string(data))
+		s += fmt.Sprintf("    json data: %s\n", string(data))
 	}
-	s += fmt.Sprintf("    hex data : %s\n", e.ActionHexData)
-	//s += fmt.Sprintf("    packed transaction hex data : %s\n", hex.EncodeToString(e.PackedTransaction.PackedTransaction))
+	s += fmt.Sprintf("    hex data: %s\n", hex.EncodeToString(e.RawAction))
+	s += fmt.Sprintf("    error: %s\n", e.Err.Error())
 
 	return s
 }
@@ -485,59 +489,103 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 	validationErrors := make([]error, 0)
 	b.TargetNetAPI.Debug = true
 
-	fmt.Println("FIRST ACTIONS", bootSeq[:3])
+	// fmt.Println("FIRST ACTIONS")
+	// for idx, act := range bootSeq {
+	// 	if idx > 5 {
+	// 		break
+	// 	}
 
-	blockCount := 1
-	actionCount := 0
-	for actionCount < expectedActionCount {
-		block, err := b.TargetNetAPI.GetBlockByNum(uint64(blockCount))
-		if err != nil {
-			return err
-		}
+	// 	hexData := hex.EncodeToString(act.ActionData.HexData)
+	// 	if len(hexData) > 32 {
+	// 		hexData = hexData[:32]
+	// 	}
+	// 	fmt.Printf("act: %s::%s %q\n", act.Account, act.Name, hexData)
+	// }
 
-		for _, blockTransaction := range block.Transactions {
-
-			patchData := blockTransaction.Trx[1]
-			var packedTransaction eos.PackedTransaction
-
-			err := json.Unmarshal(patchData, &packedTransaction)
-			if err != nil {
-				return fmt.Errorf("patching tx, %s", err)
+	actionsRead := 0
+	seenMap := map[string]bool{}
+	done := make(chan bool)
+	client := p2p.NewClient(b.Network.MyPeer.Discovery.TargetP2PAddress, make([]byte, 32, 32), int16(25431))
+	client.ShowEmptyChain = true
+	//client.RegisterHandler(p2p.HandlerFunc(p2p.LoggerHandler))
+	client.RegisterHandlerFunc(func(msg p2p.Message) {
+		switch m := msg.Envelope.P2PMessage.(type) {
+		case *eos.HandshakeMessage:
+			fmt.Println("Sending sync request", client.LastHandshakeReceived)
+			if err := client.SendSyncRequest(1, client.LastHandshakeReceived.HeadNum); err != nil {
+				fmt.Println("Failed sending sync request:", err)
+				return
 			}
-			signedTransaction, err := packedTransaction.Unpack()
+		case *eos.SignedBlock:
+			fmt.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
 
-			if err != nil {
-				return fmt.Errorf("unpacking transaction, %s", err)
-			}
-
-			for _, action := range signedTransaction.Actions {
-				data, err := eos.MarshalBinary(action)
+			for _, receipt := range m.Transactions {
+				unpacked, err := receipt.Transaction.Packed.Unpack()
 				if err != nil {
-					return fmt.Errorf("creating key with action, %s", err)
+					fmt.Println("WARNING: Unable to unpack transaction, won't be able to fully validate:", err)
+					return
 				}
 
-				key := sha2(data)
-				if _, ok := bootSeqMap[key]; !ok {
-					validationErrors = append(validationErrors, ValidationError{
-						BlockNumber:       blockCount,
-						PackedTransaction: packedTransaction,
-						Action:            *action,
-						ActionHexData:     hex.EncodeToString(data),
-						Index:             actionCount,
-					})
+				for _, act := range unpacked.Actions {
+					act.SetToServer(false)
+					data, err := eos.MarshalBinary(act)
+					if err != nil {
+						fmt.Printf("Error marshalling an action: %s\n", err)
+						validationErrors = append(validationErrors, ValidationError{
+							Err:               err,
+							BlockNumber:       1, // extract from the block transactionmroot
+							PackedTransaction: receipt.Transaction.Packed,
+							Action:            act,
+							RawAction:         data,
+							ActionHexData:     hex.EncodeToString(act.HexData),
+							Index:             actionsRead,
+						})
+						return
+					}
+					act.SetToServer(false)
+					key := sha2(data) // TODO: compute a hash here..
+
+					fmt.Printf("- Verifing action %d/%d [%s::%s]", actionsRead, expectedActionCount, act.Account, act.Name)
+					if _, ok := bootSeqMap[key]; !ok {
+						validationErrors = append(validationErrors, ValidationError{
+							Err:               errors.New("not found"),
+							BlockNumber:       1, // extract from the block transactionmroot
+							PackedTransaction: receipt.Transaction.Packed,
+							Action:            act,
+							RawAction:         data,
+							ActionHexData:     hex.EncodeToString(act.HexData),
+							Index:             actionsRead,
+						})
+						fmt.Printf(" INVALID ***************************** INVALID *************.\n")
+					} else {
+						seenMap[key] = true
+						fmt.Printf(" valid.\n")
+					}
+
+					actionsRead++
 				}
-
-				actionCount++
-
-				fmt.Printf("Verifing action [%s] [%d] of [%d] from block [%d]\n", action.Name, actionCount, expectedActionCount, blockCount)
 			}
+		default:
 		}
-
-		blockCount++
-
+		if actionsRead == len(bootSeq) {
+			done <- true
+		}
+	})
+	err = client.Connect()
+	if err != nil {
+		log.Fatal(err)
 	}
+	<-done
 
 	if len(validationErrors) > 0 {
+		fmt.Println("Unseen transactions:")
+		for _, act := range bootSeq {
+			data, _ := eos.MarshalBinary(act)
+			key := sha2(data)
+			if !seenMap[key] {
+				fmt.Printf("- Action %s::%s [%q]\n", act.Account, act.Name, hex.EncodeToString(data))
+			}
+		}
 		return ValidationErrors{Errors: validationErrors}
 	}
 

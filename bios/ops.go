@@ -144,7 +144,6 @@ func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 type OpSetPriv struct {
 	Account eos.AccountName
-	IsPriv  bool `json:"is_priv"` // unused
 }
 
 func (op *OpSetPriv) ResetTestnetOptions() { return }

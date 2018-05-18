@@ -86,11 +86,11 @@ boot_sequence:
   data:
     TESTNET_ENRICH_PRODUCERS: true
 
-- op: snapshot.inject
-  label: Injecting ERC-20 snapshot balances
-  data:
-    buy_ram_bytes: 8192  # in EOS decimil
-    TESTNET_TRUNCATE_SNAPSHOT: 50
+# - op: snapshot.inject
+#   label: Injecting ERC-20 snapshot balances
+#   data:
+#     buy_ram_bytes: 8192  # in EOS decimil
+#     TESTNET_TRUNCATE_SNAPSHOT: 50
 
 # - op: producers.register
 #   label: Register all producers with their declared key, URL and location
