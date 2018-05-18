@@ -249,6 +249,8 @@ TODO
 
 * Implement contents disagreement
 
+* Make the cache directory global.. no need to redownload for each stage.
+
 
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
