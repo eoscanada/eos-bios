@@ -243,12 +243,11 @@ TODO
 
 * Dedupe the p2p-address in join and mesh..
 
-* create the "RAM" currency, issue an initial base ? is it with `setram` ?
-
 * delegatebw, from/to eosio, do the transfer with it ?
 
 * Display time of the launch block (or delta)
 
+* Implement contents disagreement
 
 
 

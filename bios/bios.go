@@ -267,7 +267,10 @@ func (b *BIOS) RunBootSequence() error {
 	}
 
 	fmt.Println("In-memory keys:")
-	fmt.Println(b.TargetNetAPI.Signer.AvailableKeys())
+	memkeys, _ := b.TargetNetAPI.Signer.AvailableKeys()
+	for _, key := range memkeys {
+		fmt.Printf("- %s\n", key.String())
+	}
 	fmt.Println("")
 
 	// eos.Debug = true
@@ -316,14 +319,14 @@ func (b *BIOS) RunBootSequence() error {
 	}
 
 	// FIXME: don't do chain validation here..
-	isValid, err := b.RunChainValidation()
-	if err != nil {
-		return fmt.Errorf("chain validation: %s", err)
-	}
-	if !isValid {
-		fmt.Println("WARNING: chain invalid, destroying network if possible")
-		os.Exit(0)
-	}
+	// isValid, err := b.RunChainValidation()
+	// if err != nil {
+	// 	return fmt.Errorf("chain validation: %s", err)
+	// }
+	// if !isValid {
+	// 	fmt.Println("WARNING: chain invalid, destroying network if possible")
+	// 	os.Exit(0)
+	// }
 
 	if err := b.DispatchBootPublishHandoff(); err != nil {
 		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
