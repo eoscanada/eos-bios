@@ -44,6 +44,14 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 		return errors.New("target_account_name is missing")
 	}
 
+	if len(discovery.TargetAccountName) != 12 {
+		return errors.New("target_account_name should be 12 chars")
+	}
+
+	if strings.Contains(string(discovery.TargetAccountName), ".") {
+		return errors.New("target_account_name should not contain '.'")
+	}
+
 	if !strings.Contains(discovery.TargetP2PAddress, ":") {
 		return errors.New("target_p2p_address doesn't contain port number")
 	}

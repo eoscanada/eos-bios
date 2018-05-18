@@ -50,11 +50,11 @@ target_contents:
     comment: "Includes eosio.disco. Does kill accounts at the end. Sets RAM. Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
 
   - name: snapshot.csv
-    ref: /ipfs/QmY4iHQYoqUZ6e1iqFGqYYLzYWiYjy3zFLoMhG9PvSsrSD
-    comment: "Snapshot at period 290."
+    ref: /ipfs/QmSRbJeZaWQXXJfK34z6hah7RN8DYr45BGqwNE7YNeFH6s
+    comment: "Gathered by someone. Published by EOS Canada. Period 332, with account names"
   - name: snapshot_unregistered.csv
-    ref: /ipfs/QmSxed6nhtDQ5EZqGXYuzTUyW4rLPcaffrYZPkPQbZMW58
-    comment: "Published by EOS Canada. Period 320."
+    ref: /ipfs/QmYX7f4cL25dYyTBMmVKq8UrunCM46apw56Zi5SmYw1qgh
+    comment: "Gathered by someone. Published by EOS Canada. Period 332"
 
   - name: eosio.bios.abi
     ref: /ipfs/QmW9qDWMy3fHKD4Y6GGgkErwm6jYWBUMNV9Bav5T1jRVB4

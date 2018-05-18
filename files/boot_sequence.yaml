@@ -58,19 +58,10 @@ boot_sequence:
   label: Creating the EOS currency symbol
   data:
     account: eosio
-    amount: 2500000000.0000 EOS  # Accounting for 5% inflation, for the next 50 years (end of uint32 block_num).
+    amount: 10000000000.0000 EOS  # Should work with 5% inflation, for the next 50 years (end of uint32 block_num anyway)
     can_whitelist: false
     can_freeze: false
     can_recall: false
-
-- op: token.create
-  label: Creating the RAM currency symbol
-  data:
-    account: eosio
-    amount: "35184372088832 RAM"  # 32 TB RAM max supply.. we'll see how that goes.
-    can_whitelist: false
-    can_freeze: false
-    can_recall: true
 
 - op: token.issue
   label: Issuing initial EOS monetary base
@@ -78,19 +69,6 @@ boot_sequence:
     account: eosio
     amount: 1000000000.0000 EOS  # 1B coins, as per distribution model.
     memo: "Initial issuance"
-
-- op: producers.create_accounts
-  label: Creating initial Block Producers accounts
-  data:
-    TESTNET_ENRICH_PRODUCERS: true
-
-- op: snapshot.inject
-  label: Injecting ERC-20 snapshot balances
-  data:
-    TESTNET_TRUNCATE_SNAPSHOT: 50
-
-- op: system.setprods
-  label: Setting the initial Appointed Block Producer schedule
 
 - op: system.setcode
   label: Replacing eosio account from eosio.bios contract to eosio.system
@@ -103,11 +81,28 @@ boot_sequence:
   data:
     max_ram_size: 25769803776  # 24 GB
 
+- op: producers.create_accounts
+  label: Creating initial Block Producers accounts
+  data:
+    TESTNET_ENRICH_PRODUCERS: true
+
+- op: snapshot.inject
+  label: Injecting ERC-20 snapshot balances
+  data:
+    buy_ram_bytes: 8192  # in EOS decimil
+    TESTNET_TRUNCATE_SNAPSHOT: 50
+
+# - op: producers.register
+#   label: Register all producers with their declared key, URL and location
+
+# - op: system.setprods
+#   label: Setting the initial Appointed Block Producer schedule
+
 - op: system.destroy_accounts
   label: Disabling authorization for system accounts
   data:
     accounts:
-    - eosio
+#    - eosio
     - eosio.msig
     - eosio.token
     - eosio.disco
