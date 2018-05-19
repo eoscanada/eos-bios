@@ -251,6 +251,9 @@ TODO
 
 * Make the cache directory global.. no need to redownload for each stage.
 
+* Upgrade to dawn4.1, docker hub, pub eosio.unregd, maintain `eos`
+  with reverse SYS patch, publish Docker image, with disco and unregd
+  contracts. Update the disco .abi file
 
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
