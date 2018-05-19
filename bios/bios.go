@@ -279,8 +279,8 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts, 250) { // transfers max out resources higher than ~400
-				err := retry(5, 500*time.Millisecond, func() error {
+			for idx, chunk := range ChunkifyActions(acts, 250) { // transfers max out resources higher than ~400
+				err := Retry(5, 500*time.Millisecond, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
@@ -746,7 +746,7 @@ func (b *BIOS) setMyPeers() error {
 	return nil
 }
 
-func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action) {
+func ChunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action) {
 	currentChunk := []*eos.Action{}
 	for _, act := range actions {
 		if len(currentChunk) > chunkSize {
