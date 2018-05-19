@@ -19,18 +19,19 @@ type Operation interface {
 }
 
 var operationsRegistry = map[string]Operation{
-	"system.setcode":               &OpSetCode{},
-	"system.setram":                &OpSetRAM{},
-	"system.newaccount":            &OpNewAccount{},
-	"system.setpriv":               &OpSetPriv{},
-	"token.create":                 &OpCreateToken{},
-	"token.issue":                  &OpIssueToken{},
-	"producers.create_accounts":    &OpCreateProducers{},
-	"producers.register":           &OpRegisterProducers{},
-	"system.setprods":              &OpSetProds{},
-	"snapshot.inject":              &OpInjectSnapshot{},
-	"snapshot.inject.unregistered": &OpInjectUnregdSnapshot{},
-	"system.destroy_accounts":      &OpDestroyAccounts{},
+	"system.setcode":             &OpSetCode{},
+	"system.setram":              &OpSetRAM{},
+	"system.newaccount":          &OpNewAccount{},
+	"system.setpriv":             &OpSetPriv{},
+	"token.create":               &OpCreateToken{},
+	"token.issue":                &OpIssueToken{},
+	"producers.create_accounts":  &OpCreateProducers{},
+	"producers.register":         &OpRegisterProducers{},
+	"system.setprods":            &OpSetProds{},
+	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
+	"snapshot.transfer":          &OpSnapshotTransfer{},
+	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
+	"system.destroy_accounts":    &OpDestroyAccounts{},
 }
 
 type OperationType struct {
@@ -253,16 +254,16 @@ func (op *OpRegisterProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpInjectSnapshot struct {
+type OpSnapshotCreateAccounts struct {
 	BuyRAM                  uint64 `json:"buy_ram_bytes"`
 	TestnetTruncateSnapshot int    `json:"TESTNET_TRUNCATE_SNAPSHOT"`
 }
 
-func (op *OpInjectSnapshot) ResetTestnetOptions() {
+func (op *OpSnapshotCreateAccounts) ResetTestnetOptions() {
 	op.TestnetTruncateSnapshot = 0
 }
 
-func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
+func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	snapshotFile, err := b.GetContentsCacheRef("snapshot.csv")
 	if err != nil {
 		return nil, err
@@ -295,22 +296,69 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 
-		// memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-
-		// out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
-
 		initialBalance := hodler.Balance // .Sub(eos.NewEOSAsset(int64(op.BuyRAM))) // take ~0.1 to pay for initial RAM
-		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
-
 		firstHalf := initialBalance
 		secondHalf := initialBalance
 
 		firstHalf.Amount = firstHalf.Amount / 2
 		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
 
-		delBW := system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, true)
-		delBW.Authorization[0].Actor = eos.AN("eosio")
-		out = append(out, delBW)
+		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, false))
+
+		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
+
+		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
+			if idx == trunc {
+				fmt.Printf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				break
+			}
+		}
+	}
+
+	return
+}
+
+//
+
+type OpSnapshotTransfer struct {
+	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
+}
+
+func (op *OpSnapshotTransfer) ResetTestnetOptions() {
+	op.TestnetTruncateSnapshot = 0
+}
+
+func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
+	snapshotFile, err := b.GetContentsCacheRef("snapshot.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading snapshot file: %s", err)
+	}
+
+	snapshotData, err := NewSnapshot(rawSnapshot)
+	if err != nil {
+		return nil, fmt.Errorf("loading snapshot csv: %s", err)
+	}
+
+	if len(snapshotData) == 0 {
+		return nil, fmt.Errorf("snapshot is empty or not loaded")
+	}
+
+	fmt.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
+	for idx, hodler := range snapshotData {
+		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
+
+		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
+			// the undelegatebw action does special unvesting for the b1 account
+			destAccount = "b1b1b1b1b1b1" // TODO: CONTRACT SHOULD CHANGE TOO
+		}
+
+		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
+		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {

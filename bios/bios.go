@@ -273,7 +273,7 @@ func (b *BIOS) RunBootSequence() error {
 	}
 	fmt.Println("")
 
-	// eos.Debug = true
+	//eos.Debug = true
 
 	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s] ", step.Label, step.Op)
@@ -288,8 +288,8 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts, 10) { // transfers max out resources higher than ~400
-				err := retry(10, 500*time.Millisecond, func() error {
+			for idx, chunk := range chunkifyActions(acts, 8) { // transfers max out resources higher than ~400
+				err := retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!

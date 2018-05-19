@@ -99,22 +99,27 @@ boot_sequence:
   data:
     TESTNET_ENRICH_PRODUCERS: true
 
-- op: snapshot.inject.unregistered
+- op: snapshot.create_accounts
+  label: Creating accounts for ERC-20 holders
+  data:
+    buy_ram_bytes: 8192
+    TESTNET_TRUNCATE_SNAPSHOT: 50
+
+- op: snapshot.transfer
+  label: Injecting ERC-20 snapshot balances
+  data:
+    TESTNET_TRUNCATE_SNAPSHOT: 50
+
+- op: snapshot.load_unregistered
   label: Saving unregistered addresses in eosio.unregd account, for the future.
   data:
     TESTNET_TRUNCATE_SNAPSHOT: 50
 
-# - op: snapshot.inject
-#   label: Injecting ERC-20 snapshot balances
-#   data:
-#     buy_ram_bytes: 8192
-#     TESTNET_TRUNCATE_SNAPSHOT: 50
+- op: system.setprods
+  label: Setting the initial Appointed Block Producer schedule
 
 # - op: producers.register
 #   label: Register all producers with their declared key, URL and location
-
-- op: system.setprods
-  label: Setting the initial Appointed Block Producer schedule
 
 - op: system.destroy_accounts
   label: Disabling authorization for system accounts
