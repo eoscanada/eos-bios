@@ -1,0 +1,273 @@
+{
+  "version": "eosio::abi/1.0",
+  "types": [{
+      "new_type_name": "account_name",
+      "type": "name"
+    },{
+      "new_type_name": "permission_name",
+      "type": "name"
+    },{
+      "new_type_name": "action_name",
+      "type": "name"
+    },{
+      "new_type_name": "weight_type",
+      "type": "uint16"
+    }
+  ],
+  "structs": [{
+      "name": "genesis_row",
+      "base": "",
+      "fields": [{
+          "name": "id",
+          "type": "account_name"
+        },{
+          "name": "genesis_json",
+          "type": "string"
+        },{
+          "name": "initial_p2p_addresses",
+          "type": "string[]"
+        }
+      ]
+    },{
+      "name": "peer_link",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        },{
+          "name": "comment",
+          "type": "string"
+        },{
+          "name": "weight",
+          "type": "uint8"
+        }
+      ]
+    },{
+      "name": "key_weight",
+      "base": "",
+      "fields": [{
+          "name": "key",
+          "type": "public_key"
+        },{
+          "name": "weight",
+          "type": "weight_type"
+        }
+      ]
+    },{
+      "name": "permission_level",
+      "base": "",
+      "fields": [
+        {"name": "actor", "type": "account_name"},
+        {"name": "permission", "type": "permission_name"}
+      ]
+    },{
+      "name": "permission_level_weight",
+      "base": "",
+      "fields": [{
+          "name": "permission",
+          "type": "permission_level"
+        },{
+          "name": "weight",
+          "type": "weight_type"
+        }
+      ]
+    },{
+      "name": "wait_weight",
+      "base": "",
+      "fields": [{
+          "name": "wait_sec",
+          "type": "uint32"
+        },{
+          "name": "weight",
+          "type": "weight_type"
+        }
+      ]
+    },{
+      "name": "authority",
+      "base": "",
+      "fields": [{
+          "name": "threshold",
+          "type": "uint32"
+        },{
+          "name": "keys",
+          "type": "key_weight[]"
+        },{
+          "name": "accounts",
+          "type": "permission_level_weight[]"
+        },{
+          "name": "waits",
+          "type": "wait_weight[]"
+        }
+      ]
+    },{
+      "name": "authority_map",
+      "base": "",
+      "fields": [{
+          "name": "owner",
+          "type": "authority"
+        },{
+          "name": "active",
+          "type": "authority"
+        }
+      ]
+    },{
+      "name": "content_ref",
+      "base": "",
+      "fields": [{
+          "name": "name",
+          "type": "string"
+        },{
+          "name": "ref",
+          "type": "string"
+        },{
+          "name": "comment",
+          "type": "string"
+        }
+      ]
+    },{
+      "name": "discovery_file",
+      "base": "",
+      "fields": [{
+          "name": "seed_network_chain_id",
+          "type": "checksum256"
+        },{
+          "name": "seed_network_account_name",
+          "type": "account_name"
+        },{
+          "name": "seed_network_http_address",
+          "type": "string"
+        },{
+          "name": "seed_network_peers",
+          "type": "peer_link[]"
+        },{
+          "name": "seed_network_launch_block",
+          "type": "uint64"
+        },{
+          "name": "urls",
+          "type": "string[]"
+        },{
+          "name": "gmt_offset",
+          "type": "int16"
+        },{
+          "name": "target_network_is_test",
+          "type": "uint8"
+        },{
+          "name": "target_chain_id",
+          "type": "checksum256"
+        },{
+          "name": "target_p2p_address",
+          "type": "string"
+        },{
+          "name": "target_http_address",
+          "type": "string"
+        },{
+          "name": "target_account_name",
+          "type": "account_name"
+        },{
+          "name": "target_appointed_block_producer_signing_key",
+          "type": "public_key"
+        },{
+          "name": "target_initial_authority",
+          "type": "authority_map"
+        },{
+          "name": "target_contents",
+          "type": "content_ref[]"
+        }
+      ]
+    },{
+      "name": "discovery_row",
+      "base": "",
+      "fields": [{
+          "name": "id",
+          "type": "account_name"
+        },{
+          "name": "content",
+          "type": "discovery_file"
+        },{
+          "name": "updated_at",
+          "type": "time_point_sec"
+        }
+      ]
+    },
+
+    {
+      "name": "updtdisco",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        }, {
+          "name": "disco",
+          "type": "discovery_file"
+        }
+      ]
+    }, {
+      "name": "deldisco",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        }
+      ]
+    }, {
+      "name": "updtgenesis",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        }, {
+          "name": "genesis_json",
+          "type": "string"
+        }, {
+          "name": "initial_p2p_addresses",
+          "type": "string[]"
+        }
+      ]
+    }, {
+      "name": "delgenesis",
+      "base": "",
+      "fields": [{
+          "name": "account",
+          "type": "account_name"
+        }
+      ]
+    }
+  ],
+  "actions": [{
+    "name": "updtdisco",
+    "type": "updtdisco"
+  }, {
+    "name": "deldisco",
+    "type": "deldisco"
+  }, {
+    "name": "updtgenesis",
+    "type": "updtgenesis"
+  }, {
+    "name": "delgenesis",
+    "type": "delgenesis"
+  }],
+  "tables": [{
+      "name": "genesis",
+      "index_type": "i64",
+      "key_names": [
+        "id"
+      ],
+      "key_types": [
+        "account_name"
+      ],
+      "type": "genesis_row"
+    },{
+      "name": "discovery",
+      "index_type": "i64",
+      "key_names": [
+        "id"
+      ],
+      "key_types": [
+        "account_name"
+      ],
+      "type": "discovery_row"
+    }
+  ],
+  "ricardian_clauses": [],
+  "abi_extensions": []
+}

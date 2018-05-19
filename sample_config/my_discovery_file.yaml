@@ -46,8 +46,8 @@ target_initial_authority:
 
 target_contents:
   - name: boot_sequence.yaml
-    ref: /ipfs/QmQXTdCmfLhz4kNoHH23Pm4p5uikUz8o1zTn9XSFQ2nHSn
-    comment: "Includes eosio.disco. Kills accounts, buys RAM. Skips snapshot for now (until delegatebw works better). Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
+    ref: /ipfs/Qmbk3r2Prmspa8yzGNgB2ohaweQFtQvXnchVBGTaGoMAiZ
+    comment: "Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
 
   - name: snapshot.csv
     ref: /ipfs/QmSRbJeZaWQXXJfK34z6hah7RN8DYr45BGqwNE7YNeFH6s
