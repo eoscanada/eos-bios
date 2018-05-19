@@ -259,6 +259,16 @@ TODO
   launcher would have that key.. well it would have been
   published.. so anyone really would have access to that (!!).
 
+* Only download the IPFS refs from the top X that can take the
+  decision.. so we're not slowed down by some who never push their
+  files.
+
+* p2p chain validation.. should wait until the `target_p2p_address` is
+  reachable..  not fail right away.. and retry.
+
+* Insert a `nil` eos.Action in the `Actions()` to split the transactions.. so that
+  Transfer and NewAccount are not in the same.
+
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
 ----       ------------  -----------   ------  ----------------  ------------

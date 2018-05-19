@@ -288,7 +288,7 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts, 8) { // transfers max out resources higher than ~400
+			for idx, chunk := range chunkifyActions(acts) { // transfers max out resources higher than ~400
 				err := retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
@@ -305,8 +305,9 @@ func (b *BIOS) RunBootSequence() error {
 					fmt.Printf(" error\n")
 					return err
 				}
-				fmt.Printf(" done\n")
+				fmt.Printf(".")
 			}
+			fmt.Printf(" done\n")
 		}
 	}
 
@@ -416,6 +417,10 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 		}
 
 		for _, stepAction := range acts {
+			if stepAction == nil {
+				continue
+			}
+
 			data, err := eos.MarshalBinary(stepAction)
 			if err != nil {
 				return false, fmt.Errorf("verifying: binary marshalling: %s", err)
@@ -839,14 +844,17 @@ func (b *BIOS) setMyPeers() error {
 	return nil
 }
 
-func chunkifyActions(actions []*eos.Action, chunkSize int) (out [][]*eos.Action) {
+func chunkifyActions(actions []*eos.Action) (out [][]*eos.Action) {
 	currentChunk := []*eos.Action{}
 	for _, act := range actions {
-		if len(currentChunk) > chunkSize {
-			out = append(out, currentChunk)
+		if act == nil {
+			if len(currentChunk) != 0 {
+				out = append(out, currentChunk)
+			}
 			currentChunk = []*eos.Action{}
+		} else {
+			currentChunk = append(currentChunk, act)
 		}
-		currentChunk = append(currentChunk, act)
 	}
 	if len(currentChunk) > 0 {
 		out = append(out, currentChunk)

@@ -31,7 +31,7 @@ var inviteCmd = &cobra.Command{
 	Short: "Invite a fellow block producer to the seed network where you have access to",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(false, false)
+		net, err := fetchNetwork(true, false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
@@ -42,9 +42,7 @@ var inviteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("")
-		fmt.Printf("Creating account %q with public key %q, using my account %q\n", args[0], args[1], net.MyPeer.Discovery.SeedNetworkAccountName)
-		fmt.Println("")
+		fmt.Printf("Creating account %q with public key %q, using my account %q, on network %q\n", args[0], args[1], net.MyPeer.Discovery.SeedNetworkAccountName, net.MyPeer.Discovery.SeedNetworkHTTPAddress)
 
 		_, err = net.SeedNetAPI.SignPushActions(
 			system.NewNewAccount(
@@ -59,52 +57,16 @@ var inviteCmd = &cobra.Command{
 			system.NewDelegateBW(
 				eos.AccountName(net.MyPeer.Discovery.SeedNetworkAccountName),
 				eos.AccountName(args[0]),
-				eos.NewEOSAsset(1000),
-				eos.NewEOSAsset(1000),
+				eos.NewEOSAsset(10000),
+				eos.NewEOSAsset(10000),
 				false,
 			),
-			/* "actions": [
-      {
-        "account": "eosio",
-        "name": "newaccount",
-        "authorization": [
-          {
-            "actor": "eoscanadacom",
-            "permission": "active"
-          }
-        ],
-        "data": "202932c94c833055000000d3757730550100000001000264d39e1bb1fc7f2519046f1c35329f49e21c832eb3fd00a0b1e3433b2323d8b7010000000100000001000264d39e1bb1fc7f2519046f1c35329f49e21c832eb3fd00a0b1e3433b2323d8b701000000"
-      },
-      {
-        "account": "eosio",
-        "name": "buyrambytes",
-        "authorization": [
-          {
-            "actor": "eoscanadacom",
-            "permission": "active"
-          }
-        ],
-        "data": "202932c94c833055000000d37577305500200000"
-      },
-      {
-        "account": "eosio",
-        "name": "delegatebw",
-        "authorization": [
-          {
-            "actor": "eoscanadacom",
-            "permission": "active"
-          }
-        ],
-        "data": "202932c94c833055000000d375773055102700000000000004454f5300000000102700000000000004454f530000000001"
-      }
-    ],
- */
 		)
 		if err != nil {
 			log.Fatalln("creating account:", err)
 		}
 
-		fmt.Println("Done.")
+		fmt.Println("Done. Now transfer them some EOS so they can invite others too.")
 	},
 }
 

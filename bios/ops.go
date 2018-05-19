@@ -216,11 +216,11 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		// fmt.Println("Some JSON", string(mama))
 
 		fmt.Printf("- Creating new account %q\n", prodName)
-		out = append(out, newAccount, buyRAMBytes, delegateBW)
+		out = append(out, newAccount, buyRAMBytes, delegateBW, nil)
 
 		if op.TestnetEnrichProducers {
 			fmt.Printf("  DEBUG: Enriching producer %q\n", prodName)
-			out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
+			out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"), nil)
 		}
 	}
 	return
@@ -247,7 +247,7 @@ func (op *OpRegisterProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		}
 		regprod := system.NewRegProducer(prodName, prod.Discovery.TargetAppointedBlockProducerSigningKey, url) // overridden just below
 		regprod.Authorization[0].Actor = AN("eosio")
-		out = append(out, regprod)
+		out = append(out, regprod, nil)
 	}
 	return
 }
@@ -306,6 +306,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, false))
 
 		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
+		out = append(out, nil) // end transaction
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
@@ -358,7 +359,7 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 		}
 
 		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
+		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
@@ -403,7 +404,7 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 
 	fmt.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
-		out = append(out, unregd.NewAdd(hodler.EthereumAddress, hodler.Balance))
+		out = append(out, unregd.NewAdd(hodler.EthereumAddress, hodler.Balance), nil)
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
@@ -484,9 +485,8 @@ func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 					},
 				},
 			}, PN("owner")),
-			// TODO: add recovery here ??
+			nil, // end transaction
 		)
-
 		// unregister the producer at the same time ?
 	}
 	return
