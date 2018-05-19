@@ -125,7 +125,7 @@ boot_sequence:
   label: Disabling authorization for system accounts
   data:
     accounts:
-    - eosio
+    #- eosio
     - eosio.msig
     - eosio.token
     - eosio.disco
