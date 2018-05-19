@@ -45,3 +45,33 @@ func NewSnapshot(content []byte) (out Snapshot, err error) {
 
 	return
 }
+
+type UnregdSnapshot []UnregdSnapshotLine
+
+type UnregdSnapshotLine struct {
+	EthereumAddress string
+	Balance         eos.Asset
+}
+
+func NewUnregdSnapshot(content []byte) (out UnregdSnapshot, err error) {
+	reader := csv.NewReader(bytes.NewBuffer(content))
+	allRecords, err := reader.ReadAll()
+	if err != nil {
+		return
+	}
+
+	for _, el := range allRecords {
+		if len(el) != 2 {
+			return nil, fmt.Errorf("should have 2 elements per line")
+		}
+
+		newAsset, err := eos.NewEOSAssetFromString(el[1])
+		if err != nil {
+			return out, err
+		}
+
+		out = append(out, UnregdSnapshotLine{el[0], newAsset})
+	}
+
+	return
+}

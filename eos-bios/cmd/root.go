@@ -17,7 +17,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -52,6 +54,12 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	homedir, err := homedir.Dir()
+	if err != nil {
+		fmt.Println("couldn't find home dir:", err)
+		os.Exit(1)
+	}
+
 	RootCmd.PersistentFlags().StringP("my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
 	RootCmd.PersistentFlags().StringP("ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
 	RootCmd.PersistentFlags().StringP("seednet-api", "", "", "HTTP address of the seed network pointed to by your discovery file")
@@ -59,7 +67,7 @@ func init() {
 	// RootCmd.PersistentFlags().StringVarP(&seedNetworkContract, "seednet-contract", "", "eosio.disco", "Contract account name on the seed network, where to find discovery files from all Block producer candidates.")
 	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and verification)")
 
-	RootCmd.PersistentFlags().StringP("cache-path", "", ".eos-bios-cache", "directory to store cached data from discovered network")
+	RootCmd.PersistentFlags().StringP("cache-path", "", filepath.Join(homedir, ".eos-bios-cache"), "directory to store cached data from discovered network")
 	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "Display verbose output (also see 'output.log')")
 
 	for _, flag := range []string{"cache-path", "my-discovery", "ipfs-gateway-address", "seednet-keys", "seednet-api", "target-api", "verbose"} { // "seednet-contract",

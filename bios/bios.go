@@ -288,15 +288,17 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts, 33) { // transfers max out resources higher than ~400
+			for idx, chunk := range chunkifyActions(acts, 10) { // transfers max out resources higher than ~400
 				err := retry(10, 500*time.Millisecond, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
+							//fmt.Println("skiping because error message seems valid:", err)
 							return nil
 						}
 						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 					}
+
 					return nil
 				})
 				if err != nil {
@@ -311,22 +313,22 @@ func (b *BIOS) RunBootSequence() error {
 	fmt.Println("Flushing transactions into blocks")
 	time.Sleep(2 * time.Second)
 
+	// FIXME: don't do chain validation here..
+	isValid, err := b.RunChainValidation()
+	if err != nil {
+		return fmt.Errorf("chain validation: %s", err)
+	}
+	if !isValid {
+		fmt.Println("WARNING: chain invalid, destroying network if possible")
+		os.Exit(0)
+	}
+
 	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
 
 	otherPeers := b.someTopmostPeersAddresses(orderedPeers)
 	if err := b.DispatchBootConnectMesh(otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
 	}
-
-	// FIXME: don't do chain validation here..
-	// isValid, err := b.RunChainValidation()
-	// if err != nil {
-	// 	return fmt.Errorf("chain validation: %s", err)
-	// }
-	// if !isValid {
-	// 	fmt.Println("WARNING: chain invalid, destroying network if possible")
-	// 	os.Exit(0)
-	// }
 
 	if err := b.DispatchBootPublishHandoff(); err != nil {
 		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
@@ -490,20 +492,6 @@ func (v ValidationErrors) Error() string {
 func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
 	expectedActionCount := len(bootSeq)
 	validationErrors := make([]error, 0)
-	b.TargetNetAPI.Debug = true
-
-	// fmt.Println("FIRST ACTIONS")
-	// for idx, act := range bootSeq {
-	// 	if idx > 5 {
-	// 		break
-	// 	}
-
-	// 	hexData := hex.EncodeToString(act.ActionData.HexData)
-	// 	if len(hexData) > 32 {
-	// 		hexData = hexData[:32]
-	// 	}
-	// 	fmt.Printf("act: %s::%s %q\n", act.Account, act.Name, hexData)
-	// }
 
 	actionsRead := 0
 	seenMap := map[string]bool{}
@@ -548,7 +536,7 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 					act.SetToServer(false)
 					key := sha2(data) // TODO: compute a hash here..
 
-					fmt.Printf("- Verifing action %d/%d [%s::%s]", actionsRead, expectedActionCount, act.Account, act.Name)
+					fmt.Printf("- Verifing action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
 					if _, ok := bootSeqMap[key]; !ok {
 						validationErrors = append(validationErrors, ValidationError{
 							Err:               errors.New("not found"),

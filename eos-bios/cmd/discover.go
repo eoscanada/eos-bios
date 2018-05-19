@@ -26,7 +26,7 @@ var discoverCmd = &cobra.Command{
 	Use:   "discover",
 	Short: "Discover fetches the network you are participating in on the `eosio.disco` contract.  It does not show networks you are not participating in. Use `list` for that.",
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(false)
+		net, err := fetchNetwork(false, false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}

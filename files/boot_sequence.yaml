@@ -26,6 +26,13 @@ boot_sequence:
     new_account: eosio.disco
     pubkey: ephemeral
 
+- op: system.newaccount
+  label: Create account eosio.unregd
+  data:
+    creator: eosio
+    new_account: eosio.unregd
+    pubkey: ephemeral
+
 - op: system.setpriv
   label: Setting privileged account for eosio and eosio.msig
   data:
@@ -53,6 +60,12 @@ boot_sequence:
   data:
     account: eosio.disco
     contract_name_ref: eosio.disco
+
+- op: system.setcode
+  label: Setting eosio.unregd code for account eosio.unregd
+  data:
+    account: eosio.unregd
+    contract_name_ref: eosio.unregd
 
 - op: token.create
   label: Creating the EOS currency symbol
@@ -86,25 +99,31 @@ boot_sequence:
   data:
     TESTNET_ENRICH_PRODUCERS: true
 
+- op: snapshot.inject.unregistered
+  label: Saving unregistered addresses in eosio.unregd account, for the future.
+  data:
+    TESTNET_TRUNCATE_SNAPSHOT: 50
+
 # - op: snapshot.inject
 #   label: Injecting ERC-20 snapshot balances
 #   data:
-#     buy_ram_bytes: 8192  # in EOS decimil
+#     buy_ram_bytes: 8192
 #     TESTNET_TRUNCATE_SNAPSHOT: 50
 
 # - op: producers.register
 #   label: Register all producers with their declared key, URL and location
 
-# - op: system.setprods
-#   label: Setting the initial Appointed Block Producer schedule
+- op: system.setprods
+  label: Setting the initial Appointed Block Producer schedule
 
 - op: system.destroy_accounts
   label: Disabling authorization for system accounts
   data:
     accounts:
-#    - eosio
+    - eosio
     - eosio.msig
     - eosio.token
     - eosio.disco
+    - eosio.unregd
 
 # TODO: also destroy the signing capability of `eosio`.. or `unregproducer` for `eosio`.

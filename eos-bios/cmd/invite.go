@@ -31,7 +31,7 @@ var inviteCmd = &cobra.Command{
 	Short: "Invite a fellow block producer to the seed network where you have access to",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(false)
+		net, err := fetchNetwork(false, false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}

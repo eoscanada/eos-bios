@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/eoscanada/eos-bios/bios/unregd"
 	eos "github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
 	"github.com/eoscanada/eos-go/system"
@@ -18,17 +19,18 @@ type Operation interface {
 }
 
 var operationsRegistry = map[string]Operation{
-	"system.setcode":            &OpSetCode{},
-	"system.setram":             &OpSetRAM{},
-	"system.newaccount":         &OpNewAccount{},
-	"system.setpriv":            &OpSetPriv{},
-	"token.create":              &OpCreateToken{},
-	"token.issue":               &OpIssueToken{},
-	"producers.create_accounts": &OpCreateProducers{},
-	"producers.register":        &OpRegisterProducers{},
-	"system.setprods":           &OpSetProds{},
-	"snapshot.inject":           &OpInjectSnapshot{},
-	"system.destroy_accounts":   &OpDestroyAccounts{},
+	"system.setcode":               &OpSetCode{},
+	"system.setram":                &OpSetRAM{},
+	"system.newaccount":            &OpNewAccount{},
+	"system.setpriv":               &OpSetPriv{},
+	"token.create":                 &OpCreateToken{},
+	"token.issue":                  &OpIssueToken{},
+	"producers.create_accounts":    &OpCreateProducers{},
+	"producers.register":           &OpRegisterProducers{},
+	"system.setprods":              &OpSetProds{},
+	"snapshot.inject":              &OpInjectSnapshot{},
+	"snapshot.inject.unregistered": &OpInjectUnregdSnapshot{},
+	"system.destroy_accounts":      &OpDestroyAccounts{},
 }
 
 type OperationType struct {
@@ -312,7 +314,52 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
-				fmt.Printf("- DEBUG: truncated snapshot at %d rows\n", trunc)
+				fmt.Printf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				break
+			}
+		}
+	}
+
+	return
+}
+
+//
+
+type OpInjectUnregdSnapshot struct {
+	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
+}
+
+func (op *OpInjectUnregdSnapshot) ResetTestnetOptions() {
+	op.TestnetTruncateSnapshot = 0
+}
+
+func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
+	snapshotFile, err := b.GetContentsCacheRef("snapshot_unregistered.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading snapshot file: %s", err)
+	}
+
+	snapshotData, err := NewUnregdSnapshot(rawSnapshot)
+	if err != nil {
+		return nil, fmt.Errorf("loading snapshot csv: %s", err)
+	}
+
+	if len(snapshotData) == 0 {
+		return nil, fmt.Errorf("snapshot is empty or not loaded")
+	}
+
+	fmt.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
+	for idx, hodler := range snapshotData {
+		out = append(out, unregd.NewAdd(hodler.EthereumAddress, hodler.Balance))
+
+		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
+			if idx == trunc {
+				fmt.Printf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
 				break
 			}
 		}

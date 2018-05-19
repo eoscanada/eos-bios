@@ -26,7 +26,7 @@ var joinCmd = &cobra.Command{
 	Short: "Triggers the hooks to join an already running network",
 	Long:  `This will run the "join_network" hook with data discovered from the network pointed to by the seed_discovery_url.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(false)
+		net, err := fetchNetwork(false, true)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}

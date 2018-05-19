@@ -12,7 +12,7 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List shows all the networks discovered from the source contract, not only the one you are participating with.",
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(false)
+		net, err := fetchNetwork(false, false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
 		}
