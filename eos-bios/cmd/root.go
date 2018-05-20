@@ -61,16 +61,16 @@ func init() {
 	}
 
 	RootCmd.PersistentFlags().StringP("my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
-	RootCmd.PersistentFlags().StringP("ipfs-gateway-address", "", "https://ipfs.io", "Address to reach an IPFS gateway. Used as a fallback if ipfs-local-gateway-address is unreachable.")
+	RootCmd.PersistentFlags().StringP("ipfs", "", "https://ipfs.io", "Address to reach an IPFS gateway. There are a few fallbacks anyway.")
 	RootCmd.PersistentFlags().StringP("seednet-api", "", "", "HTTP address of the seed network pointed to by your discovery file")
 	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./privkeys.keys", "File containing private keys to your account on the seed network")
-	// RootCmd.PersistentFlags().StringVarP(&seedNetworkContract, "seednet-contract", "", "eosio.disco", "Contract account name on the seed network, where to find discovery files from all Block producer candidates.")
-	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and verification)")
+	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and validation)")
 
 	RootCmd.PersistentFlags().StringP("cache-path", "", filepath.Join(homedir, ".eos-bios-cache"), "directory to store cached data from discovered network")
 	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "Display verbose output (also see 'output.log')")
+	RootCmd.PersistentFlags().String("elect", "", "Force the election of the given BIOS Boot node")
 
-	for _, flag := range []string{"cache-path", "my-discovery", "ipfs-gateway-address", "seednet-keys", "seednet-api", "target-api", "verbose"} { // "seednet-contract",
+	for _, flag := range []string{"cache-path", "my-discovery", "ipfs", "seednet-keys", "seednet-api", "target-api", "verbose", "elect"} {
 		if err := viper.BindPFlag(flag, RootCmd.PersistentFlags().Lookup(flag)); err != nil {
 			panic(err)
 		}

@@ -77,7 +77,7 @@ According to an algorithm, and using the network discovery data, each
 team will be assigned a role deterministically:
 
 1. The _BIOS Boot node_, which will, alone, execute the equivalent of `eos-bios boot`.
-2. An _Appointed Block Producer_, which executes the equivalent of `eos-bios join --verify`
+2. An _Appointed Block Producer_, which executes the equivalent of `eos-bios join --validate`
 3. An _other participant_, which executes the equivalent of `eos-bios join`
 
 The orchestrate for all will wait the agreed upon
@@ -233,26 +233,22 @@ TODO
 * In Orchestrate, compute the LaunchData by the most votes, weighted by the highest Weight
 
   * Find out what we do for the chain_id.. do we vote for it too ?
-    Top 20% must agree on the chain_id ?
-    Top 20% must agree on the constitution ?
+    Top 20%, max 5 must agree on the chain_id ?
+    Top 20%, max 5 must agree on the constitution ?
 
-* boot_connect_mesh: Make sure we don't mesh with the first BIOS boot..
-  it's most probably not running..
-
-* Implement `eos-bios boot --reset` or something.. through eosio.disco::delgenesis
+* boot_connect_mesh: Make sure we don't mesh with the first BIOS
+  boot..  it's most probably not running.. but perhaps it's neat if it
+  connects when it is up.. at least to get the blocks.
 
 * Dedupe the p2p-address in join and mesh..
-
-* delegatebw, from/to eosio, do the transfer with it ?
 
 * Display time of the launch block (or delta)
 
 * Implement contents disagreement
 
 * Upgrade to dawn4.1, docker hub, pub eosio.unregd, maintain `eos`
-  with reverse SYS patch, publish Docker image, with disco and unregd
-  contracts. Update the disco .abi file
-  * Add abi_extensions
+  with CORE_SYMBOL_NAME=EOS applied, publish Docker image, with disco
+  and unregd contracts.
 
 * Destroy `eosio`'s signing key also. What happens is someone votes
   for `eosio` enough that he's able to produce ? Then the original
@@ -266,10 +262,38 @@ TODO
 * p2p chain validation.. should wait until the `target_p2p_address` is
   reachable..  not fail right away.. and retry.
 
-* Insert a `nil` eos.Action in the `Actions()` to split the transactions.. so that
-  Transfer and NewAccount are not in the same.
+* eos-bios publish: should display the number of seconds left until launch block
 
+* try to get blocks again.. now that ABI things are fixed.. ABI won't
+  change during the schebang
 
+* solve the p2p connection error, when doing validation (!!!)
+  network-version-match mismatch connection closed because of that..
+
+  * don't use the p2p, rather use the http endpoint for validation..
+  * poke until it answers..
+
+* sample_config: Docker image should use dawn 4.1 instead of 4.0.0
+
+* readiness loop:
+  * wait for launch block
+  * wait for consensus on contents, launch block, chain_id / constitution hash ?
+    * sleep 5 seconds
+  * wait for participation levels ? publish participation ?
+
+* ipfs: attempt to download from many ipfs gateways, first being `--ipfs`
+
+* do direct meshing (outgoing) from bios boot to other nodes.. don't boot_connect_mesh.sh
+  instead the bios boot has a firewalled entrypoint or something..
+  connect_mesh could unlock firewall perhaps..
+
+* implement a sort of `--json` output for those wanting to use the tool to do other things..
+  * export the `genesis` for a given name, export the disco file for a given name.
+  * perhaps simply give example `cleos` calls to do the same..
+
+Desired output for network:
+
+```
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)
 ----       ------------  -----------   ------  ----------------  ------------
 BIOS NODE  eosmama       eoscanadacom  10      1112211           500 (Fri Nov 7th 23:36, local time)
@@ -282,3 +306,4 @@ Contents disagreements:
 * About column 4: `boot_sequence.yaml`
   * eosmarc, eoscanadacom, eospouet says 1: /ipfs/Qmakjdsflakjdslfkjaldsfk
   * eosmama says 2: /ipfs/Qmhellkajdlakjdsflkj
+```

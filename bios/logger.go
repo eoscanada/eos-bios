@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 type Logger struct {
@@ -53,6 +54,10 @@ func (l *Logger) Debugf(format string, args ...interface{}) {
 	if l.Debug {
 		fmt.Fprintf(l.OutputScreen, format, args...)
 	}
+
+	if !strings.HasSuffix(format, "\n") {
+		format = format + "\n"
+	}
 	fmt.Fprintf(l.OutputFile, format, args...)
 }
 
@@ -62,5 +67,9 @@ func (l *Logger) Printf(format string, args ...interface{}) {
 	}
 
 	fmt.Fprintf(l.OutputScreen, format, args...)
+
+	if !strings.HasSuffix(format, "\n") {
+		format = format + "\n"
+	}
 	fmt.Fprintf(l.OutputFile, format, args...)
 }

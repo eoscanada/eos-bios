@@ -213,13 +213,13 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(10000), eos.NewEOSAsset(10000), true)
 
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
-		// fmt.Println("Some JSON", string(mama))
+		// b.Log.Println("Some JSON", string(mama))
 
-		fmt.Printf("- Creating new account %q\n", prodName)
+		b.Log.Debugf("- Creating new account %q\n", prodName)
 		out = append(out, newAccount, buyRAMBytes, delegateBW, nil)
 
 		if op.TestnetEnrichProducers {
-			fmt.Printf("  DEBUG: Enriching producer %q\n", prodName)
+			b.Log.Debugf("  DEBUG: Enriching producer %q\n", prodName)
 			out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"), nil)
 		}
 	}
@@ -228,6 +228,8 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
+// WE CAN'T DO THIS.. seems it checks for the proper authorization, that we don't have.
+// I thought actions by `eosio` could skip sig checks.. but it doesn't seem to work here..
 type OpRegisterProducers struct {
 }
 
@@ -283,7 +285,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	fmt.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
@@ -292,7 +294,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 			destAccount = "b1b1b1b1b1b1" // TODO: CONTRACT SHOULD CHANGE TOO
 		}
 
-		// fmt.Println("Transfer", hodler, destAccount)
+		// b.Log.Println("Transfer", hodler, destAccount)
 
 		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 
@@ -310,7 +312,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
-				fmt.Printf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
 				break
 			}
 		}
@@ -349,7 +351,7 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	fmt.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
@@ -363,7 +365,7 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
-				fmt.Printf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
 				break
 			}
 		}
@@ -402,13 +404,13 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	fmt.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		out = append(out, unregd.NewAdd(hodler.EthereumAddress, hodler.Balance), nil)
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
-				fmt.Printf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
+				b.Log.Debugf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
 				break
 			}
 		}
@@ -460,7 +462,7 @@ func (op *OpDestroyAccounts) ResetTestnetOptions() {
 
 func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	if op.TestnetKeepAccounts {
-		fmt.Println("DEBUG: Keeping system account around, for testing purposes.")
+		b.Log.Debugln("DEBUG: Keeping system account around, for testing purposes.")
 		return
 	}
 

@@ -83,7 +83,7 @@ func (net *Network) UpdateGraph() error {
 
 	net.isolateNetworks()
 
-	net.calculateNetworkWeights()
+	net.CalculateNetworkWeights("") // no forced election
 
 	return nil
 }
@@ -101,7 +101,7 @@ func (net *Network) fetchSingleNode() error {
 }
 
 func (net *Network) fetchGraphFromSeedNetwork() error {
-	fmt.Println("Updating network graph from", net.SeedNetAPI.BaseURL)
+	net.Log.Println("Updating network graph from", net.SeedNetAPI.BaseURL)
 	rowsJSON, err := net.SeedNetAPI.GetTableRows(
 		eos.GetTableRowsRequest{
 			JSON:     true,
@@ -129,7 +129,7 @@ func (net *Network) fetchGraphFromSeedNetwork() error {
 
 	for _, cand := range rows {
 		if err := ValidateDiscovery(cand.Discovery); err != nil {
-			fmt.Printf("Skipping invalid discovery file from %q: %s\n", cand.ID, err)
+			net.Log.Printf("Skipping invalid discovery file from %q: %s\n", cand.ID, err)
 			continue
 		}
 
@@ -266,11 +266,11 @@ func (net *Network) ensureCacheExists() error {
 
 func (net *Network) DownloadIPFSRef(ref string) error {
 	if net.isInCache(string(ref)) {
-		//fmt.Printf("ipfs ref: %q in cache\n", ref)
+		//net.Log.Printf("ipfs ref: %q in cache\n", ref)
 		return nil
 	}
 
-	fmt.Printf("Downloading and caching content from IPFS: %q\n", ref)
+	net.Log.Printf("Downloading and caching content from IPFS: %q\n", ref)
 	cnt, err := net.ipfs.Get(ref)
 	if err != nil {
 		return err
@@ -322,7 +322,7 @@ func (net *Network) ChainID() []byte {
 // Graph weighting...
 //
 
-func (net *Network) calculateNetworkWeights() {
+func (net *Network) CalculateNetworkWeights(forceElection string) {
 	// For all networks
 	for _, network := range net.allNetworks {
 
@@ -332,7 +332,12 @@ func (net *Network) calculateNetworkWeights() {
 				edge := network.WeightedEdge(inwardNode.ID(), node.ID())
 				totalWeight += int(edge.Weight())
 			}
-			node.(*Peer).TotalWeight = totalWeight
+			peer := node.(*Peer)
+			if string(peer.Discovery.SeedNetworkAccountName) == forceElection {
+				peer.TotalWeight = 9999999999
+			} else {
+				peer.TotalWeight = totalWeight
+			}
 		}
 	}
 }
@@ -367,7 +372,7 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 	return
 }
 
-func (net *Network) GetBlockHeight(height uint32) (blockhash string, err error) {
+func (net *Network) GetBlockHeight(height uint32) (string, error) {
 	resp, err := net.SeedNetAPI.GetBlockByNum(uint64(height))
 	if err != nil {
 		return "", err
@@ -376,13 +381,23 @@ func (net *Network) GetBlockHeight(height uint32) (blockhash string, err error) 
 	return resp.ID, nil
 }
 
-func (net *Network) GetLastBlockNum() (blockNum uint32, err error) {
+func (net *Network) GetLastBlockNum() (uint32, error) {
 	info, err := net.SeedNetAPI.GetInfo()
 	if err != nil {
 		return 0, err
 	}
 
 	return info.HeadBlockNum, nil
+}
+
+func (net *Network) LaunchBlockTime(targetBlockNum uint32) (t time.Time, currentBlock uint32, err error) {
+	lastBlockNum, err := net.GetLastBlockNum()
+	if err != nil {
+		return t, 0, fmt.Errorf("fetching seed network's latest block num: %s", err)
+	}
+
+	remaining := time.Duration((int64(targetBlockNum)-int64(lastBlockNum))/2) * time.Second
+	return time.Now().Add(remaining), lastBlockNum, nil
 }
 
 func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err error) {
@@ -425,13 +440,13 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 }
 
 func (net *Network) ListNetworks(verbose bool) {
-	fmt.Println("Networks formed by published discovery files:")
+	net.Log.Println("Networks formed by published discovery files:")
 
 	for idx, network := range net.allNetworks {
-		fmt.Printf("%d.\n", idx+1)
+		net.Log.Printf("%d.\n", idx+1)
 		orderedPeers := net.OrderedPeers(network)
 		for _, peer := range orderedPeers {
-			fmt.Printf("  - %s (total weight: %d)\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight)
+			net.Log.Printf("  - %s (total weight: %d)\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight)
 		}
 	}
 }
@@ -440,13 +455,13 @@ func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
 	network := net.NetworkThatIncludes(net.MyPeer.Discovery.SeedNetworkAccountName)
 	if network == nil {
 		if len(net.MyPeer.Discovery.SeedNetworkPeers) == 0 {
-			fmt.Println("You are part of no network. Either define a `seed_network_peers` to point to some peers in a network, or ask to be pointed to by someone in a network")
+			net.Log.Println("You are part of no network. Either define a `seed_network_peers` to point to some peers in a network, or ask to be pointed to by someone in a network")
 			os.Exit(1)
 		}
 
 		network = net.NetworkThatIncludes(net.MyPeer.Discovery.SeedNetworkPeers[0].Account)
 		if network == nil {
-			fmt.Println("You're part of no network, and your first peer in `seed_network_peers` isn't either (!!)")
+			net.Log.Println("You're part of no network, and your first peer in `seed_network_peers` isn't either (!!)")
 			os.Exit(1)
 		}
 	}
@@ -455,9 +470,9 @@ func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
 }
 
 func (net *Network) PrintOrderedPeers() {
-	fmt.Println("###############################################################################################")
-	fmt.Println("####################################    PEER NETWORK    #######################################")
-	fmt.Println("")
+	net.Log.Println("###############################################################################################")
+	net.Log.Println("####################################    PEER NETWORK    #######################################")
+	net.Log.Println("")
 
 	network := net.MyNetwork()
 	orderedPeers := net.OrderedPeers(network)
@@ -476,11 +491,11 @@ func (net *Network) PrintOrderedPeers() {
 	for i := 22; len(orderedPeers) > i; i++ {
 		columns = append(columns, fmt.Sprintf("Part. %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
 	}
-	fmt.Println(columnize.SimpleFormat(columns))
+	net.Log.Println(columnize.SimpleFormat(columns))
 
-	fmt.Println("")
-	fmt.Println("###############################################################################################")
-	fmt.Println("")
+	net.Log.Println("")
+	net.Log.Println("###############################################################################################")
+	net.Log.Println("")
 }
 
 // ReachedConsensus reads all the hashes of the top-level peers and

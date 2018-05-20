@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/eoscanada/eos-bios/bios"
@@ -29,6 +30,11 @@ var discoverCmd = &cobra.Command{
 		net, err := fetchNetwork(false, false)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
+		}
+
+		fmt.Println("IN HERE!", viper.GetString("elect"))
+		if elect := viper.GetString("elect"); elect != "" {
+			net.CalculateNetworkWeights(elect)
 		}
 
 		net.PrintOrderedPeers()

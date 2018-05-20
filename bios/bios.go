@@ -95,7 +95,7 @@ func (b *BIOS) Init() error {
 
 	var rawBootSeq []byte
 	if b.OverrideBootSequenceFile != "" {
-		fmt.Printf("Using overridden boot sequence from %q\n", b.OverrideBootSequenceFile)
+		b.Log.Printf("Using overridden boot sequence from %q\n", b.OverrideBootSequenceFile)
 
 		rawBootSeq, err = ioutil.ReadFile(b.OverrideBootSequenceFile)
 		if err != nil {
@@ -123,9 +123,9 @@ func (b *BIOS) Init() error {
 }
 
 func (b *BIOS) StartOrchestrate() error {
-	fmt.Println("Starting Orchestraion process", time.Now())
+	b.Log.Println("Starting Orchestraion process", time.Now())
 
-	fmt.Println("Showing pre-randomized network discovered:")
+	b.Log.Println("Showing pre-randomized network discovered:")
 	b.PrintProducerSchedule()
 
 	b.RandSource = b.waitLaunchBlock()
@@ -133,13 +133,13 @@ func (b *BIOS) StartOrchestrate() error {
 	// Once we have it, we can discover the net again (unless it's been discovered VERY recently)
 	// and we b.Init() again.. so load the latest version of the LaunchData according to this
 	// potentially new discovery network.
-	fmt.Println("Seed network block used to seed randomization, updating graph one last time...")
+	b.Log.Println("Seed network block used to seed randomization, updating graph one last time...")
 
 	if err := b.Network.UpdateGraph(); err != nil {
 		return fmt.Errorf("update graph: %s", err)
 	}
 
-	fmt.Println("Network used for launch:")
+	b.Log.Println("Network used for launch:")
 	b.PrintProducerSchedule()
 
 	if err := b.DispatchInit("orchestrate"); err != nil {
@@ -164,8 +164,8 @@ func (b *BIOS) StartOrchestrate() error {
 	return b.DispatchDone("orchestrate")
 }
 
-func (b *BIOS) StartJoin(verify bool) error {
-	fmt.Println("Starting network join process", time.Now())
+func (b *BIOS) StartJoin(validate bool) error {
+	b.Log.Println("Starting network join process", time.Now())
 
 	b.PrintProducerSchedule()
 
@@ -173,7 +173,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 		return fmt.Errorf("dispatch init hook: %s", err)
 	}
 
-	if err := b.RunJoinNetwork(verify, false); err != nil {
+	if err := b.RunJoinNetwork(validate, false); err != nil {
 		return fmt.Errorf("join network: %s", err)
 	}
 
@@ -181,7 +181,7 @@ func (b *BIOS) StartJoin(verify bool) error {
 }
 
 func (b *BIOS) StartBoot() error {
-	fmt.Println("Starting network join process", time.Now())
+	b.Log.Println("Starting network join process", time.Now())
 
 	b.PrintProducerSchedule()
 
@@ -199,28 +199,28 @@ func (b *BIOS) StartBoot() error {
 func (b *BIOS) PrintProducerSchedule() {
 	b.Network.PrintOrderedPeers()
 
-	fmt.Println("")
-	fmt.Println("###############################################################################################")
-	fmt.Println("")
+	b.Log.Println("")
+	b.Log.Println("###############################################################################################")
+	b.Log.Println("")
 	if b.AmIBootNode() {
-		fmt.Println("                              MY ROLE: BIOS BOOT NODE")
+		b.Log.Println("                              MY ROLE: BIOS BOOT NODE")
 	} else if b.AmIAppointedBlockProducer() {
-		fmt.Println("                              MY ROLE: APPOINTED BLOCK PRODUCER")
+		b.Log.Println("                              MY ROLE: APPOINTED BLOCK PRODUCER")
 	} else {
-		fmt.Println("                              MY ROLE: JOINING NETWORK")
+		b.Log.Println("                              MY ROLE: JOINING NETWORK")
 	}
-	fmt.Println("")
+	b.Log.Println("")
 
-	fmt.Println("###############################################################################################")
-	fmt.Println("")
+	b.Log.Println("###############################################################################################")
+	b.Log.Println("")
 }
 
 func (b *BIOS) RunBootSequence() error {
-	fmt.Println("START BOOT SEQUENCE...")
+	b.Log.Println("START BOOT SEQUENCE...")
 
 	// keys, _ := b.TargetNetAPI.Signer.(*eos.KeyBag).AvailableKeys()
 	// for _, key := range keys {
-	// 	fmt.Println("Available key in the KeyBag:", key)
+	// 	b.Log.Println("Available key in the KeyBag:", key)
 	// }
 
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
@@ -236,7 +236,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	privKey := ephemeralPrivateKey.String()
 
-	fmt.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
+	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
@@ -247,15 +247,15 @@ func (b *BIOS) RunBootSequence() error {
 
 	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.SingleOnly {
 
-		fmt.Printf("Publishing genesis data to the seed network... ")
+		b.Log.Printf("Publishing genesis data to the seed network... ")
 		_, err := b.Network.SeedNetAPI.SignPushActions(
 			disco.NewUpdateGenesis(b.Network.MyPeer.Discovery.SeedNetworkAccountName, genesisData, []string{}),
 		)
 		if err != nil {
-			fmt.Println("")
+			b.Log.Println("")
 			return fmt.Errorf("updating genesis on seednet: %s", err)
 		}
-		fmt.Println(" done")
+		b.Log.Println(" done")
 
 		if err = b.DispatchBootPublishGenesis(genesisData); err != nil {
 			return fmt.Errorf("dispatch boot_publish_genesis hook: %s", err)
@@ -266,17 +266,17 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
-	fmt.Println("In-memory keys:")
+	b.Log.Println("In-memory keys:")
 	memkeys, _ := b.TargetNetAPI.Signer.AvailableKeys()
 	for _, key := range memkeys {
-		fmt.Printf("- %s\n", key.String())
+		b.Log.Printf("- %s\n", key.String())
 	}
-	fmt.Println("")
+	b.Log.Println("")
 
 	//eos.Debug = true
 
 	for _, step := range b.BootSequence {
-		fmt.Printf("%s  [%s] ", step.Label, step.Op)
+		b.Log.Printf("%s  [%s] ", step.Label, step.Op)
 
 		if b.LaunchDisco.TargetNetworkIsTest == 0 {
 			step.Data.ResetTestnetOptions()
@@ -293,25 +293,27 @@ func (b *BIOS) RunBootSequence() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
-							//fmt.Println("skiping because error message seems valid:", err)
+							//b.Log.Println("skiping because error message seems valid:", err)
 							return nil
 						}
+						b.Log.Printf("r")
+						b.Log.Debugf("error pushing transaction for step %q, chunk %d: %s\n", step.Op, idx, err)
 						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 					}
 
 					return nil
 				})
 				if err != nil {
-					fmt.Printf(" error\n")
+					b.Log.Printf(" failed\n")
 					return err
 				}
-				fmt.Printf(".")
+				b.Log.Printf(".")
 			}
-			fmt.Printf(" done\n")
+			b.Log.Printf(" done\n")
 		}
 	}
 
-	fmt.Println("Flushing transactions into blocks")
+	b.Log.Println("Waiting 2 seconds for transactions to flush to blocks")
 	time.Sleep(2 * time.Second)
 
 	// FIXME: don't do chain validation here..
@@ -320,7 +322,7 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("chain validation: %s", err)
 	}
 	if !isValid {
-		fmt.Println("WARNING: chain invalid, destroying network if possible")
+		b.Log.Println("WARNING: chain invalid, destroying network if possible")
 		os.Exit(0)
 	}
 
@@ -347,7 +349,7 @@ func (b *BIOS) getMyPeerVariations() (out []*Peer) {
 	return
 }
 
-func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
+func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 	if b.Genesis == nil {
 		if b.SingleOnly {
 			b.Genesis = b.inputGenesisData()
@@ -369,33 +371,33 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 		return fmt.Errorf("dispatch join_network hook: %s", err)
 	}
 
-	if verify {
-		fmt.Println("###############################################################################################")
-		fmt.Println("Launching chain validation")
+	if validate {
+		b.Log.Println("###############################################################################################")
+		b.Log.Println("Launching chain validation")
 
 		isValid, err := b.RunChainValidation()
 		if err != nil {
 			return fmt.Errorf("chain validation: %s", err)
 		}
 		if !isValid {
-			fmt.Println("WARNING: chain invalid, destroying network if possible")
+			b.Log.Println("WARNING: chain invalid, destroying network if possible")
 			os.Exit(0)
 		}
 	} else {
-		fmt.Println("")
-		fmt.Println("Not doing chain validation. Someone else will do it.")
-		fmt.Println("")
+		b.Log.Println("")
+		b.Log.Println("Not doing chain validation. Someone else will do it.")
+		b.Log.Println("")
 	}
 
 	// TODO: loop operations, check all actions against blocks that you can fetch from here.
 	// Check ALL actions, should match the orchestrated launch data:
 	// - otherwise, sabotage
 
-	fmt.Println("Awaiting for private key, for handoff verification.")
-	fmt.Println("* This is the last step, and is done for the BIOS Boot node to prove it kept nothing to itself.")
-	fmt.Println("")
+	b.Log.Println("Awaiting for private key, for handoff verification.")
+	b.Log.Println("* This is the last step, and is done for the BIOS Boot node to prove it kept nothing to itself.")
+	b.Log.Println("")
 
-	if verify {
+	if validate {
 		b.waitOnHandoff(b.Genesis)
 	}
 
@@ -413,7 +415,7 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 
 		acts, err := step.Data.Actions(b)
 		if err != nil {
-			return false, fmt.Errorf("verifing: getting actions for step %q: %s", step.Op, err)
+			return false, fmt.Errorf("validating: getting actions for step %q: %s", step.Op, err)
 		}
 
 		for _, stepAction := range acts {
@@ -423,30 +425,30 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 
 			data, err := eos.MarshalBinary(stepAction)
 			if err != nil {
-				return false, fmt.Errorf("verifying: binary marshalling: %s", err)
+				return false, fmt.Errorf("validating: binary marshalling: %s", err)
 			}
 			stepAction.SetToServer(false)
-			key := sha2(data) // TODO: compute a hash here..
+			key := sha2(data)
 
-			if _, ok := bootSeqMap[key]; ok {
-				// TODO: don't fatal here plz :)
-				log.Fatalf("Same action detected twice [%s] with key [%s]\n", stepAction.Name, key)
-			}
+			// if _, ok := bootSeqMap[key]; ok {
+			// 	// TODO: don't fatal here plz :)
+			// 	log.Fatalf("Same action detected twice [%s] with key [%s]\n", stepAction.Name, key)
+			// }
 			bootSeqMap[key] = stepAction
 			bootSeq = append(bootSeq, stepAction)
 		}
 
 	}
 
-	err := b.validateBootSeqActions(bootSeqMap, bootSeq)
+	err := b.validateTargetNetwork(bootSeqMap, bootSeq)
 	if err != nil {
-		fmt.Printf("BOOT SEQUENCE VALIDATION FAILED:\n%s", err)
+		b.Log.Printf("BOOT SEQUENCE VALIDATION FAILED:\n%s", err)
 		return false, nil
 	}
 
-	fmt.Println("")
-	fmt.Println("All good! Chain verificaiton succeeded!")
-	fmt.Println("")
+	b.Log.Println("")
+	b.Log.Println("All good! Chain validation succeeded!")
+	b.Log.Println("")
 
 	return true, nil
 }
@@ -494,9 +496,30 @@ func (v ValidationErrors) Error() string {
 	return s
 }
 
-func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
+func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
 	expectedActionCount := len(bootSeq)
 	validationErrors := make([]error, 0)
+
+	// TODO: wait for target network to be up, and responding...
+	b.Log.Printf("Pinging target network at %q...", b.TargetNetAPI.BaseURL)
+	for {
+		info, err := b.TargetNetAPI.GetInfo()
+		if err != nil {
+			b.Log.Debugf("target network error: %s\n", err)
+			b.Log.Printf("e")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if info.HeadBlockNum < 2 {
+			b.Log.Debugln("target network: still no blocks in")
+			b.Log.Printf(".")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		break
+	}
 
 	actionsRead := 0
 	seenMap := map[string]bool{}
@@ -507,18 +530,20 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 	client.RegisterHandlerFunc(func(msg p2p.Message) {
 		switch m := msg.Envelope.P2PMessage.(type) {
 		case *eos.HandshakeMessage:
-			fmt.Println("Sending sync request", client.LastHandshakeReceived)
+			b.Log.Debugln("Sending sync request", client.LastHandshakeReceived)
 			if err := client.SendSyncRequest(1, client.LastHandshakeReceived.HeadNum); err != nil {
-				fmt.Println("Failed sending sync request:", err)
+				b.Log.Println("Failed sending sync request:", err)
 				return
 			}
+		case *eos.GoAwayMessage:
+			b.Log.Printf("DISCONNECTED from p2p peer: %T, node_id=%q\n", m.Reason, hex.EncodeToString(m.NodeID))
 		case *eos.SignedBlock:
-			fmt.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
+			b.Log.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
 
 			for _, receipt := range m.Transactions {
 				unpacked, err := receipt.Transaction.Packed.Unpack()
 				if err != nil {
-					fmt.Println("WARNING: Unable to unpack transaction, won't be able to fully validate:", err)
+					b.Log.Println("WARNING: Unable to unpack transaction, won't be able to fully validate:", err)
 					return
 				}
 
@@ -526,7 +551,7 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 					act.SetToServer(false)
 					data, err := eos.MarshalBinary(act)
 					if err != nil {
-						fmt.Printf("Error marshalling an action: %s\n", err)
+						b.Log.Printf("Error marshalling an action: %s\n", err)
 						validationErrors = append(validationErrors, ValidationError{
 							Err:               err,
 							BlockNumber:       1, // extract from the block transactionmroot
@@ -541,7 +566,7 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 					act.SetToServer(false)
 					key := sha2(data) // TODO: compute a hash here..
 
-					fmt.Printf("- Verifing action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
+					b.Log.Printf("- Validating action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
 					if _, ok := bootSeqMap[key]; !ok {
 						validationErrors = append(validationErrors, ValidationError{
 							Err:               errors.New("not found"),
@@ -552,10 +577,10 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 							ActionHexData:     hex.EncodeToString(act.HexData),
 							Index:             actionsRead,
 						})
-						fmt.Printf(" INVALID ***************************** INVALID *************.\n")
+						b.Log.Printf(" INVALID ***************************** INVALID *************.\n")
 					} else {
 						seenMap[key] = true
-						fmt.Printf(" valid.\n")
+						b.Log.Printf(" valid.\n")
 					}
 
 					actionsRead++
@@ -574,12 +599,12 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 	<-done
 
 	if len(validationErrors) > 0 {
-		fmt.Println("Unseen transactions:")
+		b.Log.Println("Unseen transactions:")
 		for _, act := range bootSeq {
 			data, _ := eos.MarshalBinary(act)
 			key := sha2(data)
 			if !seenMap[key] {
-				fmt.Printf("- Action %s::%s [%q]\n", act.Account, act.Name, hex.EncodeToString(data))
+				b.Log.Printf("- Action %s::%s [%q]\n", act.Account, act.Name, hex.EncodeToString(data))
 			}
 		}
 		return ValidationErrors{Errors: validationErrors}
@@ -591,28 +616,28 @@ func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Actio
 func (b *BIOS) waitLaunchBlock() rand.Source {
 	targetBlockNum := uint32(b.LaunchDisco.SeedNetworkLaunchBlock)
 
-	fmt.Println("Polling seed network until launch block, target:", targetBlockNum)
+	b.Log.Println("Polling seed network until launch block, target:", targetBlockNum)
 
 	for {
-		lastBlockNum, err := b.Network.GetLastBlockNum()
+		launchTime, _, err := b.Network.LaunchBlockTime(targetBlockNum)
 		if err != nil {
-			fmt.Println("error fetching seed network's latest block num:", err)
+			b.Log.Println(err.Error())
 		}
 
-		if lastBlockNum < targetBlockNum {
-			fmt.Printf("- not yet, %d seconds to go\n", (targetBlockNum-lastBlockNum)/2)
+		if launchTime.Before(time.Now()) {
+			b.Log.Printf("- not yet, %s to go\n", time.Now().Sub(launchTime))
 			time.Sleep(time.Second)
 			continue
 		}
 
 		hash, err := b.Network.GetBlockHeight(targetBlockNum)
 		if err != nil {
-			fmt.Println("error fetching seed network's target block height:", err)
+			b.Log.Println("error fetching seed network's target block hash:", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
 
-		fmt.Println("- got block", targetBlockNum, "- hash is", hash)
+		b.Log.Println("- got block", targetBlockNum, "- hash is", hash)
 		bytes, _ := hex.DecodeString(hash)
 		chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
 		return rand.NewSource(int64(chksum))
@@ -621,16 +646,16 @@ func (b *BIOS) waitLaunchBlock() rand.Source {
 }
 
 func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
-	fmt.Println("")
-	fmt.Println("Waiting for the BIOS Boot node to publish the genesis data to the seed network contract..")
+	b.Log.Println("")
+	b.Log.Println("Waiting for the BIOS Boot node to publish the genesis data to the seed network contract..")
 
 	bootNode := b.ShuffledProducers[0]
 
-	fmt.Printf("Polling..")
+	b.Log.Printf("Polling..")
 	for {
 		time.Sleep(500 * time.Millisecond)
 
-		fmt.Printf(".")
+		b.Log.Printf(".")
 		genesisData, err := b.Network.PollGenesisTable(bootNode.Discovery.SeedNetworkAccountName)
 		if err != nil {
 			b.Log.Debugf("\n- data not ready: %s", err)
@@ -648,29 +673,29 @@ func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 			continue
 		}
 
-		fmt.Println("")
-		fmt.Println("Got genesis data:")
-		fmt.Println("    ", genesisData)
-		fmt.Println("")
+		b.Log.Println("")
+		b.Log.Println("Got genesis data:")
+		b.Log.Println("    ", genesisData)
+		b.Log.Println("")
 
 		return
 	}
 }
 
 func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
-	fmt.Println("")
+	b.Log.Println("")
 
 	for {
-		fmt.Printf("Please input the genesis data of the network you want to join: ")
+		b.Log.Printf("Please input the genesis data of the network you want to join: ")
 		genesisData, err := ScanSingleLine()
 		if err != nil {
-			fmt.Println("error reading:", err)
+			b.Log.Println("error reading:", err)
 			continue
 		}
 
 		err = json.Unmarshal([]byte(genesisData), &genesis)
 		if err != nil {
-			fmt.Printf("Invalid genesis data: %s\n", err)
+			b.Log.Printf("Invalid genesis data: %s\n", err)
 			continue
 		}
 
@@ -680,10 +705,10 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 
 func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
 	for {
-		fmt.Printf("Please paste the private key (or ipfs link): ")
+		b.Log.Printf("Please paste the private key (or ipfs link): ")
 		privKey, err := ScanSingleLine()
 		if err != nil {
-			fmt.Println("Error reading line:", err)
+			b.Log.Println("Error reading line:", err)
 			continue
 		}
 
@@ -691,19 +716,19 @@ func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
 
 		key, err := ecc.NewPrivateKey(privKey)
 		if err != nil {
-			fmt.Println("Invalid private key pasted:", err)
+			b.Log.Println("Invalid private key pasted:", err)
 			continue
 		}
 
 		if key.PublicKey().String() == genesis.InitialKey {
-			fmt.Println("")
-			fmt.Println("   HANDOFF VERIFIED! EOS CHAIN IS ALIVE !")
-			fmt.Println("")
+			b.Log.Println("")
+			b.Log.Println("   HANDOFF VERIFIED! EOS CHAIN IS ALIVE !")
+			b.Log.Println("")
 			return
 		} else {
-			fmt.Println("")
-			fmt.Println("   WARNING: private key provided does NOT match the genesis data")
-			fmt.Println("")
+			b.Log.Println("")
+			b.Log.Println("   WARNING: private key provided does NOT match the genesis data")
+			b.Log.Println("")
 		}
 	}
 }
@@ -768,16 +793,16 @@ func (b *BIOS) setProducers() error {
 
 func (b *BIOS) shuffleProducers() {
 	if b.RandSource == nil {
-		fmt.Println("Random source not set, skipping producer shuffling")
+		b.Log.Println("Random source not set, skipping producer shuffling")
 		return
 	}
 
-	fmt.Println("Shuffling producers listed in the launch file")
+	b.Log.Println("Shuffling producers listed in the launch file")
 	r := rand.New(b.RandSource)
 	// shuffle top 25%, capped to 5
 	shuffleHowMany := int64(math.Min(math.Ceil(float64(len(b.ShuffledProducers))*0.25), 5))
 	if shuffleHowMany > 1 {
-		fmt.Println("- Shuffling top", shuffleHowMany)
+		b.Log.Println("- Shuffling top", shuffleHowMany)
 		for round := 0; round < 100; round++ {
 			from := r.Int63() % shuffleHowMany
 			to := r.Int63() % shuffleHowMany
@@ -785,11 +810,11 @@ func (b *BIOS) shuffleProducers() {
 				continue
 			}
 
-			//fmt.Println("Swapping from", from, "to", to)
+			//b.Log.Println("Swapping from", from, "to", to)
 			b.ShuffledProducers[from], b.ShuffledProducers[to] = b.ShuffledProducers[to], b.ShuffledProducers[from]
 		}
 	} else {
-		fmt.Println("- No shuffling, network too small")
+		b.Log.Println("- No shuffling, network too small")
 	}
 }
 
