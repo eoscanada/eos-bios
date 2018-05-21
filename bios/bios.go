@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash/crc64"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -17,7 +16,6 @@ import (
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
-	"github.com/eoscanada/eos-go/p2p"
 )
 
 type BIOS struct {
@@ -521,82 +519,83 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 		break
 	}
 
+	b.Log.Println(" touchdown!")
+
+	b.Log.Println("Pulling blocks from chain until we gathered all actions to validate:")
+	lastDisplay := time.Now()
+	blockHeight := 1
 	actionsRead := 0
 	seenMap := map[string]bool{}
-	done := make(chan bool)
-	client := p2p.NewClient(b.Network.MyPeer.Discovery.TargetP2PAddress, make([]byte, 32, 32), int16(25431))
-	client.ShowEmptyChain = true
-	//client.RegisterHandler(p2p.HandlerFunc(p2p.LoggerHandler))
-	client.RegisterHandlerFunc(func(msg p2p.Message) {
-		switch m := msg.Envelope.P2PMessage.(type) {
-		case *eos.HandshakeMessage:
-			b.Log.Debugln("Sending sync request", client.LastHandshakeReceived)
-			if err := client.SendSyncRequest(1, client.LastHandshakeReceived.HeadNum); err != nil {
-				b.Log.Println("Failed sending sync request:", err)
-				return
-			}
-		case *eos.GoAwayMessage:
-			b.Log.Printf("DISCONNECTED from p2p peer: %T, node_id=%q\n", m.Reason, hex.EncodeToString(m.NodeID))
-		case *eos.SignedBlock:
-			b.Log.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
 
-			for _, receipt := range m.Transactions {
-				unpacked, err := receipt.Transaction.Packed.Unpack()
+	for {
+		m, err := b.TargetNetAPI.GetBlockByNum(uint32(blockHeight))
+		if err != nil {
+			b.Log.Debugln("Failed getting block num from target api:", err)
+			b.Log.Printf("e")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if time.Now().Sub(lastDisplay) > 1*time.Second {
+			b.Log.Printf("Block %d, read actions %d/%d\n", blockHeight, actionsRead, len(bootSeq))
+			lastDisplay = time.Now()
+		}
+
+		blockHeight++
+
+		b.Log.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
+
+		for _, receipt := range m.Transactions {
+			unpacked, err := receipt.Transaction.Packed.Unpack()
+			if err != nil {
+				b.Log.Println("WARNING: Unable to unpack transaction, won't be able to fully validate:", err)
+				return fmt.Errorf("unpack transaction failed")
+			}
+
+			for _, act := range unpacked.Actions {
+				act.SetToServer(false)
+				data, err := eos.MarshalBinary(act)
 				if err != nil {
-					b.Log.Println("WARNING: Unable to unpack transaction, won't be able to fully validate:", err)
-					return
+					b.Log.Printf("Error marshalling an action: %s\n", err)
+					validationErrors = append(validationErrors, ValidationError{
+						Err:               err,
+						BlockNumber:       1, // extract from the block transactionmroot
+						PackedTransaction: receipt.Transaction.Packed,
+						Action:            act,
+						RawAction:         data,
+						ActionHexData:     hex.EncodeToString(act.HexData),
+						Index:             actionsRead,
+					})
+					return err
+				}
+				act.SetToServer(false)
+				key := sha2(data) // TODO: compute a hash here..
+
+				b.Log.Printf("- Validating action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
+				if _, ok := bootSeqMap[key]; !ok {
+					validationErrors = append(validationErrors, ValidationError{
+						Err:               errors.New("not found"),
+						BlockNumber:       1, // extract from the block transactionmroot
+						PackedTransaction: receipt.Transaction.Packed,
+						Action:            act,
+						RawAction:         data,
+						ActionHexData:     hex.EncodeToString(act.HexData),
+						Index:             actionsRead,
+					})
+					b.Log.Printf(" INVALID ***************************** INVALID *************.\n")
+				} else {
+					seenMap[key] = true
+					b.Log.Printf(" valid.\n")
 				}
 
-				for _, act := range unpacked.Actions {
-					act.SetToServer(false)
-					data, err := eos.MarshalBinary(act)
-					if err != nil {
-						b.Log.Printf("Error marshalling an action: %s\n", err)
-						validationErrors = append(validationErrors, ValidationError{
-							Err:               err,
-							BlockNumber:       1, // extract from the block transactionmroot
-							PackedTransaction: receipt.Transaction.Packed,
-							Action:            act,
-							RawAction:         data,
-							ActionHexData:     hex.EncodeToString(act.HexData),
-							Index:             actionsRead,
-						})
-						return
-					}
-					act.SetToServer(false)
-					key := sha2(data) // TODO: compute a hash here..
-
-					b.Log.Printf("- Validating action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
-					if _, ok := bootSeqMap[key]; !ok {
-						validationErrors = append(validationErrors, ValidationError{
-							Err:               errors.New("not found"),
-							BlockNumber:       1, // extract from the block transactionmroot
-							PackedTransaction: receipt.Transaction.Packed,
-							Action:            act,
-							RawAction:         data,
-							ActionHexData:     hex.EncodeToString(act.HexData),
-							Index:             actionsRead,
-						})
-						b.Log.Printf(" INVALID ***************************** INVALID *************.\n")
-					} else {
-						seenMap[key] = true
-						b.Log.Printf(" valid.\n")
-					}
-
-					actionsRead++
-				}
+				actionsRead++
 			}
-		default:
 		}
+
 		if actionsRead == len(bootSeq) {
-			done <- true
+			break
 		}
-	})
-	err = client.Connect()
-	if err != nil {
-		log.Fatal(err)
+
 	}
-	<-done
 
 	if len(validationErrors) > 0 {
 		b.Log.Println("Unseen transactions:")
@@ -637,9 +636,8 @@ func (b *BIOS) waitLaunchBlock() rand.Source {
 			continue
 		}
 
-		b.Log.Println("- got block", targetBlockNum, "- hash is", hash)
-		bytes, _ := hex.DecodeString(hash)
-		chksum := crc64.Checksum(bytes, crc64.MakeTable(crc64.ECMA))
+		b.Log.Println("- got block", targetBlockNum, "- hash is", hex.EncodeToString(hash))
+		chksum := crc64.Checksum(hash, crc64.MakeTable(crc64.ECMA))
 		return rand.NewSource(int64(chksum))
 
 	}

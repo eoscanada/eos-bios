@@ -291,6 +291,12 @@ TODO
   * export the `genesis` for a given name, export the disco file for a given name.
   * perhaps simply give example `cleos` calls to do the same..
 
+* Replace `b1` in the contract, or relace `b1b1b1b1b1b1` by `b1` in here.
+  * Create the `b1` account before setting the `eosio.system` contract ?
+
+* How will we call `setprods` if it's not in `eosio.bios` anymore ? (!!)
+
+
 Desired output for network:
 
 ```

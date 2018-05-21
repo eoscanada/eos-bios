@@ -285,7 +285,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	b.Log.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions honoring crowdsale holders\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
@@ -351,7 +351,7 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	b.Log.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions storing unregistered addresses on chain for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 

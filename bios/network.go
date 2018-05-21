@@ -372,10 +372,10 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 	return
 }
 
-func (net *Network) GetBlockHeight(height uint32) (string, error) {
-	resp, err := net.SeedNetAPI.GetBlockByNum(uint64(height))
+func (net *Network) GetBlockHeight(height uint32) (eos.SHA256Bytes, error) {
+	resp, err := net.SeedNetAPI.GetBlockByNum(height)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return resp.ID, nil
