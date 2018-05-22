@@ -295,7 +295,15 @@ TODO
   * Create the `b1` account before setting the `eosio.system` contract ?
 
 * How will we call `setprods` if it's not in `eosio.bios` anymore ? (!!)
+  * Added to eosio.system
 
+* Don't download IPFS refs, unless it was voted on by the top X..
+  * Anyone can block the flow right now, otherwise..
+
+* Add a "participate" contract publishing.. so we consider for meshing only those who are
+  actively running "orchestrate".
+
+* FIX THE REVERSE target block launch number thing..
 
 Desired output for network:
 
@@ -313,3 +321,11 @@ Contents disagreements:
   * eosmarc, eoscanadacom, eospouet says 1: /ipfs/Qmakjdsflakjdslfkjaldsfk
   * eosmama says 2: /ipfs/Qmhellkajdlakjdsflkj
 ```
+
+
+Things that need testing upon launch
+------------------------------------
+
+* Test the eosio.msig machinery, a bunch of BPs need to be able to pass in a proposed
+  transaction.
+* Cross validae the b1 vesting schedule.

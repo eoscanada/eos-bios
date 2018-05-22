@@ -567,7 +567,6 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 					})
 					return err
 				}
-				act.SetToServer(false)
 				key := sha2(data) // TODO: compute a hash here..
 
 				b.Log.Printf("- Validating action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
@@ -623,8 +622,8 @@ func (b *BIOS) waitLaunchBlock() rand.Source {
 			b.Log.Println(err.Error())
 		}
 
-		if launchTime.Before(time.Now()) {
-			b.Log.Printf("- not yet, %s to go\n", time.Now().Sub(launchTime))
+		if launchTime.After(time.Now()) {
+			b.Log.Printf("- not yet, %s to go\n", launchTime.Sub(time.Now()))
 			time.Sleep(time.Second)
 			continue
 		}
