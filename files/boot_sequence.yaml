@@ -99,10 +99,12 @@ boot_sequence:
     account: eosio
     contract_name_ref: eosio.system
 
-- op: system.setram
-  label: Set initial RAM available
-  data:
-    max_ram_size: 25769803776  # 24 GB
+# Already defaults to 64GB in code (see eosio.system.hpp:24), we won't increase it today.
+#
+# - op: system.setram
+#   label: Set initial RAM available
+#   data:
+#     max_ram_size: 25769803776  # 24 GB
 
 - op: producers.create_accounts
   label: Creating initial Block Producers accounts
