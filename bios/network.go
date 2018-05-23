@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/abourget/llerrgroup"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/ryanuber/columnize"
@@ -446,7 +447,7 @@ func (net *Network) ListNetworks(verbose bool) {
 		net.Log.Printf("%d.\n", idx+1)
 		orderedPeers := net.OrderedPeers(network)
 		for _, peer := range orderedPeers {
-			net.Log.Printf("  - %s (total weight: %d)\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight)
+			net.Log.Printf("  - %s (total weight: %d), updated %s\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt))
 		}
 	}
 }

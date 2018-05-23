@@ -886,10 +886,10 @@ func chunkifyActions(actions []*eos.Action) (out [][]*eos.Action) {
 
 func accountVariation(acct eos.AccountName, variation int) eos.AccountName {
 	name := string(acct)
-	if len(name) > 10 {
-		name = name[:10]
+	if len(name) > 11 {
+		name = name[:11]
 	}
-	variedName := name + "." + string([]byte{'a' + byte(variation-1)})
+	variedName := name + string([]byte{'a' + byte(variation-1)})
 
 	return eos.AccountName(variedName)
 }

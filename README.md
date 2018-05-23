@@ -174,7 +174,7 @@ How to weight your peers
    the BIOS Boot node.
 
 5. Can they properly boot a node and mesh into the network, have they
-   practiced join ?
+   practiced `join` ?
 
 
 The reason for those is because of the design of `eos-bios` .. votes
@@ -332,6 +332,13 @@ TODO
   actively running "orchestrate".
 
 * FIX THE REVERSE target block launch number thing..
+
+* Duplicate target account, fails at account creation.  We should ignore the nodes that
+  have multiple KEYS and multiple TARGET ACCOUNTS..
+  * Which one we choose ? The first updated at ? we don't want someone to be able to
+    take you out merely because they publish a similar `target_account_name`.
+  * Let the social graph fix it up?
+
 
 Desired output for network:
 
