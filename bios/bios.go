@@ -672,6 +672,8 @@ func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 		b.Log.Println("Got genesis data:")
 		b.Log.Println("    ", genesisData)
 		b.Log.Println("")
+		b.Log.Println("    Public key for new launch: %s\n", genesis.InitialKey)
+		b.Log.Println("")
 
 		return
 	}
@@ -694,6 +696,7 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 			continue
 		}
 
+		return
 		return
 	}
 }
@@ -777,7 +780,7 @@ func (b *BIOS) setProducers() error {
 				accountVar := eos.AccountName("")
 				for {
 					accountVar = accountVariation(fromPeer.Discovery.TargetAccountName, count)
-					if !b.targetInShuffledProducers(accountVar) {
+					if b.targetInShuffledProducers(accountVar) {
 						count++
 						continue
 					}
