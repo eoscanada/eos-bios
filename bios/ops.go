@@ -210,7 +210,7 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
 		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
-		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(10000), eos.NewEOSAsset(10000), true)
+		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(100000), eos.NewEOSAsset(100000), true)
 
 		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
 		// b.Log.Println("Some JSON", string(mama))
@@ -291,12 +291,10 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 
 		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
 			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1b1b1b1b1b1" // TODO: CONTRACT SHOULD CHANGE TOO
+			destAccount = "b1"
+		} else {
+			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 		}
-
-		// b.Log.Println("Transfer", hodler, destAccount)
-
-		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 
 		initialBalance := hodler.Balance // .Sub(eos.NewEOSAsset(int64(op.BuyRAM))) // take ~0.1 to pay for initial RAM
 		firstHalf := initialBalance
@@ -357,7 +355,7 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
 			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1b1b1b1b1b1" // TODO: CONTRACT SHOULD CHANGE TOO
+			destAccount = "b1" // TODO: CONTRACT SHOULD CHANGE TOO
 		}
 
 		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
@@ -429,8 +427,6 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// 	ProducerName:    AN("eosio"),
 	// 	BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
 	// }}
-
-	// SHOULD WE `regproducer` here ? or `setprods` is fine ?
 
 	prodkeys := []system.ProducerKey{}
 	for _, prod := range b.ShuffledProducers {

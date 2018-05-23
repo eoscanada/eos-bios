@@ -6,6 +6,13 @@ boot_sequence:
     contract_name_ref: eosio.bios
 
 - op: system.newaccount
+  label: Create account b1 (to match `validate_b1_vesting` in system contract)
+  data:
+    creator: eosio
+    new_account: b1
+    pubkey: EOS5cujNHGMYZZ2tgByyNEUaoPLFhZVmGXbZc9BLJeQkKZFqGYEiQ  # From the snapshot.csv file.
+
+- op: system.newaccount
   label: Create account eosio.msig
   data:
     creator: eosio

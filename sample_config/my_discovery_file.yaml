@@ -68,8 +68,8 @@ target_contents:
     ref: /ipfs/QmVftgJjuCz9JqFWZmgzaakQAt3P4hMXeouqxVf9ToFWko
     comment: "Published by EOS Canada. Tag dawn-v4.1.0"
   - name: eosio.system.wasm
-    ref: /ipfs/QmPxccyqzQJzMfuwJCp9MLx3Kju761EsQuSgcsPtV4AmDi
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    ref: /ipfs/QmQfufaCNLfcnLsLJM7ga81AiGHf8LchVfnVCU54rXGMfi
+    comment: "Published by EOS Canada. Tag dawn-v4.1.0 + https://github.com/EOSIO/eos/pull/3270 applied."
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
