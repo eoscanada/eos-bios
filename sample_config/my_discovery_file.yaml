@@ -59,31 +59,31 @@ target_contents:
 
   - name: eosio.bios.abi
     ref: /ipfs/QmUeci9zVkhzctMktea8UNa5fZCizteXieT8Z21M8GpZoU
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.1.0, unchanged in 05-22"
   - name: eosio.bios.wasm
     ref: /ipfs/QmW7rfu2kYk5NruE29mm3nCXaVDdh9ux5SzSwRMSFQkHMC
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.1.0, unchanged in 05-22"
 
   - name: eosio.system.abi
-    ref: /ipfs/QmVftgJjuCz9JqFWZmgzaakQAt3P4hMXeouqxVf9ToFWko
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    ref: /ipfs/QmShJs1u2TjU1CgEEsDYpEZy9WusuvmfwFhSedaR6cScGj
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-22"
   - name: eosio.system.wasm
-    ref: /ipfs/QmQfufaCNLfcnLsLJM7ga81AiGHf8LchVfnVCU54rXGMfi
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0 + https://github.com/EOSIO/eos/pull/3270 applied."
+    ref: /ipfs/QmNVuK2qhZePj7cLeRuyyTLY3LVZW6fhnQp7gpUHH4biSt
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-22"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.1.0, unchanged in 05-22"
   - name: eosio.msig.wasm
     ref: /ipfs/QmadUdTbjJWuqccmFZUfaNT7PTAvwVh6ffhnd8HfzMmuvL
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.1.0, unchanged in 05-22"
 
   - name: eosio.token.abi
     ref: /ipfs/QmPqC7HAwCzKTsoskec7jTohyXZ2YFUQ9SHep6JpTFcXbY
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    comment: "Published by EOS Canada. Tag dawn-v4.1.0, unchanged in 05-22"
   - name: eosio.token.wasm
-    ref: /ipfs/QmYNAHxipcGfNztibRkaJ4t2Q3czXyT1N3QqJ3Qg7KLFuw
-    comment: "Published by EOS Canada. Tag dawn-v4.1.0"
+    ref: /ipfs/QmY7TW1Dv9ZCyRXx9P9rDv492rspGbqaKcQgXAvHYZ22wM
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-22"
 
   - name: eosio.disco.abi
     ref: /ipfs/QmYzxhhE9f9aZTV7rqqYSNQy9pZVKk2pur9ccRZfY7yfs9
