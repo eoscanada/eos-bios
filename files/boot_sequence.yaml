@@ -5,6 +5,9 @@ boot_sequence:
     account: eosio
     contract_name_ref: eosio.bios
 
+- op: producers.create_accounts
+  label: Creating initial Block Producers accounts
+
 - op: system.setprods
   label: Setting the initial Appointed Block Producer schedule
 
@@ -106,8 +109,8 @@ boot_sequence:
 #   data:
 #     max_ram_size: 25769803776  # 24 GB
 
-- op: producers.create_accounts
-  label: Creating initial Block Producers accounts
+- op: producers.enrich
+  label: Enrich producers, to help with next stage. Disabled on mainnet.
   data:
     TESTNET_ENRICH_PRODUCERS: true
 

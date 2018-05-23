@@ -503,9 +503,15 @@ func (net *Network) PrintOrderedPeers() {
 // returns true if we have reached an agreement on the content to
 // inject in the chain.
 func (net *Network) ReachedConsensus() bool {
-	// TODO: Implement the logic that determines the consensus.. right
-	// now it's just the weights in order.. and the top-most wins: we use
-	// its configuration.
+	network := net.MyNetwork()
+	orderedPeers := net.OrderedPeers(network)
+
+	contentAgreement := ComputeContentsAgreement(orderedPeers)
+	peerContent := ComputePeerContentsColumn(contentAgreement, orderedPeers)
+	// Verify TOP peerContent are all equal, will tell us we have ReachedConsensus
+	// on CONTENT at least.. we might want to check also the LAUNCH BLOCK
+	// and verify the CONSTITUTION HASH ? where the hell is that anyway ??
+	_ = peerContent
 	return true
 }
 

@@ -26,7 +26,7 @@ var operationsRegistry = map[string]Operation{
 	"token.create":               &OpCreateToken{},
 	"token.issue":                &OpIssueToken{},
 	"producers.create_accounts":  &OpCreateProducers{},
-	"producers.register":         &OpRegisterProducers{},
+	"producers.enrich":           &OpEnrichProducers{},
 	"system.setprods":            &OpSetProds{},
 	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
 	"snapshot.transfer":          &OpSnapshotTransfer{},
@@ -186,14 +186,9 @@ func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpCreateProducers struct {
-	// TestnetEnrichProducers will provide each producer account with some EOS, only on testnets.
-	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
-}
+type OpCreateProducers struct{}
 
-func (op *OpCreateProducers) ResetTestnetOptions() {
-	op.TestnetEnrichProducers = false
-}
+func (op *OpCreateProducers) ResetTestnetOptions() {}
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
@@ -212,44 +207,36 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
 		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(100000), eos.NewEOSAsset(100000), true)
 
-		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
-		// b.Log.Println("Some JSON", string(mama))
-
 		b.Log.Debugf("- Creating new account %q\n", prodName)
 		out = append(out, newAccount, buyRAMBytes, delegateBW, nil)
-
-		if op.TestnetEnrichProducers {
-			b.Log.Debugf("  DEBUG: Enriching producer %q\n", prodName)
-			out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"), nil)
-		}
 	}
 	return
 }
 
 //
 
-// WE CAN'T DO THIS.. seems it checks for the proper authorization, that we don't have.
-// I thought actions by `eosio` could skip sig checks.. but it doesn't seem to work here..
-type OpRegisterProducers struct {
+type OpEnrichProducers struct {
+	// TestnetEnrichProducers will provide each producer account with some EOS, only on testnets.
+	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
 }
 
-func (op *OpRegisterProducers) ResetTestnetOptions() {
+func (op *OpEnrichProducers) ResetTestnetOptions() {
+	op.TestnetEnrichProducers = false
 }
 
-func (op *OpRegisterProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
-	for _, prod := range b.Network.OrderedPeers(b.Network.MyNetwork()) {
+func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if !op.TestnetEnrichProducers {
+		return
+	}
+
+	for _, prod := range b.ShuffledProducers {
 		prodName := prod.Discovery.TargetAccountName
 		if prodName == AN("eosio") {
 			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
 		}
 
-		url := ""
-		if len(prod.Discovery.URLs) > 0 {
-			url = prod.Discovery.URLs[0]
-		}
-		regprod := system.NewRegProducer(prodName, prod.Discovery.TargetAppointedBlockProducerSigningKey, url) // overridden just below
-		regprod.Authorization[0].Actor = AN("eosio")
-		out = append(out, regprod, nil)
+		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
+		out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"), nil)
 	}
 	return
 }

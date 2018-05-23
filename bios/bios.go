@@ -60,12 +60,13 @@ func (b *BIOS) SetGenesis(gen *GenesisJSON) {
 }
 
 func (b *BIOS) Init() error {
-
 	// HAVE TWO init sequences:
 	// * a first that does BASIC inits
-	// * a second that can be recalled just after receiving the Launch Block, which
-	//   might change the bootsequence we've agreed upon, might change the network,
-	//   topology, etc..
+	//
+	// * a second that can be recalled just after receiving the Launch
+	// Block (and everyone fell in agreement), which might change the
+	// bootsequence we've agreed upon, might change the network,
+	// topology, etc..  download all the contents.. because topology
 
 	// Load launch data
 	launchDisco, err := b.Network.ConsensusDiscovery()
@@ -220,6 +221,10 @@ func (b *BIOS) RunBootSequence() error {
 	// for _, key := range keys {
 	// 	b.Log.Println("Available key in the KeyBag:", key)
 	// }
+
+	// Update boot sequence HERE
+
+
 
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
