@@ -12,6 +12,7 @@ import (
 	"time"
 
 	eos "github.com/eoscanada/eos-go"
+	"gopkg.in/olivere/elastic.v3/backoff"
 )
 
 func ScanLinesUntilBlank() (out string, err error) {
@@ -51,6 +52,7 @@ func flipEndianness(in uint64) (out uint64) {
 }
 
 func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
+	b := backoff.NewExponentialBackoff(sleep, 5*time.Second)
 	for i := 0; ; i++ {
 		err = callback()
 		if err == nil {
@@ -61,7 +63,7 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 			break
 		}
 
-		time.Sleep(sleep)
+		time.Sleep(b.Next())
 
 		log.Println("retrying after error:", err)
 	}
