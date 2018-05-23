@@ -672,7 +672,7 @@ func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 		b.Log.Println("Got genesis data:")
 		b.Log.Println("    ", genesisData)
 		b.Log.Println("")
-		b.Log.Println("    Public key for new launch: %s\n", genesis.InitialKey)
+		b.Log.Printf("    Public key for new launch: %s\n", genesis.InitialKey)
 		b.Log.Println("")
 
 		return
