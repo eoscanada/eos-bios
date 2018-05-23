@@ -224,8 +224,6 @@ func (b *BIOS) RunBootSequence() error {
 
 	// Update boot sequence HERE
 
-
-
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
 		return err
@@ -775,7 +773,17 @@ func (b *BIOS) setProducers() error {
 				count++
 
 				clonedDisco := *fromPeer.Discovery
-				clonedDisco.TargetAccountName = accountVariation(fromPeer.Discovery.TargetAccountName, count)
+
+				accountVar := eos.AccountName("")
+				for {
+					accountVar = accountVariation(fromPeer.Discovery.TargetAccountName, count)
+					if !b.targetInShuffledProducers(accountVar) {
+						count++
+						continue
+					}
+					break
+				}
+				clonedDisco.TargetAccountName = accountVar
 				clonedPeer := &Peer{
 					Discovery: &clonedDisco,
 					UpdatedAt: fromPeer.UpdatedAt,
@@ -786,6 +794,15 @@ func (b *BIOS) setProducers() error {
 	}
 
 	return nil
+}
+
+func (b *BIOS) targetInShuffledProducers(acct eos.AccountName) bool {
+	for _, prod := range b.ShuffledProducers {
+		if prod.Discovery.TargetAccountName == acct {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *BIOS) shuffleProducers() {
