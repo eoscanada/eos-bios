@@ -416,7 +416,10 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// }}
 
 	prodkeys := []system.ProducerKey{}
-	for _, prod := range b.ShuffledProducers {
+	for idx, prod := range b.ShuffledProducers {
+		if idx == 0 {
+			continue
+		}
 		targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
 		targetAcct := prod.Discovery.TargetAccountName
 		if targetAcct == AN("eosio") {
