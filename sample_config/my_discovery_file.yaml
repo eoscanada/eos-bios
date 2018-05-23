@@ -46,7 +46,7 @@ target_initial_authority:
 
 target_contents:
   - name: boot_sequence.yaml
-    ref: /ipfs/Qmbk3r2Prmspa8yzGNgB2ohaweQFtQvXnchVBGTaGoMAiZ
+    ref: /ipfs/QmUMjQV89r7ZacA5ZPpyFxwhr7tRBAviaio9doHmTPzuSj
     comment: "Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml"
 
   - name: snapshot.csv
