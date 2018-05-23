@@ -68,8 +68,8 @@ target_contents:
     ref: /ipfs/QmShJs1u2TjU1CgEEsDYpEZy9WusuvmfwFhSedaR6cScGj
     comment: "Published by EOS Canada. Tag DAWN-2018-05-22"
   - name: eosio.system.wasm
-    ref: /ipfs/QmNVuK2qhZePj7cLeRuyyTLY3LVZW6fhnQp7gpUHH4biSt
-    comment: "Published by EOS Canada. Tag DAWN-2018-05-22"
+    ref: /ipfs/QmaW9um27uqmVqzmARrkMiLohcuMYfEPUbma5j13AhAjpc
+    comment: "Published by EOS Canada. Dan's quickfix in branch issue3315, off of DAWN-2018-05-22 to fix https://github.com/EOSIO/eos/issues/3315"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
