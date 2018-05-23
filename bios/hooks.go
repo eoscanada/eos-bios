@@ -24,16 +24,11 @@ func (b *BIOS) DispatchBootPublishGenesis(genesisJSON string) error {
 	}, nil)
 }
 
-func (b *BIOS) DispatchBootNode(genesisJSON, publicKey, privateKey string) error {
+func (b *BIOS) DispatchBootNode(genesisJSON, publicKey, privateKey string, otherPeers []string) error {
 	return b.dispatch("boot_node", []string{
 		genesisJSON,
 		publicKey,
 		privateKey,
-	}, nil)
-}
-
-func (b *BIOS) DispatchBootConnectMesh(otherPeers []string) error {
-	return b.dispatch("boot_connect_mesh", []string{
 		"p2p-peer-address = " + strings.Join(otherPeers, "\np2p-peer-address = "),
 		strings.Join(otherPeers, ","),
 	}, nil)

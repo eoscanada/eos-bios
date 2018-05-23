@@ -5,6 +5,9 @@ boot_sequence:
     account: eosio
     contract_name_ref: eosio.bios
 
+- op: system.setprods
+  label: Setting the initial Appointed Block Producer schedule
+
 - op: system.newaccount
   label: Create account b1 (to match `validate_b1_vesting` in system contract)
   data:
@@ -122,20 +125,11 @@ boot_sequence:
   data:
     TESTNET_TRUNCATE_SNAPSHOT: 50
 
-- op: system.setprods
-  label: Setting the initial Appointed Block Producer schedule
-
-# - op: producers.register
-#   label: Register all producers with their declared key, URL and location
-
 - op: system.destroy_accounts
-  label: Disabling authorization for system accounts
+  label: Disabling authorization for system accounts, pointing `eosio` to the `eosio.prods` system account.
   data:
     accounts:
-    #- eosio
     - eosio.msig
     - eosio.token
     - eosio.disco
     - eosio.unregd
-
-# TODO: also destroy the signing capability of `eosio`.. or `unregproducer` for `eosio`.

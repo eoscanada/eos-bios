@@ -458,34 +458,74 @@ func (op *OpDestroyAccounts) ResetTestnetOptions() {
 
 func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	if op.TestnetKeepAccounts {
-		b.Log.Debugln("DEBUG: Keeping system account around, for testing purposes.")
+		b.Log.Debugln("DEBUG: Keeping system accounts around, for testing purposes.")
 		return
 	}
 
-	nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
+	systemAccount := AN("eosio")
+	prodsAccount := AN("eosio.prods") // this is a special system account that is granted by 2/3 + 1 of the current BP schedule.
+
+	//nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
 	for _, acct := range op.Accounts {
+		if acct == systemAccount {
+			continue // special treatment for `eosio` below
+		}
 		out = append(out,
 			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
 				Threshold: 1,
-				Keys: []eos.KeyWeight{
-					{
-						PublicKey: nullKey,
-						Weight:    1,
+				Accounts: []eos.PermissionLevelWeight{
+					eos.PermissionLevelWeight{
+						Permission: eos.PermissionLevel{
+							Actor:      AN("eosio"),
+							Permission: PN("active"),
+						},
+						Weight: 1,
 					},
 				},
 			}, PN("active")),
 			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{
 				Threshold: 1,
-				Keys: []eos.KeyWeight{
-					{
-						PublicKey: nullKey,
-						Weight:    1,
+				Accounts: []eos.PermissionLevelWeight{
+					eos.PermissionLevelWeight{
+						Permission: eos.PermissionLevel{
+							Actor:      AN("eosio"),
+							Permission: PN("active"),
+						},
+						Weight: 1,
 					},
 				},
 			}, PN("owner")),
 			nil, // end transaction
 		)
-		// unregister the producer at the same time ?
 	}
+
+	out = append(out,
+		system.NewUpdateAuth(systemAccount, PN("active"), PN("owner"), eos.Authority{
+			Threshold: 1,
+			Accounts: []eos.PermissionLevelWeight{
+				eos.PermissionLevelWeight{
+					Permission: eos.PermissionLevel{
+						Actor:      prodsAccount,
+						Permission: PN("active"),
+					},
+					Weight: 1,
+				},
+			},
+		}, PN("active")),
+		system.NewUpdateAuth(systemAccount, PN("owner"), PN(""), eos.Authority{
+			Threshold: 1,
+			Accounts: []eos.PermissionLevelWeight{
+				eos.PermissionLevelWeight{
+					Permission: eos.PermissionLevel{
+						Actor:      prodsAccount,
+						Permission: PN("active"),
+					},
+					Weight: 1,
+				},
+			},
+		}, PN("owner")),
+		nil, // end transaction
+	)
+
 	return
 }

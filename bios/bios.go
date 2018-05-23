@@ -260,7 +260,9 @@ func (b *BIOS) RunBootSequence() error {
 		}
 	}
 
-	if err := b.DispatchBootNode(genesisData, pubKey.String(), privKey); err != nil {
+	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
+	otherPeers := b.someTopmostPeersAddresses(orderedPeers)
+	if err := b.DispatchBootNode(genesisData, pubKey.String(), privKey, otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
@@ -322,13 +324,6 @@ func (b *BIOS) RunBootSequence() error {
 	if !isValid {
 		b.Log.Println("WARNING: chain invalid, destroying network if possible")
 		os.Exit(0)
-	}
-
-	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
-
-	otherPeers := b.someTopmostPeersAddresses(orderedPeers)
-	if err := b.DispatchBootConnectMesh(otherPeers); err != nil {
-		return fmt.Errorf("dispatch boot_connect_mesh: %s", err)
 	}
 
 	if err := b.DispatchBootPublishHandoff(); err != nil {
