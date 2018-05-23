@@ -155,6 +155,34 @@ These are all account names on the seed network used to boot a new
 network.
 
 
+How to weight your peers
+------------------------
+
+1. Do they fully understand the boot sequence ? Do they understand all
+   actions that need to be processed in order to have a chain that
+   qualifies as mainnet. (they decide on boot_sequence.yaml)
+
+2. Can they compile system contracts and compare their source code,
+   making sure that the proposed contracts are legit, do not contain
+   rogue code, etc.. (they decide on target_contents)
+
+3. Do they understand how to make sure the snapshot.csv is valid,
+   up-to-date and reflect the last Ethereum snapshot ? (they decide on
+   snapshot.csv)
+
+4. Can they properly boot the network and have they practiced being
+   the BIOS Boot node.
+
+5. Can they properly boot a node and mesh into the network, have they
+   practiced join ?
+
+
+The reason for those is because of the design of `eos-bios` .. votes
+determine who gets which role, and based on the role you have, you
+have critical decisions to make and the community relies on you for
+the critical things, in the order above.
+
+
 Seed networks
 -------------
 
