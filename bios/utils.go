@@ -2,7 +2,9 @@ package bios
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -69,4 +71,10 @@ func Retry(attempts int, sleep time.Duration, callback func() error) (err error)
 func AccountToNodeID(acct eos.AccountName) int64 {
 	id, _ := eos.StringToName(string(acct))
 	return int64(id)
+}
+
+func sha2(input []byte) string {
+	hash := sha256.New()
+	_, _ = hash.Write(input) // can't fail
+	return hex.EncodeToString(hash.Sum(nil))
 }

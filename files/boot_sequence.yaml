@@ -26,6 +26,13 @@ boot_sequence:
     new_account: eosio.disco
     pubkey: ephemeral
 
+- op: system.newaccount
+  label: Create account eosio.unregd
+  data:
+    creator: eosio
+    new_account: eosio.unregd
+    pubkey: ephemeral
+
 - op: system.setpriv
   label: Setting privileged account for eosio and eosio.msig
   data:
@@ -54,23 +61,20 @@ boot_sequence:
     account: eosio.disco
     contract_name_ref: eosio.disco
 
+- op: system.setcode
+  label: Setting eosio.unregd code for account eosio.unregd
+  data:
+    account: eosio.unregd
+    contract_name_ref: eosio.unregd
+
 - op: token.create
   label: Creating the EOS currency symbol
   data:
     account: eosio
-    amount: 2500000000.0000 EOS  # Accounting for 5% inflation, for the next 50 years (end of uint32 block_num).
+    amount: 10000000000.0000 EOS  # Should work with 5% inflation, for the next 50 years (end of uint32 block_num anyway)
     can_whitelist: false
     can_freeze: false
     can_recall: false
-
-- op: token.create
-  label: Creating the RAM currency symbol
-  data:
-    account: eosio
-    amount: "35184372088832 RAM"  # 32 TB RAM max supply.. we'll see how that goes.
-    can_whitelist: false
-    can_freeze: false
-    can_recall: true
 
 - op: token.issue
   label: Issuing initial EOS monetary base
@@ -78,19 +82,6 @@ boot_sequence:
     account: eosio
     amount: 1000000000.0000 EOS  # 1B coins, as per distribution model.
     memo: "Initial issuance"
-
-- op: producers.create_accounts
-  label: Creating initial Block Producers accounts
-  data:
-    TESTNET_ENRICH_PRODUCERS: true
-
-- op: snapshot.inject
-  label: Injecting ERC-20 snapshot balances
-  data:
-    TESTNET_TRUNCATE_SNAPSHOT: 50
-
-- op: system.setprods
-  label: Setting the initial Appointed Block Producer schedule
 
 - op: system.setcode
   label: Replacing eosio account from eosio.bios contract to eosio.system
@@ -103,6 +94,28 @@ boot_sequence:
   data:
     max_ram_size: 25769803776  # 24 GB
 
+- op: producers.create_accounts
+  label: Creating initial Block Producers accounts
+  data:
+    TESTNET_ENRICH_PRODUCERS: true
+
+- op: snapshot.inject.unregistered
+  label: Saving unregistered addresses in eosio.unregd account, for the future.
+  data:
+    TESTNET_TRUNCATE_SNAPSHOT: 50
+
+# - op: snapshot.inject
+#   label: Injecting ERC-20 snapshot balances
+#   data:
+#     buy_ram_bytes: 8192
+#     TESTNET_TRUNCATE_SNAPSHOT: 50
+
+# - op: producers.register
+#   label: Register all producers with their declared key, URL and location
+
+- op: system.setprods
+  label: Setting the initial Appointed Block Producer schedule
+
 - op: system.destroy_accounts
   label: Disabling authorization for system accounts
   data:
@@ -111,5 +124,6 @@ boot_sequence:
     - eosio.msig
     - eosio.token
     - eosio.disco
+    - eosio.unregd
 
 # TODO: also destroy the signing capability of `eosio`.. or `unregproducer` for `eosio`.

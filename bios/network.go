@@ -1,9 +1,7 @@
 package bios
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -91,9 +89,11 @@ func (net *Network) UpdateGraph() error {
 }
 
 func (net *Network) fetchSingleNode() error {
+	eosioDisco := *net.MyPeer.Discovery
+	eosioDisco.TargetAccountName = eos.AccountName("eosio")
 	newPeer := &Peer{
 		UpdatedAt: time.Now(),
-		Discovery: net.MyPeer.Discovery,
+		Discovery: &eosioDisco,
 	}
 	net.allNodes.AddNode(newPeer)
 
@@ -422,12 +422,6 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 	}
 
 	return rows[0].GenesisJSON, nil
-}
-
-func sha2(input []byte) string {
-	hash := sha256.New()
-	_, _ = hash.Write(input) // can't fail
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func (net *Network) ListNetworks(verbose bool) {

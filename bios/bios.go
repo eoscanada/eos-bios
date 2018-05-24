@@ -3,6 +3,7 @@ package bios
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/crc64"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/eoscanada/eos-go"
 	"github.com/eoscanada/eos-go/ecc"
+	"github.com/eoscanada/eos-go/p2p"
 )
 
 type BIOS struct {
@@ -265,7 +267,10 @@ func (b *BIOS) RunBootSequence() error {
 	}
 
 	fmt.Println("In-memory keys:")
-	fmt.Println(b.TargetNetAPI.Signer.AvailableKeys())
+	memkeys, _ := b.TargetNetAPI.Signer.AvailableKeys()
+	for _, key := range memkeys {
+		fmt.Printf("- %s\n", key.String())
+	}
 	fmt.Println("")
 
 	// eos.Debug = true
@@ -273,21 +278,27 @@ func (b *BIOS) RunBootSequence() error {
 	for _, step := range b.BootSequence {
 		fmt.Printf("%s  [%s] ", step.Label, step.Op)
 
+		if b.LaunchDisco.TargetNetworkIsTest == 0 {
+			step.Data.ResetTestnetOptions()
+		}
+
 		acts, err := step.Data.Actions(b)
 		if err != nil {
 			return fmt.Errorf("getting actions for step %q: %s", step.Op, err)
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range ChunkifyActions(acts, 250) { // transfers max out resources higher than ~400
-				err := Retry(5, 500*time.Millisecond, func() error {
+			for idx, chunk := range ChunkifyActions(acts, 10) { // transfers max out resources higher than ~400
+				err := Retry(10, 500*time.Millisecond, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
+							//fmt.Println("skiping because error message seems valid:", err)
 							return nil
 						}
 						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 					}
+
 					return nil
 				})
 				if err != nil {
@@ -301,6 +312,16 @@ func (b *BIOS) RunBootSequence() error {
 
 	fmt.Println("Flushing transactions into blocks")
 	time.Sleep(2 * time.Second)
+
+	// FIXME: don't do chain validation here..
+	isValid, err := b.RunChainValidation()
+	if err != nil {
+		return fmt.Errorf("chain validation: %s", err)
+	}
+	if !isValid {
+		fmt.Println("WARNING: chain invalid, destroying network if possible")
+		os.Exit(0)
+	}
 
 	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
 
@@ -349,87 +370,19 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 	if verify {
 		fmt.Println("###############################################################################################")
-		fmt.Println("Launching chain verification")
-		fmt.Println("")
-		fmt.Println("  - VALIDATION IS BEING IMPLEMENTED BY CHARLES ! Give him a day or so ! :)")
-		fmt.Println("")
-		fmt.Println("DONE")
-		os.Exit(0)
+		fmt.Println("Launching chain validation")
 
-		seedActionMap, err := b.fetchActions()
+		isValid, err := b.RunChainValidation()
 		if err != nil {
-			return fmt.Errorf("verifing, fetching actions from seed, %s", err)
+			return fmt.Errorf("chain validation: %s", err)
 		}
-
-		fmt.Println("Seed actions found: ", len(seedActionMap))
-
-		for _, step := range b.BootSequence {
-			fmt.Printf("%s  [%s]\n", step.Label, step.Op)
-
-			acts, err := step.Data.Actions(b)
-			if err != nil {
-				return fmt.Errorf("verifing, getting actions for step %q: %s", step.Op, err)
-			}
-
-			for _, stepAction := range acts {
-				//fmt.Println("Verifying action type: ", reflect.TypeOf(stepAction.Data))
-				data, err := eos.MarshalBinary(stepAction.Data)
-				if err != nil {
-					return fmt.Errorf("verifying, marshalBinary, %s", err)
-				}
-				key := hex.EncodeToString(data)
-				//fmt.Println("verifying key : ", key)
-
-				if seedAction, ok := seedActionMap[key]; !ok {
-					//return fmt.Errorf("verify, step action [%s] does not validate", stepAction.Name)
-					fmt.Printf("✘ verify, step action [%s] does not validate\n", stepAction.Name)
-				} else {
-					fmt.Printf("✔ action [%s] verified\n", seedAction[0].Name)
-				}
-			}
-
+		if !isValid {
+			fmt.Println("WARNING: chain invalid, destroying network if possible")
+			os.Exit(0)
 		}
-
-		//***********************************************************************
-		//***********************************************************************
-		log.Fatal("let's crash!")
-		//***********************************************************************
-		//***********************************************************************
-
-		// Grab all the blocks from the chain
-		// Compare each action, find it in our list
-		// Use an ordered map ?
-
-		fmt.Printf("- Verifying the `eosio` system account was properly disabled: ")
-		for {
-			time.Sleep(1 * time.Second)
-			acct, err := b.TargetNetAPI.GetAccount(AN("eosio"))
-			if err != nil {
-				fmt.Printf("e")
-				continue
-			}
-
-			if len(acct.Permissions) != 2 || acct.Permissions[0].RequiredAuth.Threshold != 0 || acct.Permissions[1].RequiredAuth.Threshold != 0 {
-				// FIXME: perhaps check that there are no keys and
-				// accounts.. that the account is *really* disabled.  we
-				// can check elsewhere though.
-				fmt.Printf(".")
-				continue
-			}
-
-			fmt.Println(" OKAY")
-			break
-		}
-
-		fmt.Println("Chain sync'd!")
-
-		// IMPLEMENT THE BOOT SEQUENCE VERIFICATION.
-		fmt.Println("")
-		fmt.Println("All good! Chain verificaiton succeeded!")
-		fmt.Println("")
 	} else {
 		fmt.Println("")
-		fmt.Println("Not doing validation, the Appointed Block Producer will have done it.")
+		fmt.Println("Not doing chain validation. Someone else will do it.")
 		fmt.Println("")
 	}
 
@@ -443,6 +396,188 @@ func (b *BIOS) RunJoinNetwork(verify, sabotage bool) error {
 
 	if verify {
 		b.waitOnHandoff(b.Genesis)
+	}
+
+	return nil
+}
+
+func (b *BIOS) RunChainValidation() (bool, error) {
+	bootSeqMap := ActionMap{}
+	bootSeq := []*eos.Action{}
+
+	for _, step := range b.BootSequence {
+		if b.LaunchDisco.TargetNetworkIsTest == 0 {
+			step.Data.ResetTestnetOptions()
+		}
+
+		acts, err := step.Data.Actions(b)
+		if err != nil {
+			return false, fmt.Errorf("verifing: getting actions for step %q: %s", step.Op, err)
+		}
+
+		for _, stepAction := range acts {
+			data, err := eos.MarshalBinary(stepAction)
+			if err != nil {
+				return false, fmt.Errorf("verifying: binary marshalling: %s", err)
+			}
+			stepAction.SetToServer(false)
+			key := sha2(data) // TODO: compute a hash here..
+
+			if _, ok := bootSeqMap[key]; ok {
+				// TODO: don't fatal here plz :)
+				log.Fatalf("Same action detected twice [%s] with key [%s]\n", stepAction.Name, key)
+			}
+			bootSeqMap[key] = stepAction
+			bootSeq = append(bootSeq, stepAction)
+		}
+
+	}
+
+	err := b.validateBootSeqActions(bootSeqMap, bootSeq)
+	if err != nil {
+		fmt.Printf("BOOT SEQUENCE VALIDATION FAILED:\n%s", err)
+		return false, nil
+	}
+
+	fmt.Println("")
+	fmt.Println("All good! Chain verificaiton succeeded!")
+	fmt.Println("")
+
+	return true, nil
+}
+
+type ActionMap map[string]*eos.Action
+
+type ValidationError struct {
+	Err               error
+	BlockNumber       int
+	Action            *eos.Action
+	RawAction         []byte
+	Index             int
+	ActionHexData     string
+	PackedTransaction eos.PackedTransaction
+}
+
+func (e ValidationError) Error() string {
+	s := fmt.Sprintf("Action [%d][%s::%s] from block not found in boot sequences\n", e.Index, e.Action.Account, e.Action.Name)
+
+	data, err := json.Marshal(e.Action)
+	if err != nil {
+		s += fmt.Sprintf("    json generation err: %s\n", err)
+	} else {
+		s += fmt.Sprintf("    json data: %s\n", string(data))
+	}
+	s += fmt.Sprintf("    hex data: %s\n", hex.EncodeToString(e.RawAction))
+	s += fmt.Sprintf("    error: %s\n", e.Err.Error())
+
+	return s
+}
+
+type ValidationErrors struct {
+	Errors []error
+}
+
+func (v ValidationErrors) Error() string {
+
+	s := ""
+	for _, err := range v.Errors {
+		s += ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
+		s += err.Error()
+		s += "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"
+	}
+
+	return s
+}
+
+func (b *BIOS) validateBootSeqActions(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
+	expectedActionCount := len(bootSeq)
+	validationErrors := make([]error, 0)
+
+	actionsRead := 0
+	seenMap := map[string]bool{}
+	done := make(chan bool)
+	client := p2p.NewClient(b.Network.MyPeer.Discovery.TargetP2PAddress, make([]byte, 32, 32), int16(25431))
+	client.ShowEmptyChain = true
+	//client.RegisterHandler(p2p.HandlerFunc(p2p.LoggerHandler))
+	client.RegisterHandlerFunc(func(msg p2p.Message) {
+		switch m := msg.Envelope.P2PMessage.(type) {
+		case *eos.HandshakeMessage:
+			fmt.Println("Sending sync request", client.LastHandshakeReceived)
+			if err := client.SendSyncRequest(1, client.LastHandshakeReceived.HeadNum); err != nil {
+				fmt.Println("Failed sending sync request:", err)
+				return
+			}
+		case *eos.SignedBlock:
+			fmt.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
+
+			for _, receipt := range m.Transactions {
+				unpacked, err := receipt.Transaction.Packed.Unpack()
+				if err != nil {
+					fmt.Println("WARNING: Unable to unpack transaction, won't be able to fully validate:", err)
+					return
+				}
+
+				for _, act := range unpacked.Actions {
+					act.SetToServer(false)
+					data, err := eos.MarshalBinary(act)
+					if err != nil {
+						fmt.Printf("Error marshalling an action: %s\n", err)
+						validationErrors = append(validationErrors, ValidationError{
+							Err:               err,
+							BlockNumber:       1, // extract from the block transactionmroot
+							PackedTransaction: receipt.Transaction.Packed,
+							Action:            act,
+							RawAction:         data,
+							ActionHexData:     hex.EncodeToString(act.HexData),
+							Index:             actionsRead,
+						})
+						return
+					}
+					act.SetToServer(false)
+					key := sha2(data) // TODO: compute a hash here..
+
+					fmt.Printf("- Verifing action %d/%d [%s::%s]", actionsRead+1, expectedActionCount, act.Account, act.Name)
+					if _, ok := bootSeqMap[key]; !ok {
+						validationErrors = append(validationErrors, ValidationError{
+							Err:               errors.New("not found"),
+							BlockNumber:       1, // extract from the block transactionmroot
+							PackedTransaction: receipt.Transaction.Packed,
+							Action:            act,
+							RawAction:         data,
+							ActionHexData:     hex.EncodeToString(act.HexData),
+							Index:             actionsRead,
+						})
+						fmt.Printf(" INVALID ***************************** INVALID *************.\n")
+					} else {
+						seenMap[key] = true
+						fmt.Printf(" valid.\n")
+					}
+
+					actionsRead++
+				}
+			}
+		default:
+		}
+		if actionsRead == len(bootSeq) {
+			done <- true
+		}
+	})
+	err = client.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
+	<-done
+
+	if len(validationErrors) > 0 {
+		fmt.Println("Unseen transactions:")
+		for _, act := range bootSeq {
+			data, _ := eos.MarshalBinary(act)
+			key := sha2(data)
+			if !seenMap[key] {
+				fmt.Printf("- Action %s::%s [%q]\n", act.Account, act.Name, hex.EncodeToString(data))
+			}
+		}
+		return ValidationErrors{Errors: validationErrors}
 	}
 
 	return nil
@@ -465,8 +600,6 @@ func (b *BIOS) waitLaunchBlock() rand.Source {
 			continue
 		}
 
-		// GET INFO and check if the block is the right height, otherwise, give a prediction of
-		// when it will arrive :) countdown!
 		hash, err := b.Network.GetBlockHeight(targetBlockNum)
 		if err != nil {
 			fmt.Println("error fetching seed network's target block height:", err)
@@ -538,46 +671,6 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 
 		return
 	}
-}
-
-type ActionMap map[string][]*eos.Action
-
-func (b *BIOS) fetchActions() (actions ActionMap, err error) {
-	accounts := []eos.AccountName{
-		eos.AccountName("eosio"),
-		eos.AccountName("eosio.msig"),
-		eos.AccountName("eosio.disco"),
-		eos.AccountName("eosio.token"),
-	}
-	actions = ActionMap{}
-	for _, account := range accounts {
-		fmt.Printf("Fecthing actions for account [%s]\n", account)
-		out, err := b.Network.SeedNetAPI.GetTransactions(account)
-		if err != nil {
-			err = fmt.Errorf("fectching transactions for [%s] account, %s", account, err)
-		}
-
-		for _, tx := range out.Transactions {
-			for _, action := range tx.Transaction.Transaction.Actions {
-
-				key := hex.EncodeToString(action.HexData)
-				fmt.Printf("action [%s]\n", action.Name)
-				//fmt.Printf("action [%s] key : %s\n", action.Name, key)
-				//data, err := json.Marshal(action)
-				//assert.NoError(t, err)
-				//fmt.Println("Data  : ", string(data))
-				//if collision, ok := actions[key]; ok {
-				//	cdata, err := json.Marshal(collision)
-				//	assert.NoError(t, err)
-				//	fmt.Println("CData : ", string(cdata))
-				//	fmt.Println("Found a colision")
-				//}
-
-				actions[key] = append(actions[key], action)
-			}
-		}
-	}
-	return
 }
 
 func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {

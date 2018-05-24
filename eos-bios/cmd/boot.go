@@ -14,8 +14,11 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
+	"os"
 
+	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -31,9 +34,22 @@ The "publish_kickstart_data" will also be run, giving you the opportunity to dis
 Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(viper.GetBool("single"))
+		net, err := fetchNetwork(viper.GetBool("single"), true)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
+		}
+
+		if viper.GetBool("reset") {
+			fmt.Println("Resetting genesis data on seed network")
+			_, err := net.SeedNetAPI.SignPushActions(
+				disco.NewDeleteGenesis(net.MyPeer.Discovery.SeedNetworkAccountName),
+			)
+			if err != nil {
+				fmt.Println("Error deleting:", err)
+				os.Exit(1)
+			}
+			fmt.Println("Done")
+			os.Exit(0)
 		}
 
 		b, err := setupBIOS(net)
@@ -60,13 +76,12 @@ func init() {
 	RootCmd.AddCommand(bootCmd)
 
 	bootCmd.Flags().BoolP("single", "s", false, "Don't try to discover the world, just boot a local instance.")
+	bootCmd.Flags().BoolP("reset", "", false, "Remove the published genesis data from the seed_network, so that others don't accidentally join a defunc or restarted network.")
 	bootCmd.Flags().StringP("override-bootseq", "", "", "Override the boot_sequence.yaml file with a local file path (don't used the published one)")
 
-	if err := viper.BindPFlag("single", bootCmd.Flags().Lookup("single")); err != nil {
-		panic(err)
-	}
-
-	if err := viper.BindPFlag("override-bootseq", bootCmd.Flags().Lookup("override-bootseq")); err != nil {
-		panic(err)
+	for _, flag := range []string{"single", "override-bootseq", "reset"} {
+		if err := viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag)); err != nil {
+			panic(err)
+		}
 	}
 }

@@ -243,13 +243,21 @@ TODO
 
 * Dedupe the p2p-address in join and mesh..
 
-* create the "RAM" currency, issue an initial base ? is it with `setram` ?
-
 * delegatebw, from/to eosio, do the transfer with it ?
 
 * Display time of the launch block (or delta)
 
+* Implement contents disagreement
 
+* Upgrade to dawn4.1, docker hub, pub eosio.unregd, maintain `eos`
+  with reverse SYS patch, publish Docker image, with disco and unregd
+  contracts. Update the disco .abi file
+  * Add abi_extensions
+
+* Destroy `eosio`'s signing key also. What happens is someone votes
+  for `eosio` enough that he's able to produce ? Then the original
+  launcher would have that key.. well it would have been
+  published.. so anyone really would have access to that (!!).
 
 
 Role       Seed Account  Target Acct   Weight  Contents          Launch block (local time)

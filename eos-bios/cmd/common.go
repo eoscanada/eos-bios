@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func fetchNetwork(single bool) (*bios.Network, error) {
+func fetchNetwork(single, downloadRefs bool) (*bios.Network, error) {
 	discoFile := viper.GetString("my-discovery")
 	discovery, err := bios.LoadDiscoveryFromFile(discoFile)
 	if err != nil {
@@ -62,8 +62,10 @@ func fetchNetwork(single bool) (*bios.Network, error) {
 		return nil, fmt.Errorf("updating graph: %s", err)
 	}
 
-	if err := net.DownloadReferences(); err != nil {
-		return nil, fmt.Errorf("downloading content: %s", err)
+	if downloadRefs {
+		if err := net.DownloadReferences(); err != nil {
+			return nil, fmt.Errorf("downloading content: %s", err)
+		}
 	}
 
 	return net, nil
