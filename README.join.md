@@ -1,5 +1,7 @@
 # EOS.IO Software-based blockchain boot orchestration tool
 
+[点击查看中文](./README.join-cn.md)
+
 ## 1. Clone the [eos-bios repo](https://github.com/eoscanada/eos-bios)
 ## 2. Download the latest [eos-bios release](https://github.com/eoscanada/eos-bios/releases)
 
