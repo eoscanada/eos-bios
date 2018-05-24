@@ -51,7 +51,7 @@ func flipEndianness(in uint64) (out uint64) {
 	return binary.BigEndian.Uint64(buf)
 }
 
-func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
+func Retry(attempts int, sleep time.Duration, callback func() error) (err error) {
 	b := backoff.NewExponentialBackoff(sleep, 5*time.Second)
 	for i := 0; ; i++ {
 		err = callback()

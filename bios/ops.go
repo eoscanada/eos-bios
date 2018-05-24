@@ -1,6 +1,7 @@
 package bios
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -33,6 +34,7 @@ var operationsRegistry = map[string]Operation{
 	"snapshot.transfer":          &OpSnapshotTransfer{},
 	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
 	"system.destroy_accounts":    &OpDestroyAccounts{},
+	"system.create_voters":         &OpCreateVoters{},
 }
 
 type OperationType struct {
@@ -134,7 +136,9 @@ type OpNewAccount struct {
 func (op *OpNewAccount) ResetTestnetOptions() { return }
 func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
 	pubKey := b.EphemeralPublicKey
+	fmt.Println("NewNewAccount with pub key: ", op.Pubkey)
 	if op.Pubkey != "ephemeral" {
+
 		pubKey, err = ecc.NewPublicKey(op.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("reading pubkey: %s", err)
@@ -144,7 +148,43 @@ func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
 	return append(out, system.NewNewAccount(op.Creator, op.NewAccount, pubKey)), nil
 }
 
-//
+type OpCreateVoters struct {
+	Creator eos.AccountName
+	Pubkey  string
+	Count   int
+}
+
+func (op *OpCreateVoters) ResetTestnetOptions() { return }
+func (op *OpCreateVoters) Actions(b *BIOS) (out []*eos.Action, err error) {
+
+	pubKey := b.EphemeralPublicKey
+	fmt.Println("NewNewAccount with pub key: ", op.Pubkey)
+	if op.Pubkey != "ephemeral" {
+		pubKey, err = ecc.NewPublicKey(op.Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("reading pubkey: %s", err)
+		}
+	}
+
+	for i := 0; i < op.Count; i++ {
+		voterName := eos.AccountName(voterName(i))
+		fmt.Println("Creating voter: ", voterName)
+		out = append(out, system.NewNewAccount(op.Creator, voterName, pubKey))
+		out = append(out, token.NewTransfer(op.Creator, voterName, eos.NewEOSAsset(1000000000), ""))
+		out = append(out, system.NewBuyRAMBytes(AN("eosio"), voterName, 8192)) // 8kb gift !
+		out = append(out, system.NewDelegateBW(AN("eosio"), voterName, eos.NewEOSAsset(10000), eos.NewEOSAsset(10000), true))
+
+	}
+
+	return
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyz"
+
+func voterName(index int) string {
+	padding := string(bytes.Repeat([]byte{charset[index]}, 7))
+	return "voter" + padding
+}
 
 type OpSetPriv struct {
 	Account eos.AccountName

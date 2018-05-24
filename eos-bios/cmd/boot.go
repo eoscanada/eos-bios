@@ -64,6 +64,8 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
+		//b.TargetNetAPI.Debug=true
+
 		if err := b.StartBoot(); err != nil {
 			log.Fatalf("error booting network: %s", err)
 		}

@@ -73,7 +73,7 @@ func (net *Network) UpdateGraph() error {
 
 	for _, node := range net.allNodes.Nodes() {
 		peer := node.(*Peer)
-		if err := net.loadTargetContentsRefs(peer); err != nil {
+		if err := net.LoadTargetContentsRefs(peer); err != nil {
 			return fmt.Errorf("loading target contents refs: %s", err)
 		}
 
@@ -149,7 +149,7 @@ func (net *Network) fetchGraphFromSeedNetwork() error {
 	return nil
 }
 
-func (net *Network) loadTargetContentsRefs(peer *Peer) error {
+func (net *Network) LoadTargetContentsRefs(peer *Peer) error {
 	for _, contentRef := range peer.Discovery.TargetContents {
 		if contentRef.Ref == "" {
 			net.Log.Debugf("  - WARN: %q has an empty ipfs ref for name=%q\n", peer.Discovery.SeedNetworkAccountName, contentRef.Name)

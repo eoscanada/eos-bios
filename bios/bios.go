@@ -294,7 +294,7 @@ func (b *BIOS) RunBootSequence() error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range chunkifyActions(acts) {
-				err := retry(25, time.Second, func() error {
+				err := Retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						b.Log.Printf("r")
@@ -893,7 +893,7 @@ func (b *BIOS) setMyPeers() error {
 	return nil
 }
 
-func chunkifyActions(actions []*eos.Action) (out [][]*eos.Action) {
+func ChunkifyActions(actions []*eos.Action) (out [][]*eos.Action) {
 	currentChunk := []*eos.Action{}
 	for _, act := range actions {
 		if act == nil {
