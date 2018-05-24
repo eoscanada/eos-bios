@@ -11,10 +11,10 @@ seed_network_http_address: http://stage0.example.com
 # `eos-bios publish`). Otherwise, your peer link here will be ignored.
 seed_network_peers:
 - account: eosexample
-  comment: "They are good"
+  comment: "Insert why you think they're worth that weight"
   weight: 10  # Weights are between 0 and 100 (INT value)
 - account: eosmore
-  comment: "They are better"
+  comment: "Insert why you think they're worth that weight"
   weight: 20
 
 seed_network_launch_block: 551  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
