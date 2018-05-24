@@ -113,21 +113,21 @@ eos-bios --launch-data ./launch.yaml                 \
 
 This process would:
 
-* Verify that the `--opening-balances-snapshot` hashes to the value in
+* Validate that the `--opening-balances-snapshot` hashes to the value in
   `launch.yaml:opening_balances_snapshot_hash`.
 
-* Verify that the `--eosio-system-code` and `--eosio-system-abi` hash
+* Validate that the `--eosio-system-code` and `--eosio-system-abi` hash
   to `launch.yaml:system_contract_hash` when concatenated. `eos-bios`
   will print the hashes on stdout in any case.. for you to adjust or
   verify with the community.
 
-* Verify there are no duplicates within all these fields from `launch.yaml`:
+* Validate there are no duplicates within all these fields from `launch.yaml`:
   `eosio_account_name`, `keybase_user`, `agent_name`, `eosio_public_key`
 
   * That no `eosio_account_name` equal `eosio`, `eosio.auth`,
     `eosio.system` or a few other names that wouldn't be cool.
 
-* Verify there are at least 50 candidates in `producers` list.
+* Validate there are at least 50 candidates in `producers` list.
 
 * Fetch the Bitcoin block at height
   `launch.yaml:launch_btc_block_height`, take its Merkle Root, massage
@@ -227,7 +227,7 @@ This process would:
 
         * PERHAPS we should have something more intrinsic, that would
           make that key null, either a privileged primitive that skips
-          the `updateauth` checks (that verify the owner key is valid,
+          the `updateauth` checks (that validate the owner key is valid,
           thresholds are sufficient, etc..), and render the account
           permanently disabled.
 
@@ -302,18 +302,18 @@ This process would:
     * At this point, the chain is sync'd from the BIOS Boot, and a
       decently solid network is established.
 
-    * The 21 verify that all of the 21 that were voted have their
+    * The 21 validate that all of the 21 that were voted have their
       account properly set up with the pubkey in the `launch.yaml`
       file, otherwise they sabotage the network (if they can and
       they're not the ones that were left out with no account/key)
 
-    * The 21 verify the integrity of the Opening Balances in the new
+    * The 21 validate the integrity of the Opening Balances in the new
       nascent network, against the locally loaded `snapshot.csv`.
 
       * `eos-bios` takes a snapshot of `eosio`'s `currency` table and
         compares it locally with `snapshot.csv`.
 
-      * Any failure in verifications would trigger a sabotage.
+      * Any failure in validations would trigger a sabotage.
 
     * The `eos-bios` program pushes a signed transactions to `eosio`
       system contract, with the `regproducer` action (with

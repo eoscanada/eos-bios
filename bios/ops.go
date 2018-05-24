@@ -20,18 +20,19 @@ type Operation interface {
 }
 
 var operationsRegistry = map[string]Operation{
-	"system.setcode":               &OpSetCode{},
-	"system.setram":                &OpSetRAM{},
-	"system.newaccount":            &OpNewAccount{},
-	"system.setpriv":               &OpSetPriv{},
-	"token.create":                 &OpCreateToken{},
-	"token.issue":                  &OpIssueToken{},
-	"producers.create_accounts":    &OpCreateProducers{},
-	"producers.register":           &OpRegisterProducers{},
-	"system.setprods":              &OpSetProds{},
-	"snapshot.inject":              &OpInjectSnapshot{},
-	"snapshot.inject.unregistered": &OpInjectUnregdSnapshot{},
-	"system.destroy_accounts":      &OpDestroyAccounts{},
+	"system.setcode":             &OpSetCode{},
+	"system.setram":              &OpSetRAM{},
+	"system.newaccount":          &OpNewAccount{},
+	"system.setpriv":             &OpSetPriv{},
+	"token.create":               &OpCreateToken{},
+	"token.issue":                &OpIssueToken{},
+	"producers.create_accounts":  &OpCreateProducers{},
+	"producers.enrich":           &OpEnrichProducers{},
+	"system.setprods":            &OpSetProds{},
+	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
+	"snapshot.transfer":          &OpSnapshotTransfer{},
+	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
+	"system.destroy_accounts":    &OpDestroyAccounts{},
 	"system.create_voters":         &OpCreateVoters{},
 }
 
@@ -225,14 +226,9 @@ func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpCreateProducers struct {
-	// TestnetEnrichProducers will provide each producer account with some EOS, only on testnets.
-	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
-}
+type OpCreateProducers struct{}
 
-func (op *OpCreateProducers) ResetTestnetOptions() {
-	op.TestnetEnrichProducers = false
-}
+func (op *OpCreateProducers) ResetTestnetOptions() {}
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 	for _, prod := range b.ShuffledProducers {
@@ -249,60 +245,54 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
 		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
-		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(10000), eos.NewEOSAsset(10000), true)
+		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(100000), eos.NewEOSAsset(100000), true)
 
-		// mama, _ := json.MarshalIndent(newAccount.Data, "", "  ")
-		// fmt.Println("Some JSON", string(mama))
-
-		fmt.Printf("- Creating new account %q\n", prodName)
-		out = append(out, newAccount, buyRAMBytes, delegateBW)
-
-		if op.TestnetEnrichProducers {
-			fmt.Printf("  DEBUG: Enriching producer %q\n", prodName)
-			out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"))
-		}
+		b.Log.Debugf("- Creating new account %q\n", prodName)
+		out = append(out, newAccount, buyRAMBytes, delegateBW, nil)
 	}
 	return
 }
 
 //
 
-type OpRegisterProducers struct {
+type OpEnrichProducers struct {
+	// TestnetEnrichProducers will provide each producer account with some EOS, only on testnets.
+	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
 }
 
-func (op *OpRegisterProducers) ResetTestnetOptions() {
+func (op *OpEnrichProducers) ResetTestnetOptions() {
+	op.TestnetEnrichProducers = false
 }
 
-func (op *OpRegisterProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
-	for _, prod := range b.Network.OrderedPeers(b.Network.MyNetwork()) {
+func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if !op.TestnetEnrichProducers {
+		return
+	}
+
+	for _, prod := range b.ShuffledProducers {
 		prodName := prod.Discovery.TargetAccountName
 		if prodName == AN("eosio") {
 			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
 		}
 
-		url := ""
-		if len(prod.Discovery.URLs) > 0 {
-			url = prod.Discovery.URLs[0]
-		}
-		regprod := system.NewRegProducer(prodName, prod.Discovery.TargetAppointedBlockProducerSigningKey, url) // overridden just below
-		regprod.Authorization[0].Actor = AN("eosio")
-		out = append(out, regprod)
+		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
+		out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"), nil)
 	}
 	return
 }
 
 //
 
-type OpInjectSnapshot struct {
+type OpSnapshotCreateAccounts struct {
 	BuyRAM                  uint64 `json:"buy_ram_bytes"`
 	TestnetTruncateSnapshot int    `json:"TESTNET_TRUNCATE_SNAPSHOT"`
 }
 
-func (op *OpInjectSnapshot) ResetTestnetOptions() {
+func (op *OpSnapshotCreateAccounts) ResetTestnetOptions() {
 	op.TestnetTruncateSnapshot = 0
 }
 
-func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
+func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	snapshotFile, err := b.GetContentsCacheRef("snapshot.csv")
 	if err != nil {
 		return nil, err
@@ -322,39 +312,85 @@ func (op *OpInjectSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	fmt.Printf("Preparing %d actions to honor crowdsale holders\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions honoring crowdsale holders\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
 		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
 			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1b1b1b1b1b1" // TODO: CONTRACT SHOULD CHANGE TOO
+			destAccount = "b1"
+		} else {
+			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 		}
 
-		// fmt.Println("Transfer", hodler, destAccount)
-
-		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
-
-		// memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-
-		// out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo))
-
 		initialBalance := hodler.Balance // .Sub(eos.NewEOSAsset(int64(op.BuyRAM))) // take ~0.1 to pay for initial RAM
-		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
-
 		firstHalf := initialBalance
 		secondHalf := initialBalance
 
 		firstHalf.Amount = firstHalf.Amount / 2
 		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
 
-		delBW := system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, true)
-		delBW.Authorization[0].Actor = eos.AN("eosio")
-		out = append(out, delBW)
+		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, false))
+
+		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
+		out = append(out, nil) // end transaction
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
-				fmt.Printf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				break
+			}
+		}
+	}
+
+	return
+}
+
+//
+
+type OpSnapshotTransfer struct {
+	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
+}
+
+func (op *OpSnapshotTransfer) ResetTestnetOptions() {
+	op.TestnetTruncateSnapshot = 0
+}
+
+func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
+	snapshotFile, err := b.GetContentsCacheRef("snapshot.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading snapshot file: %s", err)
+	}
+
+	snapshotData, err := NewSnapshot(rawSnapshot)
+	if err != nil {
+		return nil, fmt.Errorf("loading snapshot csv: %s", err)
+	}
+
+	if len(snapshotData) == 0 {
+		return nil, fmt.Errorf("snapshot is empty or not loaded")
+	}
+
+	b.Log.Printf("Preparing %d actions storing unregistered addresses on chain for the future\n", len(snapshotData))
+	for idx, hodler := range snapshotData {
+		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
+
+		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
+			// the undelegatebw action does special unvesting for the b1 account
+			destAccount = "b1" // TODO: CONTRACT SHOULD CHANGE TOO
+		}
+
+		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
+		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
+
+		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
+			if idx == trunc {
+				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
 				break
 			}
 		}
@@ -393,13 +429,17 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	fmt.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
+	b.Log.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
-		out = append(out, unregd.NewAdd(hodler.EthereumAddress, hodler.Balance))
+		out = append(out,
+			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
+			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
+			nil,
+		)
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
-				fmt.Printf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
+				b.Log.Debugf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
 				break
 			}
 		}
@@ -419,10 +459,11 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// 	BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
 	// }}
 
-	// SHOULD WE `regproducer` here ? or `setprods` is fine ?
-
 	prodkeys := []system.ProducerKey{}
-	for _, prod := range b.ShuffledProducers {
+	for idx, prod := range b.ShuffledProducers {
+		if idx == 0 {
+			continue
+		}
 		targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
 		targetAcct := prod.Discovery.TargetAccountName
 		if targetAcct == AN("eosio") {
@@ -451,35 +492,74 @@ func (op *OpDestroyAccounts) ResetTestnetOptions() {
 
 func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	if op.TestnetKeepAccounts {
-		fmt.Println("DEBUG: Keeping system account around, for testing purposes.")
+		b.Log.Debugln("DEBUG: Keeping system accounts around, for testing purposes.")
 		return
 	}
 
-	nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
+	systemAccount := AN("eosio")
+	prodsAccount := AN("eosio.prods") // this is a special system account that is granted by 2/3 + 1 of the current BP schedule.
+
+	//nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
 	for _, acct := range op.Accounts {
+		if acct == systemAccount {
+			continue // special treatment for `eosio` below
+		}
 		out = append(out,
 			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
 				Threshold: 1,
-				Keys: []eos.KeyWeight{
-					{
-						PublicKey: nullKey,
-						Weight:    1,
+				Accounts: []eos.PermissionLevelWeight{
+					eos.PermissionLevelWeight{
+						Permission: eos.PermissionLevel{
+							Actor:      AN("eosio"),
+							Permission: PN("active"),
+						},
+						Weight: 1,
 					},
 				},
 			}, PN("active")),
 			system.NewUpdateAuth(acct, PN("owner"), PN(""), eos.Authority{
 				Threshold: 1,
-				Keys: []eos.KeyWeight{
-					{
-						PublicKey: nullKey,
-						Weight:    1,
+				Accounts: []eos.PermissionLevelWeight{
+					eos.PermissionLevelWeight{
+						Permission: eos.PermissionLevel{
+							Actor:      AN("eosio"),
+							Permission: PN("active"),
+						},
+						Weight: 1,
 					},
 				},
 			}, PN("owner")),
-			// TODO: add recovery here ??
+			nil, // end transaction
 		)
-
-		// unregister the producer at the same time ?
 	}
+
+	out = append(out,
+		system.NewUpdateAuth(systemAccount, PN("active"), PN("owner"), eos.Authority{
+			Threshold: 1,
+			Accounts: []eos.PermissionLevelWeight{
+				eos.PermissionLevelWeight{
+					Permission: eos.PermissionLevel{
+						Actor:      prodsAccount,
+						Permission: PN("active"),
+					},
+					Weight: 1,
+				},
+			},
+		}, PN("active")),
+		system.NewUpdateAuth(systemAccount, PN("owner"), PN(""), eos.Authority{
+			Threshold: 1,
+			Accounts: []eos.PermissionLevelWeight{
+				eos.PermissionLevelWeight{
+					Permission: eos.PermissionLevel{
+						Actor:      prodsAccount,
+						Permission: PN("active"),
+					},
+					Weight: 1,
+				},
+			},
+		}, PN("owner")),
+		nil, // end transaction
+	)
+
 	return
 }

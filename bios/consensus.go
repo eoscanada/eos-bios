@@ -68,7 +68,7 @@ func ComputePeerContentsColumn(content *ConsensusFiles, orderedPeers []*Peer) (o
 	for _, peer := range orderedPeers {
 		var currentColumns []string
 		for _, fileName := range content.FilesList {
-			col := " "
+			col := "."
 			for _, ref := range peer.Discovery.TargetContents {
 				if ref.Name == fileName {
 					version := content.FilesMap[fileName][ref.Ref]

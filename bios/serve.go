@@ -58,7 +58,7 @@ func Serve(net *Network) {
 	})
 
 	fmt.Println("Serving visualization on http://127.0.0.1:10101 ...")
-	if err := http.ListenAndServe("127.0.0.1:10101", nil); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:10101", nil); err != nil {
 		fmt.Println("ERROR listening on network visualition endpoint:", err)
 	}
 }

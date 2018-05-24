@@ -72,7 +72,7 @@ target_http_address: http://localhost:8888
 根据特定算法和各个节点提供的 discovery 文件，各个节点将会被自动赋予相应的角色:
 
 1. _BIOS Boot node_, 该节点将单独执行 `eos-bios boot` 命令，完成系统合约的部署，快照的导入，EOS 代币的分配等任务.
-2. _Appointed Block Producer_, 这类节点将会执行 `eos-bios join --verify` 命令，加入 BIOS Boot 的网络，并负责验证 BIOS Boot 的行为.
+2. _Appointed Block Producer_, 这类节点将会执行 `eos-bios join --validate` 命令，加入 BIOS Boot 的网络，并负责验证 BIOS Boot 的行为.
 3. _other participant_, 将会执行`eos-bios join`加入网络.
 
 以上执行完成以后，所有节点都需要等待`seed_network_launch_block`达成共识.
@@ -103,7 +103,7 @@ target_http_address: http://localhost:8888
 
 其他比较重要的字段:
 * `seed_network_launch_block` 种子网络启动时的区块高度.
-* `target_contents` 这里面配置的是我们已经达成共识可以写入链中的内容，比如系统合约，ERC-20快照等等. 
+* `target_contents` 这里面配置的是我们已经达成共识可以写入链中的内容，比如系统合约，ERC-20快照等等.
 
 
 

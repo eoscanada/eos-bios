@@ -31,6 +31,10 @@ var joinCmd = &cobra.Command{
 			log.Fatalln("fetch network:", err)
 		}
 
+		if elect := viper.GetString("elect"); elect != "" {
+			net.CalculateNetworkWeights(elect)
+		}
+
 		b, err := setupBIOS(net)
 		if err != nil {
 			log.Fatalln("bios setup:", err)
@@ -40,7 +44,7 @@ var joinCmd = &cobra.Command{
 			log.Fatalf("BIOS initialization error: %s", err)
 		}
 
-		if err := b.StartJoin(viper.GetBool("verify")); err != nil {
+		if err := b.StartJoin(viper.GetBool("validate")); err != nil {
 			log.Fatalf("error joining network: %s", err)
 		}
 	},
@@ -49,9 +53,9 @@ var joinCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(joinCmd)
 
-	joinCmd.Flags().BoolP("verify", "", false, "Verify the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
+	joinCmd.Flags().BoolP("validate", "", false, "Validate the boot sequence by comparing all expected actions against what is on the first blocks of the chain")
 
-	if err := viper.BindPFlag("verify", joinCmd.Flags().Lookup("verify")); err != nil {
+	if err := viper.BindPFlag("validate", joinCmd.Flags().Lookup("validate")); err != nil {
 		panic(err)
 	}
 }

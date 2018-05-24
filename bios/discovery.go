@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strings"
 
 	"github.com/eoscanada/eos-bios/bios/disco"
@@ -33,6 +34,8 @@ func ValidateDiscoveryFile(filename string) error {
 	return ValidateDiscovery(discovery)
 }
 
+var p2pAddressRE = regexp.MustCompile(`[a-zA-Z0-9.:-]`)
+
 func ValidateDiscovery(discovery *disco.Discovery) error {
 	for _, peer := range discovery.SeedNetworkPeers {
 		if peer.Weight > 100 || peer.Weight < 0 {
@@ -52,16 +55,16 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 		return errors.New("target_account_name should not contain '.'")
 	}
 
+	if strings.Contains(discovery.TargetP2PAddress, "://") {
+		return fmt.Errorf("target_p2p_address should be of format ip:port, not prefixed with a protocol")
+	}
+
 	if !strings.Contains(discovery.TargetP2PAddress, ":") {
 		return errors.New("target_p2p_address doesn't contain port number")
 	}
 
-	// if strings.Contains(discovery.TargetP2PAddress, "example.com") {
-	// 	return errors.New("target_p2p_address contains an example.com domain, are you sure about that?")
-	// }
-
-	if strings.Contains(discovery.TargetP2PAddress, "://") {
-		return fmt.Errorf("target_p2p_address should be of format ip:port, not prefixed with a protocol")
+	if !p2pAddressRE.MatchString(discovery.TargetP2PAddress) {
+		return errors.New("target_p2p_address is weird, should contain only [a-zA-Z0-9.:-]")
 	}
 
 	if !strings.Contains(discovery.TargetHTTPAddress, "://") {

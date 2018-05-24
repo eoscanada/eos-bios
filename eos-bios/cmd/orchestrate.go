@@ -17,6 +17,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // orchestrateCmd represents the orchestrate command
@@ -28,6 +29,10 @@ var orchestrateCmd = &cobra.Command{
 		net, err := fetchNetwork(false, true)
 		if err != nil {
 			log.Fatalln("fetch network:", err)
+		}
+
+		if elect := viper.GetString("elect"); elect != "" {
+			net.CalculateNetworkWeights(elect)
 		}
 
 		b, err := setupBIOS(net)
@@ -48,4 +53,10 @@ var orchestrateCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(orchestrateCmd)
+
+	// orchestrateCmd.Flags().String("elect", "", "Force the election of the given BIOS Boot node")
+
+	// if err := viper.BindPFlag("elect", orchestrateCmd.Flags().Lookup("elect")); err != nil {
+	// 	panic(err)
+	// }
 }

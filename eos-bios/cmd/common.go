@@ -17,7 +17,7 @@ func fetchNetwork(single, downloadRefs bool) (*bios.Network, error) {
 		return nil, fmt.Errorf("loading %q: %s", discoFile, err)
 	}
 
-	ipfs := bios.NewIPFS(viper.GetString("ipfs-gateway-address"))
+	ipfs := bios.NewIPFS(viper.GetString("ipfs"))
 
 	seedNetHTTP := viper.GetString("seednet-api")
 	if seedNetHTTP == "" {

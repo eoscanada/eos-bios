@@ -5,6 +5,19 @@ boot_sequence:
     account: eosio
     contract_name_ref: eosio.bios
 
+- op: producers.create_accounts
+  label: Creating initial Block Producers accounts
+
+- op: system.setprods
+  label: Setting the initial Appointed Block Producer schedule
+
+- op: system.newaccount
+  label: Create account b1 (to match `validate_b1_vesting` in system contract)
+  data:
+    creator: eosio
+    new_account: b1
+    pubkey: EOS5cujNHGMYZZ2tgByyNEUaoPLFhZVmGXbZc9BLJeQkKZFqGYEiQ  # From the snapshot.csv file.
+
 - op: system.newaccount
   label: Create account eosio.msig
   data:
@@ -89,41 +102,39 @@ boot_sequence:
     account: eosio
     contract_name_ref: eosio.system
 
-- op: system.setram
-  label: Set initial RAM available
-  data:
-    max_ram_size: 25769803776  # 24 GB
+# Already defaults to 64GB in code (see eosio.system.hpp:24), we won't increase it today.
+#
+# - op: system.setram
+#   label: Set initial RAM available
+#   data:
+#     max_ram_size: 25769803776  # 24 GB
 
-- op: producers.create_accounts
-  label: Creating initial Block Producers accounts
+- op: producers.enrich
+  label: Enrich producers, to help with next stage. Disabled on mainnet.
   data:
     TESTNET_ENRICH_PRODUCERS: true
 
-- op: snapshot.inject.unregistered
+- op: snapshot.create_accounts
+  label: Creating accounts for ERC-20 holders
+  data:
+    buy_ram_bytes: 8192
+    TESTNET_TRUNCATE_SNAPSHOT: 100
+
+- op: snapshot.transfer
+  label: Injecting ERC-20 snapshot balances
+  data:
+    TESTNET_TRUNCATE_SNAPSHOT: 100
+
+- op: snapshot.load_unregistered
   label: Saving unregistered addresses in eosio.unregd account, for the future.
   data:
-    TESTNET_TRUNCATE_SNAPSHOT: 50
-
-# - op: snapshot.inject
-#   label: Injecting ERC-20 snapshot balances
-#   data:
-#     buy_ram_bytes: 8192
-#     TESTNET_TRUNCATE_SNAPSHOT: 50
-
-# - op: producers.register
-#   label: Register all producers with their declared key, URL and location
-
-- op: system.setprods
-  label: Setting the initial Appointed Block Producer schedule
+    TESTNET_TRUNCATE_SNAPSHOT: 100
 
 - op: system.destroy_accounts
-  label: Disabling authorization for system accounts
+  label: Disabling authorization for system accounts, pointing `eosio` to the `eosio.prods` system account.
   data:
     accounts:
-    - eosio
     - eosio.msig
     - eosio.token
     - eosio.disco
     - eosio.unregd
-
-# TODO: also destroy the signing capability of `eosio`.. or `unregproducer` for `eosio`.

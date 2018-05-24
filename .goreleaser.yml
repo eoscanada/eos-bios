@@ -26,7 +26,6 @@ builds:
   - linux_amd64
   - darwin_amd64
   - windows_amd64
-  - windows_386
   main: ./eos-bios
   ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
   binary: eos-bios

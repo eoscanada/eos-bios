@@ -31,6 +31,10 @@ var discoverCmd = &cobra.Command{
 			log.Fatalln("fetch network:", err)
 		}
 
+		if elect := viper.GetString("elect"); elect != "" {
+			net.CalculateNetworkWeights(elect)
+		}
+
 		net.PrintOrderedPeers()
 
 		if viper.GetBool("serve") {
