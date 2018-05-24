@@ -30,6 +30,7 @@ docker run -ti --rm --detach --name nodeos-bios \
        eoscanada/eos:DAWN-2018-05-22 \
        /opt/eosio/bin/nodeos --data-dir=/data \
                              --genesis-json=/etc/nodeos/genesis.json \
+                             --max-transaction-time=5000 \
                              --config-dir=/etc/nodeos
 
 #~/build/eos/build/programs/nodeos/nodeos --data-dir /tmp/nodeos-data --genesis-json `pwd`/genesis.json --config-dir `pwd` &

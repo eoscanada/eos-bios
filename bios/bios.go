@@ -293,7 +293,7 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts) {
+			for idx, chunk := range ChunkifyActions(acts) {
 				err := Retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {

@@ -34,7 +34,7 @@ var operationsRegistry = map[string]Operation{
 	"snapshot.transfer":          &OpSnapshotTransfer{},
 	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
 	"system.destroy_accounts":    &OpDestroyAccounts{},
-	"system.create_voters":         &OpCreateVoters{},
+	"system.create_voters":       &OpCreateVoters{},
 }
 
 type OperationType struct {
@@ -136,9 +136,8 @@ type OpNewAccount struct {
 func (op *OpNewAccount) ResetTestnetOptions() { return }
 func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
 	pubKey := b.EphemeralPublicKey
-	fmt.Println("NewNewAccount with pub key: ", op.Pubkey)
-	if op.Pubkey != "ephemeral" {
 
+	if op.Pubkey != "ephemeral" {
 		pubKey, err = ecc.NewPublicKey(op.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("reading pubkey: %s", err)
@@ -156,9 +155,8 @@ type OpCreateVoters struct {
 
 func (op *OpCreateVoters) ResetTestnetOptions() { return }
 func (op *OpCreateVoters) Actions(b *BIOS) (out []*eos.Action, err error) {
-
 	pubKey := b.EphemeralPublicKey
-	fmt.Println("NewNewAccount with pub key: ", op.Pubkey)
+
 	if op.Pubkey != "ephemeral" {
 		pubKey, err = ecc.NewPublicKey(op.Pubkey)
 		if err != nil {
