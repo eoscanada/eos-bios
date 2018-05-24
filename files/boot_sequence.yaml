@@ -118,17 +118,17 @@ boot_sequence:
   label: Creating accounts for ERC-20 holders
   data:
     buy_ram_bytes: 8192
-    TESTNET_TRUNCATE_SNAPSHOT: 50
+    TESTNET_TRUNCATE_SNAPSHOT: 100
 
 - op: snapshot.transfer
   label: Injecting ERC-20 snapshot balances
   data:
-    TESTNET_TRUNCATE_SNAPSHOT: 50
+    TESTNET_TRUNCATE_SNAPSHOT: 100
 
 - op: snapshot.load_unregistered
   label: Saving unregistered addresses in eosio.unregd account, for the future.
   data:
-    TESTNET_TRUNCATE_SNAPSHOT: 50
+    TESTNET_TRUNCATE_SNAPSHOT: 100
 
 - op: system.destroy_accounts
   label: Disabling authorization for system accounts, pointing `eosio` to the `eosio.prods` system account.

@@ -391,7 +391,11 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 
 	b.Log.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
-		out = append(out, unregd.NewAdd(hodler.EthereumAddress, hodler.Balance), nil)
+		out = append(out,
+			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
+			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
+			nil,
+		)
 
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
