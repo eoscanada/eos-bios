@@ -269,6 +269,8 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
 
+	b.pingTargetNetwork()
+
 	b.Log.Println("In-memory keys:")
 	memkeys, _ := b.TargetNetAPI.Signer.AvailableKeys()
 	for _, key := range memkeys {
@@ -291,19 +293,14 @@ func (b *BIOS) RunBootSequence() error {
 		}
 
 		if len(acts) != 0 {
-			for idx, chunk := range chunkifyActions(acts) { // transfers max out resources higher than ~400
+			for idx, chunk := range chunkifyActions(acts) {
 				err := retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
-						if strings.Contains(err.Error(), `"message":"itr != structs.end(): Unknown struct ","file":"abi_serializer.cpp"`) { // server-side error for serializing, but the transaction went through !!
-							//b.Log.Println("skiping because error message seems valid:", err)
-							return nil
-						}
 						b.Log.Printf("r")
 						b.Log.Debugf("error pushing transaction for step %q, chunk %d: %s\n", step.Op, idx, err)
 						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
 					}
-
 					return nil
 				})
 				if err != nil {
@@ -492,11 +489,7 @@ func (v ValidationErrors) Error() string {
 	return s
 }
 
-func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
-	expectedActionCount := len(bootSeq)
-	validationErrors := make([]error, 0)
-
-	// TODO: wait for target network to be up, and responding...
+func (b *BIOS) pingTargetNetwork() {
 	b.Log.Printf("Pinging target network at %q...", b.TargetNetAPI.BaseURL)
 	for {
 		info, err := b.TargetNetAPI.GetInfo()
@@ -519,6 +512,15 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 
 	b.Log.Println(" touchdown!")
 
+}
+
+func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
+	expectedActionCount := len(bootSeq)
+	validationErrors := make([]error, 0)
+
+	b.pingTargetNetwork()
+
+	// TODO: wait for target network to be up, and responding...
 	b.Log.Println("Pulling blocks from chain until we gathered all actions to validate:")
 	lastDisplay := time.Now()
 	blockHeight := 1
@@ -532,7 +534,12 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 			b.Log.Printf("e")
 			time.Sleep(1 * time.Second)
 			continue
+		} else {
+			b.Log.Printf(".\n")
 		}
+
+		// TODO: Once we hit a failure, we should now poke them each 500ms, and try to speed up slllightly
+
 		if time.Now().Sub(lastDisplay) > 1*time.Second {
 			b.Log.Printf("Block %d, read actions %d/%d\n", blockHeight, actionsRead, len(bootSeq))
 			lastDisplay = time.Now()
@@ -646,7 +653,7 @@ func (b *BIOS) pollGenesisData() (genesis *GenesisJSON) {
 
 	bootNode := b.ShuffledProducers[0]
 
-	b.Log.Printf("Polling..")
+	b.Log.Printf("Polling account %q...", bootNode.Discovery.SeedNetworkAccountName)
 	for {
 		time.Sleep(500 * time.Millisecond)
 

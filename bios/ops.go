@@ -26,6 +26,7 @@ var operationsRegistry = map[string]Operation{
 	"token.create":               &OpCreateToken{},
 	"token.issue":                &OpIssueToken{},
 	"producers.create_accounts":  &OpCreateProducers{},
+	"producers.stake":            &OpStakeProducers{},
 	"producers.enrich":           &OpEnrichProducers{},
 	"system.setprods":            &OpSetProds{},
 	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
@@ -204,11 +205,28 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 			Owner:   prod.Discovery.TargetInitialAuthority.Owner,
 			Active:  prod.Discovery.TargetInitialAuthority.Active,
 		})
+		out = append(out, newAccount, nil)
+	}
+	return
+}
+
+//
+
+type OpStakeProducers struct{}
+
+func (op *OpStakeProducers) ResetTestnetOptions() {}
+
+func (op *OpStakeProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
+	for _, prod := range b.ShuffledProducers {
+		prodName := prod.Discovery.TargetAccountName
+		if prodName == AN("eosio") {
+			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
+		}
+
 		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
 		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(100000), eos.NewEOSAsset(100000), true)
 
-		b.Log.Debugf("- Creating new account %q\n", prodName)
-		out = append(out, newAccount, buyRAMBytes, delegateBW, nil)
+		out = append(out, buyRAMBytes, delegateBW, nil)
 	}
 	return
 }
@@ -272,7 +290,6 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	b.Log.Printf("Preparing %d actions honoring crowdsale holders\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
@@ -336,7 +353,6 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	b.Log.Printf("Preparing %d actions storing unregistered addresses on chain for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
 
@@ -389,7 +405,6 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
-	b.Log.Printf("Preparing %d actions to honor crowdsale buyers that did not register. This is a provision for the future\n", len(snapshotData))
 	for idx, hodler := range snapshotData {
 		out = append(out,
 			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),

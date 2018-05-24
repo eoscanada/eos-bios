@@ -415,7 +415,7 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 			Table:      "genesis",
 			TableKey:   "id",
 			LowerBound: fmt.Sprintf("%d", accountInt),
-			UpperBound: fmt.Sprintf("%d", accountInt+1),
+			UpperBound: fmt.Sprintf("%d", accountInt+1), // this doesn't really do its job.. anyway..
 			Limit:      1,
 		},
 	)
@@ -434,6 +434,10 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 	}
 
 	if len(rows) != 1 {
+		return "", nil
+	}
+
+	if rows[0].ID != account {
 		return "", nil
 	}
 

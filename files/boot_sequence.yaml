@@ -8,9 +8,6 @@ boot_sequence:
 - op: producers.create_accounts
   label: Creating initial Block Producers accounts
 
-- op: system.setprods
-  label: Setting the initial Appointed Block Producer schedule
-
 - op: system.newaccount
   label: Create account b1 (to match `validate_b1_vesting` in system contract)
   data:
@@ -45,11 +42,6 @@ boot_sequence:
     creator: eosio
     new_account: eosio.unregd
     pubkey: ephemeral
-
-- op: system.setpriv
-  label: Setting privileged account for eosio and eosio.msig
-  data:
-    account: eosio
 
 - op: system.setpriv
   label: Setting privileged account for eosio.msig
@@ -101,6 +93,9 @@ boot_sequence:
   data:
     account: eosio
     contract_name_ref: eosio.system
+
+- op: producers.stake
+  label: Stake initial producers and buy them some RAM
 
 # Already defaults to 64GB in code (see eosio.system.hpp:24), we won't increase it today.
 #
