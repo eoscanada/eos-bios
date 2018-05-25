@@ -4,6 +4,8 @@
 #### v1.0 ZhaoYu from EosLaoMao
 #### v2.0 Ian(Yahuang Wu) from MEET.ONE
 
+#### v2.1 Tyee Noprom from EOSpace.io
+
 [Click me switch to English version](./README.md)
 
 `eos-bios` 是一个命令行工具，给那些想要启动基于EOS.IO的区块链网络的人而准备.
@@ -24,22 +26,20 @@ https://youtu.be/8aNZ_ZnKS-A
 
 下列 **视频** 解释了`eos-bios`的其他概念:
 
-| 备注 | 链接 |
-| ----------- | ----:|
-| Details of the Discovery file  | https://youtu.be/uE5J7LCqcUc |
-| Network meshing algorithm  | https://youtu.be/I-PrnlmLNnQ |
-| The boot sequence | https://youtu.be/SbVzINnqWAE |
-| Code review of the core flow  | https://youtu.be/p1B6jvx25O0 |
-| The hooks to integrate with your infrastructure  | https://youtu.be/oZNV6fUoyqM |
+| 备注           |                           链接 |
+| ------------ | ---------------------------: |
+| 发现文件的细节      | https://youtu.be/uE5J7LCqcUc |
+| 网络划分算法       | https://youtu.be/I-PrnlmLNnQ |
+| 启动顺序         | https://youtu.be/SbVzINnqWAE |
+| 代码审查核心流程     | https://youtu.be/p1B6jvx25O0 |
+| 与您的基础设施集成的钩子 | https://youtu.be/oZNV6fUoyqM |
 
 `eos-bios`的一些问答视频:
 
-| 备注 | 链接 |
-| ----------- | ----:|
-| Are accounts carried over from stage to stage?  | https://youtu.be/amyMm5gVpLg |
-| How block producers agree on the content of the chain? | https://youtu.be/WIR7nab40qk |
-
-
+| 备注                 |                           链接 |
+| ------------------ | ---------------------------: |
+| 账号是否从一个阶段延续到另一个阶段？ | https://youtu.be/amyMm5gVpLg |
+| 出块节点如何就链的内容达成一致？   | https://youtu.be/WIR7nab40qk |
 
 ### 本地开发环境
 -----------------------------
@@ -150,6 +150,12 @@ seed_network_peers:
 这个列表是`eos-bios`启动的不同阶段的种子网络，我们会持续更新.
 https://stages.eoscanada.com
 
+## 流程化发布中的示例流程和干预
+
+1. 每个人都运行 `eos-bios orchestrate`；
+2. `eos-bios` 会下载`my_discovery_file.yaml`指向的网络拓扑，每个人都一样；
+3. 网络拓扑结构按照人们在`peer`部分投票的方式进行权重排序；
+4. `launch_ethereum_block`取自拓扑结构的前20％：如果他们都同意，会继续使用该数字。 否则，我们等到他们这样做（并周期性地重新绘制网络图）。
 
 安装 / 下载
 ------------------
@@ -163,21 +169,15 @@ https://stages.eoscanada.com
 编译成功之后，可执行文件将默认安装到 ~/go/bin 目录下（安装Go请查阅https://golang.org/dl）
 
 
-
-
 加入讨论
 -------------------
 
 加入我们的电报群: https://t.me/joinchat/GSUv1UaI5QIuifHZs8k_eA (EOSIO BIOS Boot channel)
 
-
-
 以前的想法
 --------------------
 
 可以在README.v0.md找到之前的一些想法.
-
-
 
 准备启动前的检查事项
 -------------------
@@ -191,4 +191,4 @@ https://stages.eoscanada.com
 
 * `hook_join_network.sh`中的`PRIVKEY`和`PUBKEY`是否跟`discovery_file.yaml`文件中的`target_initial_authority` and `target_initial_block_signing_key`匹配?
 
-* 是否指向了一个旧的P2P地址?
+* 是否指向了一个旧的P2P地址?如果是的话，请将它从网络中移除。
