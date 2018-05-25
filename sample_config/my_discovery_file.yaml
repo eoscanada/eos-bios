@@ -98,10 +98,3 @@ target_contents:
   - name: eosio.unregd.wasm
     ref: /ipfs/QmfBsgyHFZc3dJ3H1qqEQZdZsSZTXL3EwbVqdRWua1XuLm
     comment: "Published by EOS Canada. eos-bios revision 4c6fc8b7a4f26ef81978d796e2e953c96c83b941"
-
-  # - name: eosio.unregd.abi
-  #   ref: /ipfs/Qm...
-  #   comment: ""
-  # - name: eosio.unregd.wasm
-  #   ref: /ipfs/Qm...
-  #   comment: ""
