@@ -129,6 +129,11 @@ func (b *BIOS) StartOrchestrate() error {
 
 	b.RandSource = b.waitLaunchBlock()
 
+	// Randomize the list now.
+	if err := b.setProducers(); err != nil {
+		return err
+	}
+
 	// Once we have it, we can discover the net again (unless it's been discovered VERY recently)
 	// and we b.Init() again.. so load the latest version of the LaunchData according to this
 	// potentially new discovery network.
