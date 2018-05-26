@@ -5,32 +5,32 @@ using eosio::unregd;
 EOSIO_ABI(eosio::unregd, (add))
 
 /**
- * Add a mapping betwen an ethereum_account and an initial EOS token balance.
+ * Add a mapping between an ethereum_address and an initial EOS token balance.
  */
-void unregd::add(const ethereum_account& ethereum_account, const asset& balance) {
+void unregd::add(const ethereum_address& ethereum_address, const asset& balance) {
   require_auth(_self);
 
   auto symbol = balance.symbol;
-  eosio_assert(symbol.is_valid() && symbol == EOS_SYMBOL, "balance must be EOS token");
+  eosio_assert(symbol.is_valid() && symbol == CORE_SYMBOL, "balance must be EOS token");
 
-  eosio_assert(ethereum_account.length() == 42, "Ethereum account should have exactly 42 characters");
+  eosio_assert(ethereum_address.length() == 42, "Ethereum address should have exactly 42 characters");
 
-  update_account(ethereum_account, [&](auto& account) {
-    account.ethereum_account = ethereum_account;
-    account.balance = balance;
+  update_address(ethereum_address, [&](auto& address) {
+    address.ethereum_address = ethereum_address;
+    address.balance = balance;
   });
 }
 
-void unregd::update_account(const ethereum_account& ethereum_account, const function<void(account&)> updater) {
-  auto index = accounts.template get_index<N(ethereum_account)>();
+void unregd::update_address(const ethereum_address& ethereum_address, const function<void(address&)> updater) {
+  auto index = addresses.template get_index<N(ethereum_address)>();
 
-  auto itr = index.find(compute_ethereum_account_key256(ethereum_account));
+  auto itr = index.find(compute_ethereum_address_key256(ethereum_address));
   if (itr == index.end()) {
-    accounts.emplace(_self, [&](auto& account) {
-      account.id = accounts.available_primary_key();
-      updater(account);
+    addresses.emplace(_self, [&](auto& address) {
+      address.id = addresses.available_primary_key();
+      updater(address);
     });
   } else {
-    index.modify(itr, _self, [&](auto& account) { updater(account); });
+    index.modify(itr, _self, [&](auto& address) { updater(address); });
   }
 }

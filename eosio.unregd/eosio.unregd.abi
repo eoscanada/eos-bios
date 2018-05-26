@@ -1,18 +1,18 @@
 {
   "version": "eosio::abi/1.0",
   "types": [{
-    "new_type_name": "ethereum_account",
+    "new_type_name": "ethereum_address",
     "type": "string"
   }],
   "structs": [{
-      "name": "account",
+      "name": "address",
       "base": "",
       "fields": [{
           "name": "id",
           "type": "uint64"
         }, {
-          "name": "ethereum_account",
-          "type": "ethereum_account"
+          "name": "ethereum_address",
+          "type": "ethereum_address"
         }, {
           "name": "balance",
           "type": "asset"
@@ -24,8 +24,8 @@
       "name": "add",
       "base": "",
       "fields": [{
-          "name": "ethereum_account",
-          "type": "ethereum_account"
+          "name": "ethereum_address",
+          "type": "ethereum_address"
         }, {
           "name": "balance",
           "type": "asset"
@@ -39,7 +39,7 @@
     }
   ],
   "tables": [{
-      "name": "accounts",
+      "name": "addresses",
       "index_type": "i64",
       "key_names": [
         "id"
@@ -47,7 +47,7 @@
       "key_types": [
         "uint64"
       ],
-      "type": "account"
+      "type": "address"
     }
   ],
   "ricardian_clauses": [],
