@@ -27,7 +27,7 @@ echo "Running 'nodeos' through Docker."
 docker run -ti --rm --detach --name nodeos-bios \
        -v `pwd`:/etc/nodeos -v /tmp/nodeos-data:/data \
        -p 8888:8888 -p 9876:9876 \
-       eoscanada/eos:DAWN-2018-05-22 \
+       eoscanada/eos:dawn-v4.2.0 \
        /opt/eosio/bin/nodeos --data-dir=/data \
                              --genesis-json=/etc/nodeos/genesis.json \
                              --max-transaction-time=5000 \
