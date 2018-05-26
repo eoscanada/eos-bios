@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/eoscanada/eos-bios/bios/unregd"
 	eos "github.com/eoscanada/eos-go"
@@ -395,12 +394,7 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 	}
 
 	for idx, hodler := range snapshotData {
-		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
-
-		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
-			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1" // TODO: CONTRACT SHOULD CHANGE TOO
-		}
+		destAccount := AN(hodler.AccountName)
 
 		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
 		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
@@ -474,7 +468,7 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// and resigns the system accounts.
 	prodkeys := []system.ProducerKey{system.ProducerKey{
 		ProducerName:    AN("eosio"),
-		BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
+		BlockSigningKey: b.EphemeralPublicKey,
 	}}
 
 	//prodkeys := []system.ProducerKey{}
