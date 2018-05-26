@@ -331,14 +331,12 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 	}
 
 	for idx, hodler := range snapshotData {
-		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
+		destAccount := AN(hodler.AccountName)
 
-		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
-			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1"
-			// we should have created the account before loading `eosio.system`, otherwise
-			// b1 wouldn't have been accepted.
-		} else {
+		// we should have created the account before loading `eosio.system`, otherwise
+		// b1 wouldn't have been accepted.
+		if hodler.EthereumAddress != "0x00000000000000000000000000000000000000b1" {
+			// create all other accounts, but not `b1`.. because it's a short name..
 			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 		}
 
