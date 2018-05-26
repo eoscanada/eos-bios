@@ -294,12 +294,13 @@ func (b *BIOS) RunBootSequence() error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range ChunkifyActions(acts) {
+				//time.Sleep(500 * time.Millisecond)
 				err := Retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
 						b.Log.Printf("r")
 						b.Log.Debugf("error pushing transaction for step %q, chunk %d: %s\n", step.Op, idx, err)
-						return fmt.Errorf("SignPushActions for step %q, chunk %d: %s", step.Op, idx, err)
+						return fmt.Errorf("push actions for step %q, chunk %d: %s", step.Op, idx, err)
 					}
 					return nil
 				})

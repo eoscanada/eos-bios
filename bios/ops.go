@@ -33,7 +33,7 @@ var operationsRegistry = map[string]Operation{
 	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
 	"snapshot.transfer":          &OpSnapshotTransfer{},
 	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
-	"system.destroy_accounts":    &OpDestroyAccounts{},
+	"system.resign_accounts":     &OpResignAccounts{},
 	"system.create_voters":       &OpCreateVoters{},
 }
 
@@ -292,7 +292,9 @@ func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 		}
 
 		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
-		out = append(out, token.NewTransfer(AN("eosio"), prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!"), nil)
+
+		act := token.NewIssue(prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!")
+		out = append(out, act, nil)
 	}
 	return
 }
@@ -334,6 +336,8 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
 			// the undelegatebw action does special unvesting for the b1 account
 			destAccount = "b1"
+			// we should have created the account before loading `eosio.system`, otherwise
+			// b1 wouldn't have been accepted.
 		} else {
 			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 		}
@@ -345,6 +349,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		firstHalf.Amount = firstHalf.Amount / 2
 		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
 
+		// special case `transfer` for `b1` ?
 		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, false))
 
 		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
@@ -467,12 +472,14 @@ type OpSetProds struct{}
 
 func (op *OpSetProds) ResetTestnetOptions() {}
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
-	// prodkeys := []system.ProducerKey{system.ProducerKey{
-	// 	ProducerName:    AN("eosio"),
-	// 	BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
-	// }}
+	// We he can at least process the last few blocks, that wrap up
+	// and resigns the system accounts.
+	prodkeys := []system.ProducerKey{system.ProducerKey{
+		ProducerName:    AN("eosio"),
+		BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
+	}}
 
-	prodkeys := []system.ProducerKey{}
+	//prodkeys := []system.ProducerKey{}
 	for idx, prod := range b.ShuffledProducers {
 		if idx == 0 {
 			continue
@@ -494,16 +501,16 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpDestroyAccounts struct {
+type OpResignAccounts struct {
 	Accounts            []eos.AccountName
 	TestnetKeepAccounts bool `json:"TESTNET_KEEP_ACCOUNTS"`
 }
 
-func (op *OpDestroyAccounts) ResetTestnetOptions() {
+func (op *OpResignAccounts) ResetTestnetOptions() {
 	op.TestnetKeepAccounts = false
 }
 
-func (op *OpDestroyAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
+func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	if op.TestnetKeepAccounts {
 		b.Log.Debugln("DEBUG: Keeping system accounts around, for testing purposes.")
 		return

@@ -63,7 +63,7 @@ func init() {
 	RootCmd.PersistentFlags().StringP("my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
 	RootCmd.PersistentFlags().StringP("ipfs", "", "https://ipfs.io", "Address to reach an IPFS gateway. There are a few fallbacks anyway.")
 	RootCmd.PersistentFlags().StringP("seednet-api", "", "", "HTTP address of the seed network pointed to by your discovery file")
-	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./privkeys.keys", "File containing private keys to your account on the seed network")
+	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./seed_network.keys", "File containing private keys to your account on the seed network")
 	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and validation)")
 
 	RootCmd.PersistentFlags().StringP("cache-path", "", filepath.Join(homedir, ".eos-bios-cache"), "directory to store cached data from discovered network")

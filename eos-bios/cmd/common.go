@@ -27,16 +27,12 @@ func fetchNetwork(single, downloadRefs bool) (*bios.Network, error) {
 		return nil, fmt.Errorf("missing `seed_network_http_address` and no `--seednet-api` override provided")
 	}
 
-	seedNetAPI := eos.New(
-		seedNetHTTP,
-		discovery.SeedNetworkChainID,
-	)
-	// FIXME: when the blockchain uses the chain ID, we'll set it (!!)
-	seedNetAPI.ChainID = make([]byte, 32, 32)
+	seedNetAPI := eos.New(seedNetHTTP)
 
 	keyBag := eos.NewKeyBag()
 	err = keyBag.ImportFromFile(viper.GetString("seednet-keys"))
 	if err != nil {
+		fmt.Println("WARN: you might want to simply rename privkeys.keys to seed_network.keys")
 		return nil, fmt.Errorf("importing keys: %s", err)
 	}
 
@@ -95,16 +91,8 @@ func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
 		return nil, fmt.Errorf("missing `target_http_address` and no `--target-api` override provided")
 	}
 
-	targetNetAPI := eos.New(
-		targetNetHTTP,
-		net.MyPeer.Discovery.TargetChainID,
-	)
-	// FIXME: this is until the blockchain (past dawn3) actually USES the chain ID
-	// specified in the `genesis.json`.
-	targetNetAPI.ChainID = make([]byte, 32, 32)
-
-	keyBag := eos.NewKeyBag()
-	targetNetAPI.SetSigner(keyBag)
+	targetNetAPI := eos.New(targetNetHTTP)
+	targetNetAPI.SetSigner(eos.NewKeyBag())
 
 	return bios.NewBIOS(net.Log, net, targetNetAPI), nil
 }

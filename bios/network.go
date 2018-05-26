@@ -281,6 +281,8 @@ func (net *Network) DownloadIPFSRef(ref string) error {
 		return err
 	}
 
+	net.Log.Printf("- %q done\n", ref)
+
 	return nil
 }
 
