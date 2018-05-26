@@ -16,28 +16,70 @@ boot_sequence:
     pubkey: EOS5cujNHGMYZZ2tgByyNEUaoPLFhZVmGXbZc9BLJeQkKZFqGYEiQ  # From the snapshot.csv file.
 
 - op: system.newaccount
-  label: Create account eosio.msig
+  label: Create account eosio.msig (on-chain multi-signature helper)
   data:
     creator: eosio
     new_account: eosio.msig
     pubkey: ephemeral
 
 - op: system.newaccount
-  label: Create account eosio.token
+  label: Create account eosio.token (main multi-currency contract, including EOS)
   data:
     creator: eosio
     new_account: eosio.token
     pubkey: ephemeral
 
 - op: system.newaccount
-  label: Create account eosio.disco
+  label: Create account eosio.ramfee (where buyram fees go)
+  data:
+    creator: eosio
+    new_account: eosio.ramfee
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.names (where bidname revenues go)
+  data:
+    creator: eosio
+    new_account: eosio.names
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.stake (where delegated stakes go)
+  data:
+    creator: eosio
+    new_account: eosio.stake
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.saving (unallocated inflation)
+  data:
+    creator: eosio
+    new_account: eosio.saving
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.bpay (fund per-block bucket)
+  data:
+    creator: eosio
+    new_account: eosio.bpay
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.vpay (fund per-vote bucket)
+  data:
+    creator: eosio
+    new_account: eosio.vpay
+    pubkey: ephemeral
+
+- op: system.newaccount
+  label: Create account eosio.disco (for eos-bios launch consensus)
   data:
     creator: eosio
     new_account: eosio.disco
     pubkey: ephemeral
 
 - op: system.newaccount
-  label: Create account eosio.unregd
+  label: Create account eosio.unregd (to eventually honor unregistered crowdsale accounts)
   data:
     creator: eosio
     new_account: eosio.unregd
@@ -131,5 +173,13 @@ boot_sequence:
     accounts:
     - eosio.msig
     - eosio.token
+
+    - eosio.ramfee
+    - eosio.stake
+    - eosio.names
+    - eosio.saving
+    - eosio.bpay
+    - eosio.vpay
+
     - eosio.disco
     - eosio.unregd

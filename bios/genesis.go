@@ -11,7 +11,6 @@ import (
 type GenesisJSON struct {
 	InitialTimestamp string `json:"initial_timestamp"`
 	InitialKey       string `json:"initial_key"`
-	InitialChainID   string `json:"initial_chain_id"`
 }
 
 func readGenesisData(text string, ipfs *IPFS) (out *GenesisJSON, err error) {

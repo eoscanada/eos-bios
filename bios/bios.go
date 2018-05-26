@@ -745,7 +745,6 @@ func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	cnt, _ := json.Marshal(&GenesisJSON{
 		InitialTimestamp: time.Now().UTC().Format("2006-01-02T15:04:05"),
 		InitialKey:       pubKey,
-		InitialChainID:   hex.EncodeToString(b.TargetNetAPI.ChainID),
 	})
 	return string(cnt)
 }
