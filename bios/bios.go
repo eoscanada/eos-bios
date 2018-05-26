@@ -386,10 +386,6 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 	// Check ALL actions, should match the orchestrated launch data:
 	// - otherwise, sabotage
 
-	b.Log.Println("Awaiting for private key, for handoff verification.")
-	b.Log.Println("* This is the last step, and is done for the BIOS Boot node to prove it kept nothing to itself.")
-	b.Log.Println("")
-
 	if validate {
 		b.waitOnHandoff(b.Genesis)
 	}
@@ -704,13 +700,15 @@ func (b *BIOS) inputGenesisData() (genesis *GenesisJSON) {
 		}
 
 		return
-		return
 	}
 }
 
 func (b *BIOS) waitOnHandoff(genesis *GenesisJSON) {
+	b.Log.Println("------------------")
+	b.Log.Println("This step is to prove the BIOS Boot node kept nothing to itself.")
+
 	for {
-		b.Log.Printf("Please paste the private key (or ipfs link): ")
+		b.Log.Printf("Please paste the EPHEMERAL private key that the Boot node published: ")
 		privKey, err := ScanSingleLine()
 		if err != nil {
 			b.Log.Println("Error reading line:", err)
