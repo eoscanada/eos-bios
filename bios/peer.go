@@ -34,6 +34,12 @@ func (p *Peer) ID() int64 {
 	return int64(id)
 }
 
+// Active flags peers if they published in the last 30
+// minutes.. otherwise they're ignored, as to not stop the boot.
+func (p *Peer) Active() bool {
+	return p.UpdatedAt.After(time.Now().Add(-30 * time.Minute))
+}
+
 func (p *Peer) String() string {
 	if p == nil {
 		return "Account:nil"
@@ -46,7 +52,11 @@ func (p *Peer) String() string {
 }
 
 func (p *Peer) Columns() string {
-	return fmt.Sprintf("%s | %s | %d | %d | %d", p.Discovery.SeedNetworkAccountName, p.Discovery.TargetAccountName, p.TotalWeight, p.Discovery.GMTOffset, p.Discovery.SeedNetworkLaunchBlock)
+	active := ""
+	if p.Active() {
+		active = "A "
+	}
+	return fmt.Sprintf("%s | %s | %s%d | %d | %d", p.Discovery.SeedNetworkAccountName, p.Discovery.TargetAccountName, active, p.TotalWeight, p.Discovery.GMTOffset, p.Discovery.SeedNetworkLaunchBlock)
 }
 
 // PeerEdge is an internal structure that links two Discovery peers.

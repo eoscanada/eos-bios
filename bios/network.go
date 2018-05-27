@@ -366,6 +366,10 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 	}
 
 	sort.Slice(out, func(i, j int) bool {
+		if out[i].Active() != out[j].Active() {
+			return out[i].Active()
+		}
+
 		if out[i].TotalWeight == out[j].TotalWeight {
 			return out[i].AccountName() < out[j].AccountName()
 		}
@@ -449,13 +453,24 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 func (net *Network) ListNetworks(verbose bool) {
 	net.Log.Println("Networks formed by published discovery files:")
 
+	columns := []string{
+		"Network | Seed Account | Weight | Last update | Active",
+		"------- | ------------ | ------ | ----------- | ------",
+	}
+
 	for idx, network := range net.allNetworks {
-		net.Log.Printf("%d.\n", idx+1)
+		columns = append(columns, fmt.Sprintf("%d | | | |", idx+1))
 		orderedPeers := net.OrderedPeers(network)
 		for _, peer := range orderedPeers {
-			net.Log.Printf("  - %s (total weight: %d), updated %s\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt))
+			active := " "
+			if peer.Active() {
+				active = "X"
+			}
+			columns = append(columns, fmt.Sprintf(" | %s | %d | %s | %s", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt), active))
+			//net.Log.Printf("  - %s (total weight: %d), updated %s\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt))
 		}
 	}
+	net.Log.Println(columnize.SimpleFormat(columns))
 }
 
 func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
