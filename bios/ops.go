@@ -195,16 +195,13 @@ func (op *OpSetPriv) Actions(b *BIOS) (out []*eos.Action, err error) {
 //
 
 type OpCreateToken struct {
-	Account      eos.AccountName
-	Amount       eos.Asset
-	CanWhitelist bool `json:"can_whitelist"`
-	CanFreeze    bool `json:"can_freeze"`
-	CanRecall    bool `json:"can_recall"`
+	Account eos.AccountName `json:"account"`
+	Amount  eos.Asset       `json:"amount"`
 }
 
 func (op *OpCreateToken) ResetTestnetOptions() {}
 func (op *OpCreateToken) Actions(b *BIOS) (out []*eos.Action, err error) {
-	act := token.NewCreate(op.Account, op.Amount, op.CanFreeze, op.CanRecall, op.CanWhitelist)
+	act := token.NewCreate(op.Account, op.Amount)
 	return append(out, act), nil
 }
 
