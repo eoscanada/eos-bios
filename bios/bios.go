@@ -123,16 +123,12 @@ func (b *BIOS) Init() error {
 
 func (b *BIOS) StartOrchestrate() error {
 	b.Log.Println("Starting Orchestraion process", time.Now())
-
 	b.Log.Println("Showing pre-randomized network discovered:")
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(nil)
+
+	firstTarget := b.LaunchDisco.SeedNetworkLaunchBlock
 
 	b.RandSource = b.waitLaunchBlock()
-
-	// Randomize the list now.
-	if err := b.setProducers(); err != nil {
-		return err
-	}
 
 	// Once we have it, we can discover the net again (unless it's been discovered VERY recently)
 	// and we b.Init() again.. so load the latest version of the LaunchData according to this
@@ -143,8 +139,21 @@ func (b *BIOS) StartOrchestrate() error {
 		return fmt.Errorf("update graph: %s", err)
 	}
 
+	// Set this before randomization, so top-by-weight still decides on content.
+	b.LaunchDisco, _ = b.Network.ConsensusDiscovery()
+
+	secondTarget := b.LaunchDisco.SeedNetworkLaunchBlock
+	if firstTarget != secondTarget {
+		return fmt.Errorf("Whoops, target launch block changed mid-flight ! Try orchestrate again.")
+	}
+
+	// Randomize the list now.
+	if err := b.setProducers(); err != nil {
+		return err
+	}
+
 	b.Log.Println("Network used for launch:")
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(b.ShuffledProducers)
 
 	if err := b.DispatchInit("orchestrate"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -171,7 +180,7 @@ func (b *BIOS) StartOrchestrate() error {
 func (b *BIOS) StartJoin(validate bool) error {
 	b.Log.Println("Starting network join process", time.Now())
 
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(nil)
 
 	if err := b.DispatchInit("join"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -187,7 +196,7 @@ func (b *BIOS) StartJoin(validate bool) error {
 func (b *BIOS) StartBoot() error {
 	b.Log.Println("Starting network join process", time.Now())
 
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(nil)
 
 	if err := b.DispatchInit("boot"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -200,8 +209,8 @@ func (b *BIOS) StartBoot() error {
 	return b.DispatchDone("boot")
 }
 
-func (b *BIOS) PrintProducerSchedule() {
-	b.Network.PrintOrderedPeers()
+func (b *BIOS) PrintProducerSchedule(orderedPeers []*Peer) {
+	b.Network.PrintOrderedPeers(orderedPeers)
 
 	b.Log.Println("")
 	b.Log.Println("###############################################################################################")
@@ -242,7 +251,7 @@ func (b *BIOS) RunBootSequence() error {
 
 	privKey := ephemeralPrivateKey.String()
 
-	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
+	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:6], privKey[len(privKey)-6:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
@@ -332,9 +341,9 @@ func (b *BIOS) RunBootSequence() error {
 		os.Exit(0)
 	}
 
-	if err := b.DispatchBootPublishHandoff(); err != nil {
-		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
-	}
+	// if err := b.DispatchBootPublishHandoff(); err != nil {
+	// 	return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
+	// }
 
 	return nil
 }
@@ -379,7 +388,7 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 			return fmt.Errorf("chain validation: %s", err)
 		}
 		if !isValid {
-			b.Log.Println("WARNING: chain invalid, destroying network if possible")
+			b.Log.Println("WARNING: CHAIN CONTAINS VALIDATION ERRORS")
 			os.Exit(0)
 		}
 	} else {
@@ -388,13 +397,9 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 		b.Log.Println("")
 	}
 
-	// TODO: loop operations, check all actions against blocks that you can fetch from here.
-	// Check ALL actions, should match the orchestrated launch data:
-	// - otherwise, sabotage
-
-	if validate {
-		b.waitOnHandoff(b.Genesis)
-	}
+	// if validate {
+	// 	b.waitOnHandoff(b.Genesis)
+	// }
 
 	return nil
 }

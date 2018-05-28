@@ -35,7 +35,7 @@ var discoverCmd = &cobra.Command{
 			net.CalculateNetworkWeights(elect)
 		}
 
-		net.PrintOrderedPeers()
+		net.PrintOrderedPeers(nil)
 
 		if viper.GetBool("serve") {
 			bios.Serve(net)

@@ -292,7 +292,7 @@ func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
 
-		act := token.NewIssue(prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!")
+		act := token.NewIssue(prodName, eos.NewEOSAsset(1500000000000), "For the vote dance")
 		out = append(out, act, nil)
 	}
 	return

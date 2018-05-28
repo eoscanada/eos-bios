@@ -491,16 +491,21 @@ func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
 	return network
 }
 
-func (net *Network) PrintOrderedPeers() {
-	net.Log.Println("###############################################################################################")
-	net.Log.Println("####################################    PEER NETWORK    #######################################")
-	net.Log.Println("")
-
-	network := net.MyNetwork()
-	orderedPeers := net.OrderedPeers(network)
+func (net *Network) PrintOrderedPeers(orderedPeers []*Peer) {
+	if orderedPeers == nil {
+		network := net.MyNetwork()
+		orderedPeers = net.OrderedPeers(network)
+	}
 
 	contentAgreement := ComputeContentsAgreement(orderedPeers)
 	peerContent := ComputePeerContentsColumn(contentAgreement, orderedPeers)
+
+	net.Log.Println("###############################################################################################")
+	net.Log.Println("####################################    PEER NETWORK    #######################################")
+	targetBlock := orderedPeers[0].Discovery.SeedNetworkLaunchBlock
+	targetTime, currentBlock, _ := net.LaunchBlockTime(uint32(targetBlock))
+	net.Log.Printf("Target launch block: %d, %s (current: %d)\n", targetBlock, humanize.Time(targetTime), currentBlock)
+	net.Log.Println("")
 
 	columns := []string{
 		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block | Contents",
