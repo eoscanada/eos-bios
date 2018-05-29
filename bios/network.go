@@ -20,6 +20,8 @@ import (
 	"gonum.org/v1/gonum/graph/topo"
 )
 
+const ContentConsensusRequiredFromTop = 7
+
 type Network struct {
 	Log *Logger
 
@@ -73,10 +75,6 @@ func (net *Network) UpdateGraph() error {
 
 	for _, node := range net.allNodes.Nodes() {
 		peer := node.(*Peer)
-		if err := net.LoadTargetContentsRefs(peer); err != nil {
-			return fmt.Errorf("loading target contents refs: %s", err)
-		}
-
 		if err := net.traversePeers(peer); err != nil {
 			return fmt.Errorf("traversing peers: %s", err)
 		}
@@ -85,6 +83,18 @@ func (net *Network) UpdateGraph() error {
 	net.isolateNetworks()
 
 	net.CalculateNetworkWeights("") // no forced election
+
+	count := 0
+	for _, peer := range net.OrderedPeers(net.MyNetwork()) {
+		count++
+
+		if count > ContentConsensusRequiredFromTop {
+			break
+		}
+		if err := net.LoadTargetContentsRefs(peer); err != nil {
+			return fmt.Errorf("loading target contents refs: %s", err)
+		}
+	}
 
 	return nil
 }

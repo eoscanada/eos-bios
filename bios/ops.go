@@ -343,23 +343,40 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
 		}
 
-		initialBalance := hodler.Balance // .Sub(eos.NewEOSAsset(int64(op.BuyRAM))) // take ~0.1 to pay for initial RAM
-		firstHalf := initialBalance
-		secondHalf := initialBalance
-
-		// every has MINIMAL 0.25 EOS staked
-		// 10 floating EOS
-		// the rest split between the two
-
-		firstHalf.Amount = firstHalf.Amount / 2
-		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
+		cpuStake, netStake := splitSnapshotStakes(hodler.Balance)
 
 		// special case `transfer` for `b1` ?
-		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, false))
-
+		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, cpuStake, netStake, false))
 		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
 		out = append(out, nil) // end transaction
 	}
+
+	return
+}
+
+func splitSnapshotStakes(balance eos.Asset) (cpu, net eos.Asset) {
+	if balance.Amount < 5000 {
+		return
+	}
+
+	// everyone has minimum 0.25 EOS staked
+	// some 10 EOS unstaked
+	// the rest split between the two
+
+	cpu = eos.NewEOSAsset(2500)
+	net = eos.NewEOSAsset(2500)
+
+	remainder := eos.NewEOSAsset(balance.Amount - cpu.Amount - net.Amount)
+
+	if remainder.Amount <= 100000 /* 10.0 EOS */ {
+		return
+	}
+
+	remainder.Amount -= 100000 // keep them floating, unstaked
+
+	firstHalf := remainder.Amount / 2
+	cpu.Amount += firstHalf
+	net.Amount += remainder.Amount - firstHalf
 
 	return
 }
