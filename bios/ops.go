@@ -289,7 +289,7 @@ func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
 
-		act := token.NewIssue(prodName, eos.NewEOSAsset(100000000000), "To play around")  // You need to be 15 to unlock the chain with that amount.
+		act := token.NewIssue(prodName, eos.NewEOSAsset(100000000000), "To play around") // You need to be 15 to unlock the chain with that amount.
 		out = append(out, act, nil)
 	}
 	return
@@ -412,17 +412,17 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 	}
 
 	for idx, hodler := range snapshotData {
-		destAccount := AN(hodler.AccountName)
-
-		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
-
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
 				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
 				break
 			}
 		}
+
+		destAccount := AN(hodler.AccountName)
+
+		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
+		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
 	}
 
 	return
