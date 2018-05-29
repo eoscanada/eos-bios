@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# THIS IS A SAMPLE FILE. PLEASE TWEAK FOR YOUR INFRASTRUCTURE.
+
 # `boot_node` hook
 # $1 genesis JSON
 # $2 ephemeral public key
@@ -29,11 +31,21 @@ docker run -ti --rm --detach --name nodeos-bios \
        -p 8888:8888 -p 9876:9876 \
        eoscanada/eos:dawn-v4.2.0 \
        /opt/eosio/bin/nodeos --data-dir=/data \
+                             --config-dir=/etc/nodeos \
                              --genesis-json=/etc/nodeos/genesis.json \
-                             --max-transaction-time=5000 \
-                             --config-dir=/etc/nodeos
+                             --p2p-listen-endpoint=127.0.0.1:65432 \
+                             --max-transaction-time=5000
 
-#~/build/eos/build/programs/nodeos/nodeos --data-dir /tmp/nodeos-data --genesis-json `pwd`/genesis.json --config-dir `pwd` &
+#~/build/eos/build/programs/nodeos/nodeos --data-dir /tmp/nodeos-data --genesis-json `pwd`/genesis.json --max-transaction-time=5000 --p2p-listen-endpoint=127.0.0.1:65432 --config-dir `pwd` &
+
+# Reasons for options:
+#
+# --genesis-json to initialize the chain, can only be put the FIRST boot, take out after.
+# --p2p-listen-endpoint is a quick way to make sure your node is NOT reachable during the boot.
+#                       don't open or forward traffic to that point.
+# --max-transaction-time is to avoid timeouts when doing the initial actions insertion.
+#
+# All three options can be removed when you're ready to mesh with the network.
 
 echo ""
 echo "   View logs with: docker logs -f nodeos-bios"

@@ -340,9 +340,13 @@ func (b *BIOS) RunBootSequence() error {
 		os.Exit(0)
 	}
 
-	// if err := b.DispatchBootPublishHandoff(); err != nil {
-	// 	return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
-	// }
+	fmt.Println("")
+	fmt.Println("You should now mesh your node with the network.")
+	fmt.Println("")
+
+	if err := b.DispatchBootMesh(); err != nil {
+		return fmt.Errorf("dispatch boot_mesh: %s", err)
+	}
 
 	return nil
 }

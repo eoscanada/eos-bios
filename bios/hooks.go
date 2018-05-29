@@ -29,7 +29,7 @@ func (b *BIOS) DispatchBootNode(genesisJSON, publicKey, privateKey string, other
 		genesisJSON,
 		publicKey,
 		privateKey,
-		"p2p-peer-address = " + strings.Join(otherPeers, "\np2p-peer-address = "),
+		"# p2p-peer-address = " + strings.Join(otherPeers, "\n# p2p-peer-address = "),
 		strings.Join(otherPeers, ","),
 	}, nil)
 }
@@ -54,11 +54,8 @@ func (b *BIOS) DispatchJoinNetwork(genesis *GenesisJSON, peerDefs []*Peer, other
 	}, nil)
 }
 
-func (b *BIOS) DispatchBootPublishHandoff() error {
-	return b.dispatch("boot_publish_handoff", []string{
-		b.EphemeralPrivateKey.PublicKey().String(),
-		b.EphemeralPrivateKey.String(),
-	}, nil)
+func (b *BIOS) DispatchBootMesh() error {
+	return b.dispatch("boot_mesh", []string{}, nil)
 }
 
 func (b *BIOS) DispatchDone(operation string) error {
