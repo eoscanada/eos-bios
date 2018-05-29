@@ -509,13 +509,15 @@ func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
 	if network == nil {
 		if len(net.MyPeer.Discovery.SeedNetworkPeers) == 0 {
 			net.Log.Println("You are part of no network. Either define a `seed_network_peers` to point to some peers in a network, or ask to be pointed to by someone in a network")
-			os.Exit(1)
+			return nil
+			//os.Exit(1)
 		}
 
 		network = net.NetworkThatIncludes(net.MyPeer.Discovery.SeedNetworkPeers[0].Account)
 		if network == nil {
 			net.Log.Println("You're part of no network, and your first peer in `seed_network_peers` isn't either (!!)")
-			os.Exit(1)
+			return nil
+			//os.Exit(1)
 		}
 	}
 
@@ -533,10 +535,12 @@ func (net *Network) PrintOrderedPeers(orderedPeers []*Peer) {
 
 	net.Log.Println("###############################################################################################")
 	net.Log.Println("####################################    PEER NETWORK    #######################################")
-	targetBlock := orderedPeers[0].Discovery.SeedNetworkLaunchBlock
-	targetTime, currentBlock, _ := net.LaunchBlockTime(uint32(targetBlock))
-	net.Log.Printf("Target launch block: %d, %s (current: %d)\n", targetBlock, humanize.Time(targetTime), currentBlock)
-	net.Log.Println("")
+	if len(orderedPeers) > 1 {
+		targetBlock := orderedPeers[0].Discovery.SeedNetworkLaunchBlock
+		targetTime, currentBlock, _ := net.LaunchBlockTime(uint32(targetBlock))
+		net.Log.Printf("Target launch block: %d, %s (current: %d)\n", targetBlock, humanize.Time(targetTime), currentBlock)
+		net.Log.Println("")
+	}
 
 	columns := []string{
 		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block | Contents",
