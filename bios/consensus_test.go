@@ -39,6 +39,7 @@ func TestConsensusContents(t *testing.T) {
 					&disco.PeerLink{Account: AN("p1")},
 					&disco.PeerLink{Account: AN("p3")},
 				},
+				TargetNetworkIsTest: 1,
 				TargetContents: []disco.ContentRef{
 					disco.ContentRef{
 						Name: "file1",
@@ -91,5 +92,5 @@ func TestConsensusContents(t *testing.T) {
 	assert.Equal(t, 1, files.FilesMap["file1"]["/ipfs/file1"])
 	assert.Equal(t, 2, files.FilesMap["file1"]["/ipfs/file1-modified"])
 
-	assert.Equal(t, []string{"1", "2", "2"}, ComputePeerContentsColumn(files, orderedPeers))
+	assert.Equal(t, []string{"11. MAINNET", "221", "12. MAINNET"}, ComputePeerContentsColumn(files, orderedPeers))
 }

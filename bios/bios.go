@@ -277,8 +277,7 @@ func (b *BIOS) RunBootSequence() error {
 		}
 	}
 
-	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
-	otherPeers := b.someTopmostPeersAddresses(orderedPeers)
+	otherPeers := b.someTopmostPeersAddresses()
 	if err := b.DispatchBootNode(genesisData, pubKey.String(), privKey, otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}

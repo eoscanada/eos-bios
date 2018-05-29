@@ -25,8 +25,7 @@ urls:
 gmt_offset: -700  # in HourMinutes format
 
 target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
-# You can only link with peers that target the same chain_id
-target_p2p_address: stage1.example.com:9876
+target_p2p_address: stage1.example.com:9876  # you can put "none" to be excluded from the automated meshing
 target_http_address: http://stage1.example.com
 target_account_name: examplecom12
 target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
