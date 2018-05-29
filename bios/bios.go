@@ -33,6 +33,7 @@ type BIOS struct {
 	TargetNetAPI *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
+	WriteActions bool
 
 	Genesis *GenesisJSON
 
@@ -231,13 +232,6 @@ func (b *BIOS) PrintProducerSchedule(orderedPeers []*Peer) {
 func (b *BIOS) RunBootSequence() error {
 	b.Log.Println("START BOOT SEQUENCE...")
 
-	// keys, _ := b.TargetNetAPI.Signer.(*eos.KeyBag).AvailableKeys()
-	// for _, key := range keys {
-	// 	b.Log.Println("Available key in the KeyBag:", key)
-	// }
-
-	// Update boot sequence HERE
-
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
 		return err
@@ -256,6 +250,10 @@ func (b *BIOS) RunBootSequence() error {
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
 		return fmt.Errorf("ImportWIF: %s", err)
+	}
+
+	if err := b.writeAllActionsToDisk(); err != nil {
+		return fmt.Errorf("writing actions to disk: %s", err)
 	}
 
 	genesisData := b.GenerateGenesisJSON(pubKey.String())
@@ -375,7 +373,10 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 	}
 	b.EphemeralPublicKey = pubKey
 
-	// Create mesh network
+	if err := b.writeAllActionsToDisk(); err != nil {
+		return fmt.Errorf("writing actions to disk: %s", err)
+	}
+
 	otherPeers := b.computeMyMeshP2PAddresses()
 
 	if err := b.DispatchJoinNetwork(b.Genesis, b.getMyPeerVariations(), otherPeers); err != nil {
@@ -454,6 +455,51 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 	b.Log.Println("")
 
 	return true, nil
+}
+
+func (b *BIOS) writeAllActionsToDisk() error {
+	if !b.WriteActions {
+		fmt.Println("Not writing actions to 'actions.jsonl'. Activate with --write-actions")
+		return nil
+	}
+
+	fmt.Println("Writing all actions to 'actions.jsonl'...")
+	fl, err := os.Create("actions.jsonl")
+	if err != nil {
+		return err
+	}
+	defer fl.Close()
+
+	for _, step := range b.BootSequence {
+		if b.LaunchDisco.TargetNetworkIsTest == 0 {
+			step.Data.ResetTestnetOptions()
+		}
+
+		acts, err := step.Data.Actions(b)
+		if err != nil {
+			return fmt.Errorf("fetch step %q: %s", step.Op, err)
+		}
+
+		for _, stepAction := range acts {
+			if stepAction == nil {
+				continue
+			}
+
+			stepAction.SetToServer(false)
+			data, err := json.Marshal(stepAction)
+			if err != nil {
+				return fmt.Errorf("binary marshalling: %s", err)
+			}
+
+			_, err = fl.Write(data)
+			if err != nil {
+				return err
+			}
+			_, _ = fl.Write([]byte("\n"))
+		}
+	}
+
+	return nil
 }
 
 type ActionMap map[string]*eos.Action
