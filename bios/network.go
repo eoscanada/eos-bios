@@ -20,7 +20,8 @@ import (
 	"gonum.org/v1/gonum/graph/topo"
 )
 
-const ContentConsensusRequiredFromTop = 7
+const ContentConsensusRequiredFromTop = 8
+const RandomBootFromTop = 5
 
 type Network struct {
 	Log *Logger
@@ -383,10 +384,30 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 		if out[i].TotalWeight == out[j].TotalWeight {
 			return out[i].AccountName() < out[j].AccountName()
 		}
+
 		return out[i].TotalWeight > out[j].TotalWeight
 	})
 
+	out = bootOptInFilter(out)
+
 	return
+}
+
+func bootOptInFilter(in []*Peer) (out []*Peer) {
+	var launchers []*Peer
+	var nonLaunchers []*Peer
+	for _, el := range in {
+		if el.Discovery.SeedNetworkLaunchBlock == 0 {
+			nonLaunchers = append(nonLaunchers, el)
+		} else {
+			launchers = append(launchers, el)
+		}
+	}
+	maxLaunchers := RandomBootFromTop
+	if len(launchers) < RandomBootFromTop {
+		maxLaunchers = len(launchers)
+	}
+	return append(launchers[:maxLaunchers], append(nonLaunchers, launchers[maxLaunchers:]...)...)
 }
 
 func (net *Network) GetBlockHeight(height uint32) (eos.SHA256Bytes, error) {
@@ -521,12 +542,14 @@ func (net *Network) PrintOrderedPeers(orderedPeers []*Peer) {
 		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block | Contents",
 		"---- | ------------ | ----------- | ------ | --- | ------------ | --------",
 	}
-	columns = append(columns, fmt.Sprintf("BIOS NODE | %s | %s", orderedPeers[0].Columns(), peerContent[0]))
-	for i := 1; i < 22 && len(orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("ABP %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
+	for i := 0; i < RandomBootFromTop && len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("BOOT CAND. | %s | %s", orderedPeers[i].Columns(), peerContent[i]))
 	}
-	for i := 22; len(orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("Part. %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
+	for i := RandomBootFromTop; i < 21 && len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("ABP %02d | %s | %s", i+1, orderedPeers[i].Columns(), peerContent[i]))
+	}
+	for i := 21; len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("Part. %02d | %s | %s", i+1, orderedPeers[i].Columns(), peerContent[i]))
 	}
 	net.Log.Println(columnize.SimpleFormat(columns))
 

@@ -52,11 +52,18 @@ func (p *Peer) String() string {
 }
 
 func (p *Peer) Columns() string {
-	active := ""
+	add := ""
 	if p.Active() {
-		active = "A "
+		add += "A"
+		if p.Discovery.SeedNetworkLaunchBlock != 0 {
+			add += "B"
+		}
 	}
-	return fmt.Sprintf("%s | %s | %s%d | %d | %d", p.Discovery.SeedNetworkAccountName, p.Discovery.TargetAccountName, active, p.TotalWeight, p.Discovery.GMTOffset, p.Discovery.SeedNetworkLaunchBlock)
+	if len(add) != 0 {
+		add += " "
+	}
+
+	return fmt.Sprintf("%s | %s | %s%d | %d | %d", p.Discovery.SeedNetworkAccountName, p.Discovery.TargetAccountName, add, p.TotalWeight, p.Discovery.GMTOffset, p.Discovery.SeedNetworkLaunchBlock)
 }
 
 // PeerEdge is an internal structure that links two Discovery peers.

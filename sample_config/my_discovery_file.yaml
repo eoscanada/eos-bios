@@ -16,7 +16,10 @@ seed_network_peers:
   comment: "Insert why you think they're worth that weight"
   weight: 20
 
-seed_network_launch_block: 551  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
+# Block on the SEED EOS network before we orchestrate the TARGET network launch.
+# Putting a past block will start orchestration right away.
+# Setting it 0 means you OPT OUT of being selected the BIOS Boot node.
+seed_network_launch_block: 0
 
 urls:
 - https://website.com

@@ -835,7 +835,7 @@ func (b *BIOS) shuffleProducers() {
 	b.Log.Println("Shuffling producers listed in the launch file")
 	r := rand.New(b.RandSource)
 	// shuffle top 25%, capped to 5
-	shuffleHowMany := int64(math.Min(math.Ceil(float64(len(b.ShuffledProducers))*0.25), 5))
+	shuffleHowMany := int64(math.Min(math.Ceil(float64(len(b.ShuffledProducers))*0.25), RandomBootFromTop))
 	if shuffleHowMany > 1 {
 		b.Log.Println("- Shuffling top", shuffleHowMany)
 		for round := 0; round < 100; round++ {
