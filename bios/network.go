@@ -587,5 +587,9 @@ func (net *Network) ConsensusDiscovery() (*disco.Discovery, error) {
 	// Cycle through the top peers, take the most vetted
 
 	orderedPeers := net.OrderedPeers(net.MyNetwork())
+	if len(orderedPeers) == 0 {
+		return nil, fmt.Errorf("no other peers in sight")
+	}
+
 	return orderedPeers[0].Discovery, nil
 }
