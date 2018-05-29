@@ -289,7 +289,7 @@ func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
 
-		act := token.NewIssue(prodName, eos.NewEOSAsset(1500000000000), "For the vote dance")
+		act := token.NewIssue(prodName, eos.NewEOSAsset(100000000000), "To play around")  // You need to be 15 to unlock the chain with that amount.
 		out = append(out, act, nil)
 	}
 	return
