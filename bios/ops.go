@@ -327,6 +327,13 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 	}
 
 	for idx, hodler := range snapshotData {
+		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
+			if idx == trunc {
+				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
+				break
+			}
+		}
+
 		destAccount := AN(hodler.AccountName)
 
 		// we should have created the account before loading `eosio.system`, otherwise
@@ -340,6 +347,10 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		firstHalf := initialBalance
 		secondHalf := initialBalance
 
+		// every has MINIMAL 0.25 EOS staked
+		// 10 floating EOS
+		// the rest split between the two
+
 		firstHalf.Amount = firstHalf.Amount / 2
 		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
 
@@ -348,13 +359,6 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 
 		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
 		out = append(out, nil) // end transaction
-
-		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
-			if idx == trunc {
-				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
-				break
-			}
-		}
 	}
 
 	return
@@ -438,18 +442,18 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 	}
 
 	for idx, hodler := range snapshotData {
-		out = append(out,
-			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
-			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
-			nil,
-		)
-
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
 				b.Log.Debugf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
 				break
 			}
 		}
+
+		out = append(out,
+			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
+			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
+			nil,
+		)
 	}
 
 	return
