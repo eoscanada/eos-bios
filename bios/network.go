@@ -395,19 +395,21 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 
 func bootOptInFilter(in []*Peer) (out []*Peer) {
 	var launchers []*Peer
+	var remainders []*Peer
 	var nonLaunchers []*Peer
 	for _, el := range in {
-		if el.Discovery.SeedNetworkLaunchBlock == 0 {
-			nonLaunchers = append(nonLaunchers, el)
+		if len(launchers) < RandomBootFromTop {
+			if el.Discovery.SeedNetworkLaunchBlock != 0 {
+				launchers = append(launchers, el)
+			} else {
+				nonLaunchers = append(nonLaunchers, el)
+			}
 		} else {
-			launchers = append(launchers, el)
+			remainders = append(remainders, el)
 		}
 	}
-	maxLaunchers := RandomBootFromTop
-	if len(launchers) < RandomBootFromTop {
-		maxLaunchers = len(launchers)
-	}
-	return append(launchers[:maxLaunchers], append(nonLaunchers, launchers[maxLaunchers:]...)...)
+
+	return append(launchers, append(nonLaunchers, remainders...)...)
 }
 
 func (net *Network) GetBlockHeight(height uint32) (eos.SHA256Bytes, error) {

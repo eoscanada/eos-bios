@@ -22,6 +22,7 @@ func TestBootOptInFilter(t *testing.T) {
 		{"abC", "Cab"},
 		{"abcdeF", "Fabcde"},
 		{"abcdeFGHI", "FGHIabcde"},
+		{"AbCdEfGhIjKlM", "ACEGIbdfhjKlM"},
 	}
 
 	for _, test := range tests {
