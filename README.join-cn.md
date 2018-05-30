@@ -21,7 +21,7 @@
 * `target_p2p_address`, 对外提供的P2P地址
 * `target_account_name`, `target_appointed_block_producer_signing_key`, `target_initial_authority`: 这三个都需要改成你的值
 * `target_contents`, 我们达成一致可以写入区块链中的内容，包含系统合约，EOS映射快照
-## 5. 更新`privkeys.keys`
+## 5. 更新`seed_network.keys`
 这个文件中需要包含你的公钥地址对应的私钥
 
 ## 6. 发布你的配置文件
