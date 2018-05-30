@@ -93,9 +93,15 @@ func (b *BIOS) someTopmostPeersAddresses() []string {
 func (b *BIOS) meshableShuffledProducers() []*Peer {
 	var meshableProducers []*Peer
 	for _, peer := range b.ShuffledProducers {
-		if peer.Discovery.TargetP2PAddress != "none" {
-			meshableProducers = append(meshableProducers, peer)
+		if peer.Discovery.TargetP2PAddress == "none" {
+			continue
 		}
+
+		if !peer.Active() {
+			continue
+		}
+
+		meshableProducers = append(meshableProducers, peer)
 	}
 	return meshableProducers
 }
