@@ -66,7 +66,7 @@ func (b *BIOS) DispatchDone(operation string) error {
 
 // dispatch to both exec calls, and remote web hooks.
 func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
-	fmt.Printf("---- BEGIN HOOK %q ----\n", hookName)
+	b.Log.Printf("---- BEGIN HOOK %q ----\n", hookName)
 
 	// check if `hook_[hookName]` exists or `hook_[hookName].sh` exists, and use that as a command,
 	// otherwise, print that the hook is not present.
@@ -82,7 +82,7 @@ func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
 	}
 
 	if executable == "" {
-		fmt.Printf("  - Hook not found (searched %q)\n", filePaths)
+		b.Log.Printf("  - Hook not found (searched %q)\n", filePaths)
 		return nil
 	}
 
@@ -99,7 +99,7 @@ func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
 		return err
 	}
 
-	fmt.Printf("---- END HOOK %q ----\n", hookName)
+	b.Log.Printf("---- END HOOK %q ----\n", hookName)
 
 	return nil
 }

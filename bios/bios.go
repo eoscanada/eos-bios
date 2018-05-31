@@ -252,7 +252,7 @@ func (b *BIOS) RunBootSequence() error {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
-	if err := b.writeAllActionsToDisk(); err != nil {
+	if err := b.writeAllActionsToDisk(true); err != nil {
 		return fmt.Errorf("writing actions to disk: %s", err)
 	}
 
@@ -305,7 +305,6 @@ func (b *BIOS) RunBootSequence() error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range ChunkifyActions(acts) {
-				//time.Sleep(500 * time.Millisecond)
 				err := Retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
@@ -338,9 +337,9 @@ func (b *BIOS) RunBootSequence() error {
 		os.Exit(0)
 	}
 
-	fmt.Println("")
-	fmt.Println("You should now mesh your node with the network.")
-	fmt.Println("")
+	b.Log.Println("")
+	b.Log.Println("You should now mesh your node with the network.")
+	b.Log.Println("")
 
 	if err := b.DispatchBootMesh(); err != nil {
 		return fmt.Errorf("dispatch boot_mesh: %s", err)
@@ -373,7 +372,7 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 	}
 	b.EphemeralPublicKey = pubKey
 
-	if err := b.writeAllActionsToDisk(); err != nil {
+	if err := b.writeAllActionsToDisk(false); err != nil {
 		return fmt.Errorf("writing actions to disk: %s", err)
 	}
 
@@ -427,11 +426,11 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 				continue
 			}
 
+			stepAction.SetToServer(true)
 			data, err := eos.MarshalBinary(stepAction)
 			if err != nil {
 				return false, fmt.Errorf("validating: binary marshalling: %s", err)
 			}
-			stepAction.SetToServer(false)
 			key := sha2(data)
 
 			// if _, ok := bootSeqMap[key]; ok {
@@ -457,13 +456,13 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 	return true, nil
 }
 
-func (b *BIOS) writeAllActionsToDisk() error {
-	if !b.WriteActions {
-		fmt.Println("Not writing actions to 'actions.jsonl'. Activate with --write-actions")
+func (b *BIOS) writeAllActionsToDisk(alwaysRun bool) error {
+	if !b.WriteActions && !alwaysRun {
+		b.Log.Println("Not writing actions to 'actions.jsonl'. Activate with --write-actions")
 		return nil
 	}
 
-	fmt.Println("Writing all actions to 'actions.jsonl'...")
+	b.Log.Println("Writing all actions to 'actions.jsonl'...")
 	fl, err := os.Create("actions.jsonl")
 	if err != nil {
 		return err
@@ -515,7 +514,7 @@ type ValidationError struct {
 }
 
 func (e ValidationError) Error() string {
-	s := fmt.Sprintf("Action [%d][%s::%s] from block not found in boot sequences\n", e.Index, e.Action.Account, e.Action.Name)
+	s := fmt.Sprintf("Action [%d][%s::%s] absent from blocks\n", e.Index, e.Action.Account, e.Action.Name)
 
 	data, err := json.Marshal(e.Action)
 	if err != nil {
@@ -534,7 +533,6 @@ type ValidationErrors struct {
 }
 
 func (v ValidationErrors) Error() string {
-
 	s := ""
 	for _, err := range v.Errors {
 		s += ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
@@ -567,7 +565,6 @@ func (b *BIOS) pingTargetNetwork() {
 	}
 
 	b.Log.Println(" touchdown!")
-
 }
 
 func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
@@ -578,14 +575,29 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 
 	// TODO: wait for target network to be up, and responding...
 	b.Log.Println("Pulling blocks from chain until we gathered all actions to validate:")
-	lastDisplay := time.Now()
 	blockHeight := 1
 	actionsRead := 0
 	seenMap := map[string]bool{}
+	gotSomeTx := false
+	backOff := false
+	timeBetweenFetch := time.Duration(0)
+	var timeLastNotFound time.Time
 
 	for {
+		time.Sleep(timeBetweenFetch)
+
 		m, err := b.TargetNetAPI.GetBlockByNum(uint32(blockHeight))
 		if err != nil {
+			if gotSomeTx && !backOff {
+				backOff = true
+				timeBetweenFetch = 500 * time.Millisecond
+				timeLastNotFound = time.Now()
+
+				time.Sleep(2000 * time.Millisecond)
+
+				continue
+			}
+
 			b.Log.Debugln("Failed getting block num from target api:", err)
 			b.Log.Printf("e")
 			time.Sleep(1 * time.Second)
@@ -594,16 +606,17 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 			b.Log.Printf(".\n")
 		}
 
-		// TODO: Once we hit a failure, we should now poke them each 500ms, and try to speed up slllightly
-
-		if time.Now().Sub(lastDisplay) > 1*time.Second {
-			b.Log.Printf("Block %d, read actions %d/%d\n", blockHeight, actionsRead, len(bootSeq))
-			lastDisplay = time.Now()
-		}
-
 		blockHeight++
 
-		b.Log.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
+		b.Log.Printf("Receiving block height=%d producer=%s transactions=%d\n", m.BlockNumber(), m.Producer, len(m.Transactions))
+
+		if !gotSomeTx && len(m.Transactions) > 2 {
+			gotSomeTx = true
+		}
+
+		if !timeLastNotFound.IsZero() && timeLastNotFound.Before(time.Now().Add(-10*time.Second)) {
+			b.flushMissingActions(seenMap, bootSeq)
+		}
 
 		for _, receipt := range m.Transactions {
 			unpacked, err := receipt.Transaction.Packed.Unpack()
@@ -658,18 +671,35 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 	}
 
 	if len(validationErrors) > 0 {
-		b.Log.Println("Unseen transactions:")
-		for _, act := range bootSeq {
-			data, _ := eos.MarshalBinary(act)
-			key := sha2(data)
-			if !seenMap[key] {
-				b.Log.Printf("- Action %s::%s [%q]\n", act.Account, act.Name, hex.EncodeToString(data))
-			}
-		}
 		return ValidationErrors{Errors: validationErrors}
 	}
 
 	return nil
+}
+
+func (b *BIOS) flushMissingActions(seenMap map[string]bool, bootSeq []*eos.Action) {
+	fl, err := os.Create("missing_actions.jsonl")
+	if err != nil {
+		fmt.Println("Couldn't write to `missing_actions.jsonl`:", err)
+		return
+	}
+	defer fl.Close()
+
+	// TODO: print all actions that are still MISSING to `missing_actions.jsonl`.
+	b.Log.Println("Flushing unseen transactions to `missing_actions.jsonl` up until this point.")
+
+	for _, act := range bootSeq {
+		act.SetToServer(true)
+		data, _ := eos.MarshalBinary(act)
+		key := sha2(data)
+
+		if !seenMap[key] {
+			act.SetToServer(false)
+			data, _ := json.Marshal(act)
+			fl.Write(data)
+			fl.Write([]byte("\n"))
+		}
+	}
 }
 
 func (b *BIOS) waitLaunchBlock() rand.Source {
