@@ -94,6 +94,10 @@ func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
 	targetNetAPI := eos.New(targetNetHTTP)
 	targetNetAPI.SetSigner(eos.NewKeyBag())
 
+	if viper.GetBool("fast-inject") {
+		targetNetAPI.EnableKeepAlives()
+	}
+
 	b = bios.NewBIOS(net.Log, net, targetNetAPI)
 	b.WriteActions = viper.GetBool("write-actions")
 	return b, nil
