@@ -65,12 +65,14 @@ func init() {
 	RootCmd.PersistentFlags().StringP("seednet-api", "", "", "HTTP address of the seed network pointed to by your discovery file")
 	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./seed_network.keys", "File containing private keys to your account on the seed network")
 	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and validation)")
+	RootCmd.PersistentFlags().BoolP("fast-inject", "", false, "Inject the boot sequence assuming an HTTP/1.1 API endpoint (nodeos does only 1.0 and closes connections). You can use that if you front your nodeos node with some reverse proxy.")
 
+	RootCmd.PersistentFlags().BoolP("write-actions", "", false, "Write actions to actions.jsonl upon join or boot")
 	RootCmd.PersistentFlags().StringP("cache-path", "", filepath.Join(homedir, ".eos-bios-cache"), "directory to store cached data from discovered network")
 	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "Display verbose output (also see 'output.log')")
 	RootCmd.PersistentFlags().String("elect", "", "Force the election of the given BIOS Boot node")
 
-	for _, flag := range []string{"cache-path", "my-discovery", "ipfs", "seednet-keys", "seednet-api", "target-api", "verbose", "elect"} {
+	for _, flag := range []string{"cache-path", "my-discovery", "ipfs", "seednet-keys", "write-actions", "seednet-api", "target-api", "verbose", "elect", "fast-inject"} {
 		if err := viper.BindPFlag(flag, RootCmd.PersistentFlags().Lookup(flag)); err != nil {
 			panic(err)
 		}

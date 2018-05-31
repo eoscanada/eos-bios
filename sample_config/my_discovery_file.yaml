@@ -16,7 +16,10 @@ seed_network_peers:
   comment: "Insert why you think they're worth that weight"
   weight: 20
 
-seed_network_launch_block: 551  # Block on the SEED EOS network before we orchestrate the TARGET network launch.  Putting a past block will start orchestration right away.
+# Block on the SEED EOS network before we orchestrate the TARGET network launch.
+# Putting a past block will start orchestration right away.
+# Setting it 0 means you OPT OUT of being selected the BIOS Boot node.
+seed_network_launch_block: 0
 
 urls:
 - https://website.com
@@ -25,8 +28,7 @@ urls:
 gmt_offset: -700  # in HourMinutes format
 
 target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
-# You can only link with peers that target the same chain_id
-target_p2p_address: stage1.example.com:9876
+target_p2p_address: stage1.example.com:9876  # you can put "none" to be excluded from the automated meshing
 target_http_address: http://stage1.example.com
 target_account_name: examplecom12
 target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
@@ -36,11 +38,15 @@ target_initial_authority:
     keys:
     - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
+    accounts: []
+    waits: []
   active:
     threshold: 1
     keys:
     - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
+    accounts: []
+    waits: []
 
 target_contents:
   - name: boot_sequence.yaml
@@ -63,11 +69,11 @@ target_contents:
     comment: "Published by EOS Canada. Tag dawn-v4.2.0"
 
   - name: eosio.system.abi
-    ref: /ipfs/QmRmwmks3ctxd624ToJgQE5DNic1NLNHLKrhGzHzqPjS3S
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    ref: /ipfs/QmTPP6C2sw7oSJjvaSbtR8SjHfx8R8rKwJDtTZe8VdzMrM
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-30"
   - name: eosio.system.wasm
-    ref: /ipfs/QmSxrJBUVHW67FmsCh4Xa18moEVBh9UZnKK2xhPpYHujfG
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    ref: /ipfs/QmWhjcw4djLxWVzNyg7SosjopcT3KayAjG5Gw8YAY7j3H1
+    comment: "Published by EOS Canada. Tag DAWN-2018-05-30"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx

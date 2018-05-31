@@ -29,7 +29,7 @@ func (b *BIOS) DispatchBootNode(genesisJSON, publicKey, privateKey string, other
 		genesisJSON,
 		publicKey,
 		privateKey,
-		"p2p-peer-address = " + strings.Join(otherPeers, "\np2p-peer-address = "),
+		"# p2p-peer-address = " + strings.Join(otherPeers, "\n# p2p-peer-address = "),
 		strings.Join(otherPeers, ","),
 	}, nil)
 }
@@ -54,11 +54,8 @@ func (b *BIOS) DispatchJoinNetwork(genesis *GenesisJSON, peerDefs []*Peer, other
 	}, nil)
 }
 
-func (b *BIOS) DispatchBootPublishHandoff() error {
-	return b.dispatch("boot_publish_handoff", []string{
-		b.EphemeralPrivateKey.PublicKey().String(),
-		b.EphemeralPrivateKey.String(),
-	}, nil)
+func (b *BIOS) DispatchBootMesh() error {
+	return b.dispatch("boot_mesh", []string{}, nil)
 }
 
 func (b *BIOS) DispatchDone(operation string) error {
@@ -69,7 +66,7 @@ func (b *BIOS) DispatchDone(operation string) error {
 
 // dispatch to both exec calls, and remote web hooks.
 func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
-	fmt.Printf("---- BEGIN HOOK %q ----\n", hookName)
+	b.Log.Printf("---- BEGIN HOOK %q ----\n", hookName)
 
 	// check if `hook_[hookName]` exists or `hook_[hookName].sh` exists, and use that as a command,
 	// otherwise, print that the hook is not present.
@@ -85,7 +82,7 @@ func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
 	}
 
 	if executable == "" {
-		fmt.Printf("  - Hook not found (searched %q)\n", filePaths)
+		b.Log.Printf("  - Hook not found (searched %q)\n", filePaths)
 		return nil
 	}
 
@@ -102,7 +99,7 @@ func (b *BIOS) dispatch(hookName string, args []string, f func() error) error {
 		return err
 	}
 
-	fmt.Printf("---- END HOOK %q ----\n", hookName)
+	b.Log.Printf("---- END HOOK %q ----\n", hookName)
 
 	return nil
 }

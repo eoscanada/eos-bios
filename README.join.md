@@ -23,7 +23,7 @@ Copy the `sample_config` folder to a folder named `stageX` where X is the stage 
 * `target_p2p_address` is a publicly reachable address advertised to mesh the network
 * `target_account_name`, `target_appointed_block_producer_signing_key`, `target_initial_authority`: the values you want to use on the target network
 * `target_contents` are all the pieces of content we need to agree on that will make it into the chain, like system contracts, ERC-20 snapshots, etc.. You will see consensus achieved with the members on your first orchestration. Use the sample_config values for now.
-## 5. Update `privkeys.keys`
+## 5. Update `seed_network.keys`
 This file should contain the private key(s) to control your seed network account
 ## 6. Publish your discovery file
 

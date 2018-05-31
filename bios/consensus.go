@@ -82,6 +82,9 @@ func ComputePeerContentsColumn(content *ConsensusFiles, orderedPeers []*Peer) (o
 			}
 			currentColumns = append(currentColumns, col)
 		}
+		if peer.Discovery.TargetNetworkIsTest == 0 {
+			currentColumns = append(currentColumns, " MAINNET")
+		}
 		out = append(out, strings.Join(currentColumns, ""))
 	}
 

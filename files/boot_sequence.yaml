@@ -126,9 +126,6 @@ boot_sequence:
   data:
     account: eosio
     amount: 10000000000.0000 EOS  # Should work with 5% inflation, for the next 50 years (end of uint32 block_num anyway)
-    can_whitelist: false
-    can_freeze: false
-    can_recall: false
 
 - op: token.issue
   label: Issuing initial EOS monetary base
@@ -150,7 +147,6 @@ boot_sequence:
   label: Enrich producers, to help with next stage. Disabled on mainnet.
   data:
     TESTNET_ENRICH_PRODUCERS: true
-
 
 - op: token.issue
   label: Issuing more and more EOS, because initial account creation and RAM buying for the snapshot holders is REALLY PRICEY! This has to be solved otherwise.
@@ -174,7 +170,6 @@ boot_sequence:
   label: Saving unregistered addresses in eosio.unregd account, for the future.
   data:
     TESTNET_TRUNCATE_SNAPSHOT: 1000
-
 
 - op: system.setcode
   label: Setting eosio.bios code for account eosio

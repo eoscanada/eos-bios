@@ -59,7 +59,7 @@ func ValidateDiscovery(discovery *disco.Discovery) error {
 		return fmt.Errorf("target_p2p_address should be of format ip:port, not prefixed with a protocol")
 	}
 
-	if !strings.Contains(discovery.TargetP2PAddress, ":") {
+	if discovery.TargetP2PAddress != "none" && !strings.Contains(discovery.TargetP2PAddress, ":") {
 		return errors.New("target_p2p_address doesn't contain port number")
 	}
 

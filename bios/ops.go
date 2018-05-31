@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/eoscanada/eos-bios/bios/unregd"
 	eos "github.com/eoscanada/eos-go"
@@ -196,16 +195,13 @@ func (op *OpSetPriv) Actions(b *BIOS) (out []*eos.Action, err error) {
 //
 
 type OpCreateToken struct {
-	Account      eos.AccountName
-	Amount       eos.Asset
-	CanWhitelist bool `json:"can_whitelist"`
-	CanFreeze    bool `json:"can_freeze"`
-	CanRecall    bool `json:"can_recall"`
+	Account eos.AccountName `json:"account"`
+	Amount  eos.Asset       `json:"amount"`
 }
 
 func (op *OpCreateToken) ResetTestnetOptions() {}
 func (op *OpCreateToken) Actions(b *BIOS) (out []*eos.Action, err error) {
-	act := token.NewCreate(op.Account, op.Amount, op.CanFreeze, op.CanRecall, op.CanWhitelist)
+	act := token.NewCreate(op.Account, op.Amount)
 	return append(out, act), nil
 }
 
@@ -293,7 +289,7 @@ func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
 
-		act := token.NewIssue(prodName, eos.NewEOSAsset(1000000000), "Hey, make good use of it!")
+		act := token.NewIssue(prodName, eos.NewEOSAsset(100000000000), "To play around") // You need to be 15 to unlock the chain with that amount.
 		out = append(out, act, nil)
 	}
 	return
@@ -331,37 +327,56 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 	}
 
 	for idx, hodler := range snapshotData {
-		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
-
-		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
-			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1"
-			// we should have created the account before loading `eosio.system`, otherwise
-			// b1 wouldn't have been accepted.
-		} else {
-			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
-		}
-
-		initialBalance := hodler.Balance // .Sub(eos.NewEOSAsset(int64(op.BuyRAM))) // take ~0.1 to pay for initial RAM
-		firstHalf := initialBalance
-		secondHalf := initialBalance
-
-		firstHalf.Amount = firstHalf.Amount / 2
-		secondHalf.Amount = hodler.Balance.Amount - firstHalf.Amount
-
-		// special case `transfer` for `b1` ?
-		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, firstHalf, secondHalf, false))
-
-		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
-		out = append(out, nil) // end transaction
-
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
 				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
 				break
 			}
 		}
+
+		destAccount := AN(hodler.AccountName)
+
+		// we should have created the account before loading `eosio.system`, otherwise
+		// b1 wouldn't have been accepted.
+		if hodler.EthereumAddress != "0x00000000000000000000000000000000000000b1" {
+			// create all other accounts, but not `b1`.. because it's a short name..
+			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
+		}
+
+		cpuStake, netStake := splitSnapshotStakes(hodler.Balance)
+
+		// special case `transfer` for `b1` ?
+		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, cpuStake, netStake, false))
+		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
+		out = append(out, nil) // end transaction
 	}
+
+	return
+}
+
+func splitSnapshotStakes(balance eos.Asset) (cpu, net eos.Asset) {
+	if balance.Amount < 5000 {
+		return
+	}
+
+	// everyone has minimum 0.25 EOS staked
+	// some 10 EOS unstaked
+	// the rest split between the two
+
+	cpu = eos.NewEOSAsset(2500)
+	net = eos.NewEOSAsset(2500)
+
+	remainder := eos.NewEOSAsset(balance.Amount - cpu.Amount - net.Amount)
+
+	if remainder.Amount <= 100000 /* 10.0 EOS */ {
+		return
+	}
+
+	remainder.Amount -= 100000 // keep them floating, unstaked
+
+	firstHalf := remainder.Amount / 2
+	cpu.Amount += firstHalf
+	net.Amount += remainder.Amount - firstHalf
 
 	return
 }
@@ -397,22 +412,17 @@ func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
 	}
 
 	for idx, hodler := range snapshotData {
-		destAccount := AN(strings.Replace(hodler.AccountName, "0", "genesis", -1)[:12])
-
-		if hodler.EthereumAddress == "0x00000000000000000000000000000000000000b1" {
-			// the undelegatebw action does special unvesting for the b1 account
-			destAccount = "b1" // TODO: CONTRACT SHOULD CHANGE TOO
-		}
-
-		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
-
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
 				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
 				break
 			}
 		}
+
+		destAccount := AN(hodler.AccountName)
+
+		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
+		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
 	}
 
 	return
@@ -449,18 +459,18 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 	}
 
 	for idx, hodler := range snapshotData {
-		out = append(out,
-			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
-			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
-			nil,
-		)
-
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
 				b.Log.Debugf("- DEBUG: truncated unreg'd snapshot to %d rows\n", trunc)
 				break
 			}
 		}
+
+		out = append(out,
+			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
+			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
+			nil,
+		)
 	}
 
 	return
@@ -476,7 +486,7 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// and resigns the system accounts.
 	prodkeys := []system.ProducerKey{system.ProducerKey{
 		ProducerName:    AN("eosio"),
-		BlockSigningKey: b.EphemeralPrivateKey.PublicKey(),
+		BlockSigningKey: b.EphemeralPublicKey,
 	}}
 
 	//prodkeys := []system.ProducerKey{}

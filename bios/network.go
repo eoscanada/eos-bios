@@ -20,6 +20,9 @@ import (
 	"gonum.org/v1/gonum/graph/topo"
 )
 
+const ContentConsensusRequiredFromTop = 8
+const RandomBootFromTop = 5
+
 type Network struct {
 	Log *Logger
 
@@ -73,10 +76,6 @@ func (net *Network) UpdateGraph() error {
 
 	for _, node := range net.allNodes.Nodes() {
 		peer := node.(*Peer)
-		if err := net.LoadTargetContentsRefs(peer); err != nil {
-			return fmt.Errorf("loading target contents refs: %s", err)
-		}
-
 		if err := net.traversePeers(peer); err != nil {
 			return fmt.Errorf("traversing peers: %s", err)
 		}
@@ -85,6 +84,18 @@ func (net *Network) UpdateGraph() error {
 	net.isolateNetworks()
 
 	net.CalculateNetworkWeights("") // no forced election
+
+	count := 0
+	for _, peer := range net.OrderedPeers(net.MyNetwork()) {
+		count++
+
+		if count > ContentConsensusRequiredFromTop {
+			break
+		}
+		if err := net.LoadTargetContentsRefs(peer); err != nil {
+			return fmt.Errorf("loading target contents refs: %s", err)
+		}
+	}
 
 	return nil
 }
@@ -366,13 +377,39 @@ func (net *Network) OrderedPeers(network *simple.WeightedDirectedGraph) (out []*
 	}
 
 	sort.Slice(out, func(i, j int) bool {
+		if out[i].Active() != out[j].Active() {
+			return out[i].Active()
+		}
+
 		if out[i].TotalWeight == out[j].TotalWeight {
 			return out[i].AccountName() < out[j].AccountName()
 		}
+
 		return out[i].TotalWeight > out[j].TotalWeight
 	})
 
+	out = bootOptInFilter(out)
+
 	return
+}
+
+func bootOptInFilter(in []*Peer) (out []*Peer) {
+	var launchers []*Peer
+	var remainders []*Peer
+	var nonLaunchers []*Peer
+	for _, el := range in {
+		if len(launchers) < RandomBootFromTop {
+			if el.Discovery.SeedNetworkLaunchBlock != 0 {
+				launchers = append(launchers, el)
+			} else {
+				nonLaunchers = append(nonLaunchers, el)
+			}
+		} else {
+			remainders = append(remainders, el)
+		}
+	}
+
+	return append(launchers, append(nonLaunchers, remainders...)...)
 }
 
 func (net *Network) GetBlockHeight(height uint32) (eos.SHA256Bytes, error) {
@@ -449,13 +486,24 @@ func (net *Network) PollGenesisTable(account eos.AccountName) (data string, err 
 func (net *Network) ListNetworks(verbose bool) {
 	net.Log.Println("Networks formed by published discovery files:")
 
+	columns := []string{
+		"Network | Seed Account | Weight | Last update | Active",
+		"------- | ------------ | ------ | ----------- | ------",
+	}
+
 	for idx, network := range net.allNetworks {
-		net.Log.Printf("%d.\n", idx+1)
+		columns = append(columns, fmt.Sprintf("%d | | | |", idx+1))
 		orderedPeers := net.OrderedPeers(network)
 		for _, peer := range orderedPeers {
-			net.Log.Printf("  - %s (total weight: %d), updated %s\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt))
+			active := " "
+			if peer.Active() {
+				active = "X"
+			}
+			columns = append(columns, fmt.Sprintf(" | %s | %d | %s | %s", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt), active))
+			//net.Log.Printf("  - %s (total weight: %d), updated %s\n", peer.Discovery.SeedNetworkAccountName, peer.TotalWeight, humanize.Time(peer.UpdatedAt))
 		}
 	}
+	net.Log.Println(columnize.SimpleFormat(columns))
 }
 
 func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
@@ -463,40 +511,51 @@ func (net *Network) MyNetwork() *simple.WeightedDirectedGraph {
 	if network == nil {
 		if len(net.MyPeer.Discovery.SeedNetworkPeers) == 0 {
 			net.Log.Println("You are part of no network. Either define a `seed_network_peers` to point to some peers in a network, or ask to be pointed to by someone in a network")
-			os.Exit(1)
+			return nil
+			//os.Exit(1)
 		}
 
 		network = net.NetworkThatIncludes(net.MyPeer.Discovery.SeedNetworkPeers[0].Account)
 		if network == nil {
 			net.Log.Println("You're part of no network, and your first peer in `seed_network_peers` isn't either (!!)")
-			os.Exit(1)
+			return nil
+			//os.Exit(1)
 		}
 	}
 
 	return network
 }
 
-func (net *Network) PrintOrderedPeers() {
-	net.Log.Println("###############################################################################################")
-	net.Log.Println("####################################    PEER NETWORK    #######################################")
-	net.Log.Println("")
-
-	network := net.MyNetwork()
-	orderedPeers := net.OrderedPeers(network)
+func (net *Network) PrintOrderedPeers(orderedPeers []*Peer) {
+	if orderedPeers == nil {
+		network := net.MyNetwork()
+		orderedPeers = net.OrderedPeers(network)
+	}
 
 	contentAgreement := ComputeContentsAgreement(orderedPeers)
 	peerContent := ComputePeerContentsColumn(contentAgreement, orderedPeers)
+
+	net.Log.Println("###############################################################################################")
+	net.Log.Println("####################################    PEER NETWORK    #######################################")
+	if len(orderedPeers) > 1 {
+		targetBlock := orderedPeers[0].Discovery.SeedNetworkLaunchBlock
+		targetTime, currentBlock, _ := net.LaunchBlockTime(uint32(targetBlock))
+		net.Log.Printf("Target launch block: %d, %s (current: %d)\n", targetBlock, humanize.Time(targetTime), currentBlock)
+		net.Log.Println("")
+	}
 
 	columns := []string{
 		"Role | Seed Account | Target Acct | Weight | GMT | Launch Block | Contents",
 		"---- | ------------ | ----------- | ------ | --- | ------------ | --------",
 	}
-	columns = append(columns, fmt.Sprintf("BIOS NODE | %s | %s", orderedPeers[0].Columns(), peerContent[0]))
-	for i := 1; i < 22 && len(orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("ABP %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
+	for i := 0; i < RandomBootFromTop && len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("BOOT CAND. | %s | %s", orderedPeers[i].Columns(), peerContent[i]))
 	}
-	for i := 22; len(orderedPeers) > i; i++ {
-		columns = append(columns, fmt.Sprintf("Part. %02d | %s | %s", i, orderedPeers[i].Columns(), peerContent[i]))
+	for i := RandomBootFromTop; i < 21 && len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("ABP %02d | %s | %s", i+1, orderedPeers[i].Columns(), peerContent[i]))
+	}
+	for i := 21; len(orderedPeers) > i; i++ {
+		columns = append(columns, fmt.Sprintf("Part. %02d | %s | %s", i+1, orderedPeers[i].Columns(), peerContent[i]))
 	}
 	net.Log.Println(columnize.SimpleFormat(columns))
 
@@ -530,5 +589,9 @@ func (net *Network) ConsensusDiscovery() (*disco.Discovery, error) {
 	// Cycle through the top peers, take the most vetted
 
 	orderedPeers := net.OrderedPeers(net.MyNetwork())
+	if len(orderedPeers) == 0 {
+		return nil, fmt.Errorf("no other peers in sight")
+	}
+
 	return orderedPeers[0].Discovery, nil
 }

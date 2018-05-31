@@ -33,6 +33,7 @@ type BIOS struct {
 	TargetNetAPI *eos.API
 	Snapshot     Snapshot
 	BootSequence []*OperationType
+	WriteActions bool
 
 	Genesis *GenesisJSON
 
@@ -123,9 +124,10 @@ func (b *BIOS) Init() error {
 
 func (b *BIOS) StartOrchestrate() error {
 	b.Log.Println("Starting Orchestraion process", time.Now())
-
 	b.Log.Println("Showing pre-randomized network discovered:")
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(nil)
+
+	firstTarget := b.LaunchDisco.SeedNetworkLaunchBlock
 
 	b.RandSource = b.waitLaunchBlock()
 
@@ -138,8 +140,21 @@ func (b *BIOS) StartOrchestrate() error {
 		return fmt.Errorf("update graph: %s", err)
 	}
 
+	// Set this before randomization, so top-by-weight still decides on content.
+	b.LaunchDisco, _ = b.Network.ConsensusDiscovery()
+
+	secondTarget := b.LaunchDisco.SeedNetworkLaunchBlock
+	if firstTarget != secondTarget {
+		return fmt.Errorf("Whoops, target launch block changed mid-flight ! Try orchestrate again.")
+	}
+
+	// Randomize the list now.
+	if err := b.setProducers(); err != nil {
+		return err
+	}
+
 	b.Log.Println("Network used for launch:")
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(b.ShuffledProducers)
 
 	if err := b.DispatchInit("orchestrate"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -166,7 +181,7 @@ func (b *BIOS) StartOrchestrate() error {
 func (b *BIOS) StartJoin(validate bool) error {
 	b.Log.Println("Starting network join process", time.Now())
 
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(nil)
 
 	if err := b.DispatchInit("join"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -182,7 +197,7 @@ func (b *BIOS) StartJoin(validate bool) error {
 func (b *BIOS) StartBoot() error {
 	b.Log.Println("Starting network join process", time.Now())
 
-	b.PrintProducerSchedule()
+	b.PrintProducerSchedule(nil)
 
 	if err := b.DispatchInit("boot"); err != nil {
 		return fmt.Errorf("dispatch init hook: %s", err)
@@ -195,8 +210,8 @@ func (b *BIOS) StartBoot() error {
 	return b.DispatchDone("boot")
 }
 
-func (b *BIOS) PrintProducerSchedule() {
-	b.Network.PrintOrderedPeers()
+func (b *BIOS) PrintProducerSchedule(orderedPeers []*Peer) {
+	b.Network.PrintOrderedPeers(orderedPeers)
 
 	b.Log.Println("")
 	b.Log.Println("###############################################################################################")
@@ -217,13 +232,6 @@ func (b *BIOS) PrintProducerSchedule() {
 func (b *BIOS) RunBootSequence() error {
 	b.Log.Println("START BOOT SEQUENCE...")
 
-	// keys, _ := b.TargetNetAPI.Signer.(*eos.KeyBag).AvailableKeys()
-	// for _, key := range keys {
-	// 	b.Log.Println("Available key in the KeyBag:", key)
-	// }
-
-	// Update boot sequence HERE
-
 	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
 	if err != nil {
 		return err
@@ -237,11 +245,15 @@ func (b *BIOS) RunBootSequence() error {
 
 	privKey := ephemeralPrivateKey.String()
 
-	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:7], privKey[len(privKey)-7:])
+	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:6], privKey[len(privKey)-6:])
 
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
 		return fmt.Errorf("ImportWIF: %s", err)
+	}
+
+	if err := b.writeAllActionsToDisk(true); err != nil {
+		return fmt.Errorf("writing actions to disk: %s", err)
 	}
 
 	genesisData := b.GenerateGenesisJSON(pubKey.String())
@@ -263,8 +275,7 @@ func (b *BIOS) RunBootSequence() error {
 		}
 	}
 
-	orderedPeers := b.Network.OrderedPeers(b.Network.MyNetwork())
-	otherPeers := b.someTopmostPeersAddresses(orderedPeers)
+	otherPeers := b.someTopmostPeersAddresses()
 	if err := b.DispatchBootNode(genesisData, pubKey.String(), privKey, otherPeers); err != nil {
 		return fmt.Errorf("dispatch boot_node hook: %s", err)
 	}
@@ -294,7 +305,6 @@ func (b *BIOS) RunBootSequence() error {
 
 		if len(acts) != 0 {
 			for idx, chunk := range ChunkifyActions(acts) {
-				//time.Sleep(500 * time.Millisecond)
 				err := Retry(25, time.Second, func() error {
 					_, err := b.TargetNetAPI.SignPushActions(chunk...)
 					if err != nil {
@@ -327,8 +337,12 @@ func (b *BIOS) RunBootSequence() error {
 		os.Exit(0)
 	}
 
-	if err := b.DispatchBootPublishHandoff(); err != nil {
-		return fmt.Errorf("dispatch boot_publish_handoff: %s", err)
+	b.Log.Println("")
+	b.Log.Println("You should now mesh your node with the network.")
+	b.Log.Println("")
+
+	if err := b.DispatchBootMesh(); err != nil {
+		return fmt.Errorf("dispatch boot_mesh: %s", err)
 	}
 
 	return nil
@@ -358,7 +372,10 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 	}
 	b.EphemeralPublicKey = pubKey
 
-	// Create mesh network
+	if err := b.writeAllActionsToDisk(false); err != nil {
+		return fmt.Errorf("writing actions to disk: %s", err)
+	}
+
 	otherPeers := b.computeMyMeshP2PAddresses()
 
 	if err := b.DispatchJoinNetwork(b.Genesis, b.getMyPeerVariations(), otherPeers); err != nil {
@@ -374,7 +391,7 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 			return fmt.Errorf("chain validation: %s", err)
 		}
 		if !isValid {
-			b.Log.Println("WARNING: chain invalid, destroying network if possible")
+			b.Log.Println("WARNING: CHAIN CONTAINS VALIDATION ERRORS")
 			os.Exit(0)
 		}
 	} else {
@@ -383,13 +400,9 @@ func (b *BIOS) RunJoinNetwork(validate, sabotage bool) error {
 		b.Log.Println("")
 	}
 
-	// TODO: loop operations, check all actions against blocks that you can fetch from here.
-	// Check ALL actions, should match the orchestrated launch data:
-	// - otherwise, sabotage
-
-	if validate {
-		b.waitOnHandoff(b.Genesis)
-	}
+	// if validate {
+	// 	b.waitOnHandoff(b.Genesis)
+	// }
 
 	return nil
 }
@@ -413,11 +426,11 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 				continue
 			}
 
+			stepAction.SetToServer(true)
 			data, err := eos.MarshalBinary(stepAction)
 			if err != nil {
 				return false, fmt.Errorf("validating: binary marshalling: %s", err)
 			}
-			stepAction.SetToServer(false)
 			key := sha2(data)
 
 			// if _, ok := bootSeqMap[key]; ok {
@@ -443,6 +456,51 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 	return true, nil
 }
 
+func (b *BIOS) writeAllActionsToDisk(alwaysRun bool) error {
+	if !b.WriteActions && !alwaysRun {
+		b.Log.Println("Not writing actions to 'actions.jsonl'. Activate with --write-actions")
+		return nil
+	}
+
+	b.Log.Println("Writing all actions to 'actions.jsonl'...")
+	fl, err := os.Create("actions.jsonl")
+	if err != nil {
+		return err
+	}
+	defer fl.Close()
+
+	for _, step := range b.BootSequence {
+		if b.LaunchDisco.TargetNetworkIsTest == 0 {
+			step.Data.ResetTestnetOptions()
+		}
+
+		acts, err := step.Data.Actions(b)
+		if err != nil {
+			return fmt.Errorf("fetch step %q: %s", step.Op, err)
+		}
+
+		for _, stepAction := range acts {
+			if stepAction == nil {
+				continue
+			}
+
+			stepAction.SetToServer(false)
+			data, err := json.Marshal(stepAction)
+			if err != nil {
+				return fmt.Errorf("binary marshalling: %s", err)
+			}
+
+			_, err = fl.Write(data)
+			if err != nil {
+				return err
+			}
+			_, _ = fl.Write([]byte("\n"))
+		}
+	}
+
+	return nil
+}
+
 type ActionMap map[string]*eos.Action
 
 type ValidationError struct {
@@ -456,7 +514,7 @@ type ValidationError struct {
 }
 
 func (e ValidationError) Error() string {
-	s := fmt.Sprintf("Action [%d][%s::%s] from block not found in boot sequences\n", e.Index, e.Action.Account, e.Action.Name)
+	s := fmt.Sprintf("Action [%d][%s::%s] absent from blocks\n", e.Index, e.Action.Account, e.Action.Name)
 
 	data, err := json.Marshal(e.Action)
 	if err != nil {
@@ -475,7 +533,6 @@ type ValidationErrors struct {
 }
 
 func (v ValidationErrors) Error() string {
-
 	s := ""
 	for _, err := range v.Errors {
 		s += ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
@@ -508,7 +565,6 @@ func (b *BIOS) pingTargetNetwork() {
 	}
 
 	b.Log.Println(" touchdown!")
-
 }
 
 func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action) (err error) {
@@ -519,14 +575,29 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 
 	// TODO: wait for target network to be up, and responding...
 	b.Log.Println("Pulling blocks from chain until we gathered all actions to validate:")
-	lastDisplay := time.Now()
 	blockHeight := 1
 	actionsRead := 0
 	seenMap := map[string]bool{}
+	gotSomeTx := false
+	backOff := false
+	timeBetweenFetch := time.Duration(0)
+	var timeLastNotFound time.Time
 
 	for {
+		time.Sleep(timeBetweenFetch)
+
 		m, err := b.TargetNetAPI.GetBlockByNum(uint32(blockHeight))
 		if err != nil {
+			if gotSomeTx && !backOff {
+				backOff = true
+				timeBetweenFetch = 500 * time.Millisecond
+				timeLastNotFound = time.Now()
+
+				time.Sleep(2000 * time.Millisecond)
+
+				continue
+			}
+
 			b.Log.Debugln("Failed getting block num from target api:", err)
 			b.Log.Printf("e")
 			time.Sleep(1 * time.Second)
@@ -535,16 +606,17 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 			b.Log.Printf(".\n")
 		}
 
-		// TODO: Once we hit a failure, we should now poke them each 500ms, and try to speed up slllightly
-
-		if time.Now().Sub(lastDisplay) > 1*time.Second {
-			b.Log.Printf("Block %d, read actions %d/%d\n", blockHeight, actionsRead, len(bootSeq))
-			lastDisplay = time.Now()
-		}
-
 		blockHeight++
 
-		b.Log.Printf("Receiving block tmroot=%q producer=%s transactions=%d\n", hex.EncodeToString(m.TransactionMRoot), m.Producer, len(m.Transactions))
+		b.Log.Printf("Receiving block height=%d producer=%s transactions=%d\n", m.BlockNumber(), m.Producer, len(m.Transactions))
+
+		if !gotSomeTx && len(m.Transactions) > 2 {
+			gotSomeTx = true
+		}
+
+		if !timeLastNotFound.IsZero() && timeLastNotFound.Before(time.Now().Add(-10*time.Second)) {
+			b.flushMissingActions(seenMap, bootSeq)
+		}
 
 		for _, receipt := range m.Transactions {
 			unpacked, err := receipt.Transaction.Packed.Unpack()
@@ -599,18 +671,35 @@ func (b *BIOS) validateTargetNetwork(bootSeqMap ActionMap, bootSeq []*eos.Action
 	}
 
 	if len(validationErrors) > 0 {
-		b.Log.Println("Unseen transactions:")
-		for _, act := range bootSeq {
-			data, _ := eos.MarshalBinary(act)
-			key := sha2(data)
-			if !seenMap[key] {
-				b.Log.Printf("- Action %s::%s [%q]\n", act.Account, act.Name, hex.EncodeToString(data))
-			}
-		}
 		return ValidationErrors{Errors: validationErrors}
 	}
 
 	return nil
+}
+
+func (b *BIOS) flushMissingActions(seenMap map[string]bool, bootSeq []*eos.Action) {
+	fl, err := os.Create("missing_actions.jsonl")
+	if err != nil {
+		fmt.Println("Couldn't write to `missing_actions.jsonl`:", err)
+		return
+	}
+	defer fl.Close()
+
+	// TODO: print all actions that are still MISSING to `missing_actions.jsonl`.
+	b.Log.Println("Flushing unseen transactions to `missing_actions.jsonl` up until this point.")
+
+	for _, act := range bootSeq {
+		act.SetToServer(true)
+		data, _ := eos.MarshalBinary(act)
+		key := sha2(data)
+
+		if !seenMap[key] {
+			act.SetToServer(false)
+			data, _ := json.Marshal(act)
+			fl.Write(data)
+			fl.Write([]byte("\n"))
+		}
+	}
 }
 
 func (b *BIOS) waitLaunchBlock() rand.Source {
@@ -822,7 +911,7 @@ func (b *BIOS) shuffleProducers() {
 	b.Log.Println("Shuffling producers listed in the launch file")
 	r := rand.New(b.RandSource)
 	// shuffle top 25%, capped to 5
-	shuffleHowMany := int64(math.Min(math.Ceil(float64(len(b.ShuffledProducers))*0.25), 5))
+	shuffleHowMany := int64(math.Min(math.Ceil(float64(len(b.ShuffledProducers))*0.25), RandomBootFromTop))
 	if shuffleHowMany > 1 {
 		b.Log.Println("- Shuffling top", shuffleHowMany)
 		for round := 0; round < 100; round++ {
