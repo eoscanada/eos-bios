@@ -247,6 +247,13 @@ func (b *BIOS) RunBootSequence() error {
 
 	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:6], privKey[len(privKey)-6:])
 
+	// Don't get `get_required_keys` from the blockchain, this adds
+	// latency.. and we KNOW the key you're going to ask :) It's the
+	// only key we're going to sign with anyway..
+	b.TargetNetAPI.SetCustomGetRequiredKeys(func(tx *eos.Transaction) (out []ecc.PublicKey, err error) {
+		return append(out, pubKey), nil
+	})
+
 	// Store keys in wallet, to sign `SetCode` and friends..
 	if err := b.TargetNetAPI.Signer.ImportPrivateKey(privKey); err != nil {
 		return fmt.Errorf("ImportWIF: %s", err)
