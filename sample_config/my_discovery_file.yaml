@@ -38,11 +38,15 @@ target_initial_authority:
     keys:
     - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
+    accounts: []
+    waits: []
   active:
     threshold: 1
     keys:
     - key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
       weight: 1
+    accounts: []
+    waits: []
 
 target_contents:
   - name: boot_sequence.yaml
