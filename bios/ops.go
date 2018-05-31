@@ -559,7 +559,6 @@ func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 					},
 				},
 			}, PN("owner")),
-			nil, // end transaction
 		)
 	}
 
@@ -588,8 +587,9 @@ func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 				},
 			},
 		}, PN("owner")),
-		nil, // end transaction
 	)
+
+	out = append(out, nil)
 
 	return
 }
