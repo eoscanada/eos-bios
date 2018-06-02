@@ -29,11 +29,12 @@ type BIOS struct {
 	OverrideBootSequenceFile string
 	Log                      *Logger
 
-	LaunchDisco  *disco.Discovery
-	TargetNetAPI *eos.API
-	Snapshot     Snapshot
-	BootSequence []*OperationType
-	WriteActions bool
+	LaunchDisco        *disco.Discovery
+	TargetNetAPI       *eos.API
+	Snapshot           Snapshot
+	BootSequence       []*OperationType
+	WriteActions       bool
+	HackVotingAccounts bool
 
 	Genesis *GenesisJSON
 

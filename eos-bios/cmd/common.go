@@ -100,5 +100,6 @@ func setupBIOS(net *bios.Network) (b *bios.BIOS, err error) {
 
 	b = bios.NewBIOS(net.Log, net, targetNetAPI)
 	b.WriteActions = viper.GetBool("write-actions")
+	b.HackVotingAccounts = viper.GetBool("hack-voting-accounts")
 	return b, nil
 }

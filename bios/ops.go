@@ -350,6 +350,8 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		return nil, fmt.Errorf("snapshot is empty or not loaded")
 	}
 
+	wellKnownPubkey, _ := ecc.NewPublicKey("EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV")
+
 	for idx, hodler := range snapshotData {
 		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
 			if idx == trunc {
@@ -359,12 +361,16 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		}
 
 		destAccount := AN(hodler.AccountName)
+		destPubKey := hodler.EOSPublicKey
+		if b.HackVotingAccounts {
+			destPubKey = wellKnownPubkey
+		}
 
 		// we should have created the account before loading `eosio.system`, otherwise
 		// b1 wouldn't have been accepted.
 		if hodler.EthereumAddress != "0x00000000000000000000000000000000000000b1" {
 			// create all other accounts, but not `b1`.. because it's a short name..
-			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, hodler.EOSPublicKey))
+			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, destPubKey))
 		}
 
 		cpuStake, netStake := splitSnapshotStakes(hodler.Balance)
@@ -504,13 +510,9 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 
 //
 
-type OpSetProds struct {
-	IsMainnet bool
-}
+type OpSetProds struct{}
 
-func (op *OpSetProds) ResetTestnetOptions() {
-	op.IsMainnet = true
-}
+func (op *OpSetProds) ResetTestnetOptions() {}
 
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// We he can at least process the last few blocks, that wrap up
@@ -522,21 +524,19 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 	// WARN: this makes it a SOLO producer on mainnet.
 
-	if !op.IsMainnet {
-		//prodkeys := []system.ProducerKey{}
-		for idx, prod := range b.ShuffledProducers {
-			if idx == 0 {
-				continue
-			}
-			targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
-			targetAcct := prod.Discovery.TargetAccountName
-			if targetAcct == AN("eosio") {
-				targetKey = b.EphemeralPublicKey
-			}
-			prodkeys = append(prodkeys, system.ProducerKey{targetAcct, targetKey})
-			if len(prodkeys) >= 21 {
-				break
-			}
+	//prodkeys := []system.ProducerKey{}
+	for idx, prod := range b.ShuffledProducers {
+		if idx == 0 {
+			continue
+		}
+		targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
+		targetAcct := prod.Discovery.TargetAccountName
+		if targetAcct == AN("eosio") {
+			targetKey = b.EphemeralPublicKey
+		}
+		prodkeys = append(prodkeys, system.ProducerKey{targetAcct, targetKey})
+		if len(prodkeys) >= 21 {
+			break
 		}
 	}
 
