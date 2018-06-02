@@ -30,7 +30,6 @@ var operationsRegistry = map[string]Operation{
 	"producers.enrich":           &OpEnrichProducers{},
 	"system.setprods":            &OpSetProds{},
 	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
-	"snapshot.transfer":          &OpSnapshotTransfer{},
 	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
 	"system.resign_accounts":     &OpResignAccounts{},
 	"system.create_voters":       &OpCreateVoters{},
@@ -237,11 +236,19 @@ func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpCreateProducers struct{}
+type OpCreateProducers struct {
+	IsMainnet bool
+}
 
-func (op *OpCreateProducers) ResetTestnetOptions() {}
+func (op *OpCreateProducers) ResetTestnetOptions() {
+	op.IsMainnet = true
+}
 
 func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if op.IsMainnet {
+		return
+	}
+
 	for _, prod := range b.ShuffledProducers {
 		prodName := prod.Discovery.TargetAccountName
 		if prodName == AN("eosio") {
@@ -373,18 +380,21 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, destPubKey))
 		}
 
-		cpuStake, netStake := splitSnapshotStakes(hodler.Balance)
+		cpuStake, netStake, rest := splitSnapshotStakes(hodler.Balance)
 
 		// special case `transfer` for `b1` ?
-		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, cpuStake, netStake, false))
+		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, cpuStake, netStake, true))
 		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
 		out = append(out, nil) // end transaction
+
+		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
+		out = append(out, token.NewTransfer(AN("eosio"), destAccount, rest, memo), nil)
 	}
 
 	return
 }
 
-func splitSnapshotStakes(balance eos.Asset) (cpu, net eos.Asset) {
+func splitSnapshotStakes(balance eos.Asset) (cpu, net, xfer eos.Asset) {
 	if balance.Amount < 5000 {
 		return
 	}
@@ -399,7 +409,7 @@ func splitSnapshotStakes(balance eos.Asset) (cpu, net eos.Asset) {
 	remainder := eos.NewEOSAsset(balance.Amount - cpu.Amount - net.Amount)
 
 	if remainder.Amount <= 100000 /* 10.0 EOS */ {
-		return
+		return cpu, net, remainder
 	}
 
 	remainder.Amount -= 100000 // keep them floating, unstaked
@@ -408,54 +418,7 @@ func splitSnapshotStakes(balance eos.Asset) (cpu, net eos.Asset) {
 	cpu.Amount += firstHalf
 	net.Amount += remainder.Amount - firstHalf
 
-	return
-}
-
-//
-
-type OpSnapshotTransfer struct {
-	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
-}
-
-func (op *OpSnapshotTransfer) ResetTestnetOptions() {
-	op.TestnetTruncateSnapshot = 0
-}
-
-func (op *OpSnapshotTransfer) Actions(b *BIOS) (out []*eos.Action, err error) {
-	snapshotFile, err := b.GetContentsCacheRef("snapshot.csv")
-	if err != nil {
-		return nil, err
-	}
-
-	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
-	if err != nil {
-		return nil, fmt.Errorf("reading snapshot file: %s", err)
-	}
-
-	snapshotData, err := NewSnapshot(rawSnapshot)
-	if err != nil {
-		return nil, fmt.Errorf("loading snapshot csv: %s", err)
-	}
-
-	if len(snapshotData) == 0 {
-		return nil, fmt.Errorf("snapshot is empty or not loaded")
-	}
-
-	for idx, hodler := range snapshotData {
-		if trunc := op.TestnetTruncateSnapshot; trunc != 0 {
-			if idx == trunc {
-				b.Log.Debugf("- DEBUG: truncated snapshot to %d rows\n", trunc)
-				break
-			}
-		}
-
-		destAccount := AN(hodler.AccountName)
-
-		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
-		out = append(out, token.NewTransfer(AN("eosio"), destAccount, hodler.Balance, memo), nil)
-	}
-
-	return
+	return cpu, net, eos.NewEOSAsset(100000)
 }
 
 //

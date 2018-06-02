@@ -168,11 +168,6 @@ boot_sequence:
     buy_ram_bytes: 8192
     TESTNET_TRUNCATE_SNAPSHOT: 1000
 
-- op: snapshot.transfer
-  label: Injecting ERC-20 snapshot balances
-  data:
-    TESTNET_TRUNCATE_SNAPSHOT: 1000
-
 - op: snapshot.load_unregistered
   label: Saving unregistered addresses in eosio.unregd account, for the future.
   data:
