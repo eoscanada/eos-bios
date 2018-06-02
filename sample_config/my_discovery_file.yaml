@@ -63,42 +63,42 @@ target_contents:
 
   - name: eosio.bios.abi
     ref: /ipfs/QmUeci9zVkhzctMktea8UNa5fZCizteXieT8Z21M8GpZoU
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
   - name: eosio.bios.wasm
-    ref: /ipfs/QmVmavtFmPhJPrNYos6xE9SuzJVCPgezGaDGWDwwR5tPx1
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    ref: /ipfs/QmSit9SXVBjd5oAKxFzT9hwMUwDS5njdb4wihxRNmw5JQn
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.system.abi
-    ref: /ipfs/QmTPP6C2sw7oSJjvaSbtR8SjHfx8R8rKwJDtTZe8VdzMrM
-    comment: "Published by EOS Canada. Tag DAWN-2018-05-30"
+    ref: /ipfs/QmSLpcCBqedCa7XH5JJjaxLNr6k1bxqsukmK8ynardjDhL
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
   - name: eosio.system.wasm
-    ref: /ipfs/QmWhjcw4djLxWVzNyg7SosjopcT3KayAjG5Gw8YAY7j3H1
-    comment: "Published by EOS Canada. Tag DAWN-2018-05-30"
+    ref: /ipfs/QmVTwpwBSWEWYT1dWHhgueZf2MmjsTuMRQXygvh7VxJHUE
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
   - name: eosio.msig.wasm
     ref: /ipfs/QmadUdTbjJWuqccmFZUfaNT7PTAvwVh6ffhnd8HfzMmuvL
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.token.abi
     ref: /ipfs/QmPqC7HAwCzKTsoskec7jTohyXZ2YFUQ9SHep6JpTFcXbY
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
   - name: eosio.token.wasm
     ref: /ipfs/QmNfVCvXgiXCwbRkd8yakK5LLF8SK2xzrpmKsiHyouzhWL
-    comment: "Published by EOS Canada. Tag dawn-v4.2.0"
+    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.disco.abi
     ref: /ipfs/QmYzxhhE9f9aZTV7rqqYSNQy9pZVKk2pur9ccRZfY7yfs9
-    comment: "Published by EOS Canada. eos-bios revision 4c6fc8b7a4f26ef81978d796e2e953c96c83b941"
+    comment: "eos-bios revision 4c6fc8b7a4f26ef81978d796e2e953c96c83b941"
   - name: eosio.disco.wasm
     ref: /ipfs/QmUNo5jMFn1BqT8msuw7ZtW37d1FP2PJSeWu7fDQ7H4Syn
-    comment: "Published by EOS Canada. eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"
+    comment: "eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"
 
   - name: eosio.unregd.abi
     ref: /ipfs/QmfTP1RDACUHUB95pYDzmtowNovjvqkt9caVdtSQ69QFyK
-    comment: "Published by EOS Canada. From https://github.com/eoscanada/eos-bios/commit/8f1b9503dbb4c36bb75d7c74adebbc2d5a9d9175"
+    comment: "From https://github.com/eoscanada/eos-bios/commit/8f1b9503dbb4c36bb75d7c74adebbc2d5a9d9175"
   - name: eosio.unregd.wasm
     ref: /ipfs/QmPYfn1bniet9NYjeSvyDWNvJie6Xad7uSYjydpsK4VwuP
-    comment: "Published by EOS Canada. From https://github.com/eoscanada/eos-bios/commit/8f1b9503dbb4c36bb75d7c74adebbc2d5a9d9175"
+    comment: "From https://github.com/eoscanada/eos-bios/commit/8f1b9503dbb4c36bb75d7c74adebbc2d5a9d9175"
