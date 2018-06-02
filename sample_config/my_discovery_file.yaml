@@ -27,7 +27,7 @@ urls:
 # To help organize schedules for rehearsals.
 gmt_offset: -700  # in HourMinutes format
 
-target_network_is_test: 1  # 0 = mainnet, anything else is a testnet
+target_network_is_test: 0  # 0 = mainnet, anything else is a testnet
 target_p2p_address: stage1.example.com:9876  # you can put "none" to be excluded from the automated meshing
 target_http_address: http://stage1.example.com
 target_account_name: examplecom12
