@@ -1020,7 +1020,7 @@ func accountVariation(acct eos.AccountName, variation int) eos.AccountName {
 func (b *BIOS) writeToFile(filename, content string) {
 	fl, err := os.Create(filename)
 	if err != nil {
-		b.Log.Printn("Unable to write to file", filename, err)
+		b.Log.Println("Unable to write to file", filename, err)
 		return
 	}
 	defer fl.Close()
