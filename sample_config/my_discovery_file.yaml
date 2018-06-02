@@ -63,31 +63,31 @@ target_contents:
 
   - name: eosio.bios.abi
     ref: /ipfs/QmUeci9zVkhzctMktea8UNa5fZCizteXieT8Z21M8GpZoU
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
   - name: eosio.bios.wasm
     ref: /ipfs/QmSit9SXVBjd5oAKxFzT9hwMUwDS5njdb4wihxRNmw5JQn
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
 
   - name: eosio.system.abi
     ref: /ipfs/QmSLpcCBqedCa7XH5JJjaxLNr6k1bxqsukmK8ynardjDhL
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
   - name: eosio.system.wasm
     ref: /ipfs/QmVTwpwBSWEWYT1dWHhgueZf2MmjsTuMRQXygvh7VxJHUE
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
   - name: eosio.msig.wasm
     ref: /ipfs/QmadUdTbjJWuqccmFZUfaNT7PTAvwVh6ffhnd8HfzMmuvL
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
 
   - name: eosio.token.abi
     ref: /ipfs/QmPqC7HAwCzKTsoskec7jTohyXZ2YFUQ9SHep6JpTFcXbY
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
   - name: eosio.token.wasm
     ref: /ipfs/QmNfVCvXgiXCwbRkd8yakK5LLF8SK2xzrpmKsiHyouzhWL
-    comment: "Tag v1.0.0 from github.com/EOS-Mainnet/eos"
+    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
 
   - name: eosio.disco.abi
     ref: /ipfs/QmYzxhhE9f9aZTV7rqqYSNQy9pZVKk2pur9ccRZfY7yfs9
