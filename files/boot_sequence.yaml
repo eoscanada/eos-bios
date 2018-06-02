@@ -58,6 +58,13 @@ boot_sequence:
     pubkey: ephemeral
 
 - op: system.newaccount
+  label: Create account eosio.burned (where you send your coins to burn them)
+  data:
+    creator: eosio
+    new_account: eosio.burned
+    pubkey: ephemeral
+
+- op: system.newaccount
   label: Create account eosio.saving (unallocated inflation)
   data:
     creator: eosio
@@ -149,10 +156,10 @@ boot_sequence:
     TESTNET_ENRICH_PRODUCERS: true
 
 - op: token.issue
-  label: Issuing more and more EOS, because initial account creation and RAM buying for the snapshot holders is REALLY PRICEY! This has to be solved otherwise.
+  label: Issuing more and more EOS, because initial account creation and RAM buying for the snapshot holders is REALLY PRICEY! Anything remaining in eosio should be sent to eosio.burned after boot.
   data:
     account: eosio
-    amount: 1000000000.0000 EOS  # Another 1B.. we'll see how far this goes.
+    amount: 1000000000.0000 EOS  # Another 1B.. we should destroy anything remaining.
     memo: "Second issuance to pay for accounts and RAM."
 
 - op: snapshot.create_accounts
@@ -203,3 +210,4 @@ boot_sequence:
 
     - eosio.disco
     - eosio.unregd
+    - eosio.burned

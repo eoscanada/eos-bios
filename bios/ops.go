@@ -246,11 +246,19 @@ func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpStakeProducers struct{}
+type OpStakeProducers struct {
+	IsMainnet bool
+}
 
-func (op *OpStakeProducers) ResetTestnetOptions() {}
+func (op *OpStakeProducers) ResetTestnetOptions() {
+	op.IsMainnet = true
+}
 
 func (op *OpStakeProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if op.IsMainnet {
+		return
+	}
+
 	for _, prod := range b.ShuffledProducers {
 		prodName := prod.Discovery.TargetAccountName
 		if prodName == AN("eosio") {
@@ -466,6 +474,8 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 			}
 		}
 
+		//system.NewDelegatedNewAccount(AN("eosio"), AN(hodler.AccountName), AN("eosio.unregd"))
+
 		out = append(out,
 			unregd.NewAdd(hodler.EthereumAddress, hodler.Balance),
 			token.NewTransfer(AN("eosio"), AN("eosio.unregd"), hodler.Balance, "Future claim"),
@@ -478,9 +488,14 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 
 //
 
-type OpSetProds struct{}
+type OpSetProds struct {
+	IsMainnet bool
+}
 
-func (op *OpSetProds) ResetTestnetOptions() {}
+func (op *OpSetProds) ResetTestnetOptions() {
+	op.IsMainnet = true
+}
+
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// We he can at least process the last few blocks, that wrap up
 	// and resigns the system accounts.
@@ -489,21 +504,26 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 		BlockSigningKey: b.EphemeralPublicKey,
 	}}
 
-	//prodkeys := []system.ProducerKey{}
-	for idx, prod := range b.ShuffledProducers {
-		if idx == 0 {
-			continue
-		}
-		targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
-		targetAcct := prod.Discovery.TargetAccountName
-		if targetAcct == AN("eosio") {
-			targetKey = b.EphemeralPublicKey
-		}
-		prodkeys = append(prodkeys, system.ProducerKey{targetAcct, targetKey})
-		if len(prodkeys) >= 21 {
-			break
+	// WARN: this makes it a SOLO producer on mainnet.
+
+	if !op.IsMainnet {
+		//prodkeys := []system.ProducerKey{}
+		for idx, prod := range b.ShuffledProducers {
+			if idx == 0 {
+				continue
+			}
+			targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
+			targetAcct := prod.Discovery.TargetAccountName
+			if targetAcct == AN("eosio") {
+				targetKey = b.EphemeralPublicKey
+			}
+			prodkeys = append(prodkeys, system.ProducerKey{targetAcct, targetKey})
+			if len(prodkeys) >= 21 {
+				break
+			}
 		}
 	}
+
 	out = append(out, system.NewSetProds(prodkeys))
 
 	return
