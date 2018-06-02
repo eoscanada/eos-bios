@@ -38,7 +38,7 @@ echo "Running 'nodeos' through Docker."
 docker run -ti --detach --name nodeos-bios \
        -v `pwd`:/etc/nodeos -v /tmp/nodeos-data:/data \
        -p 8888:8888 -p 9876:9876 \
-       eoscanada/eos:v1.0.0 \
+       eoscanada/eos:v1.0.1 \
        /opt/eosio/bin/nodeos --data-dir=/data \
                              --genesis-json=/etc/nodeos/genesis.json \
                              --config-dir=/etc/nodeos
