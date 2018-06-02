@@ -245,7 +245,9 @@ func (b *BIOS) RunBootSequence() error {
 
 	privKey := ephemeralPrivateKey.String()
 
-	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:6], privKey[len(privKey)-6:])
+	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:4], privKey[len(privKey)-4:])
+	b.writeToFile("genesis.pub", pubKey.String())
+	b.writeToFile("genesis.key", privKey)
 
 	// Don't get `get_required_keys` from the blockchain, this adds
 	// latency.. and we KNOW the key you're going to ask :) It's the
@@ -1013,4 +1015,17 @@ func accountVariation(acct eos.AccountName, variation int) eos.AccountName {
 	variedName := name + string([]byte{'a' + byte(variation-1)})
 
 	return eos.AccountName(variedName)
+}
+
+func (b *BIOS) writeToFile(filename, content string) {
+	fl, err := os.Create(filename)
+	if err != nil {
+		b.Log.Printn("Unable to write to file", filename, err)
+		return
+	}
+	defer fl.Close()
+
+	fl.Write([]byte(content))
+
+	b.Log.Printf("Wrote file %q\n", filename)
 }
