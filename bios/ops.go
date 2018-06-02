@@ -88,10 +88,18 @@ func (o *OperationType) UnmarshalJSON(data []byte) error {
 type OpSetCode struct {
 	Account         eos.AccountName
 	ContractNameRef string `json:"contract_name_ref"`
+	IsMainnet       bool
 }
 
-func (op *OpSetCode) ResetTestnetOptions() { return }
-func (op *OpSetCode) Actions(b *BIOS) ([]*eos.Action, error) {
+func (op *OpSetCode) ResetTestnetOptions() {
+	op.IsMainnet = true
+}
+
+func (op *OpSetCode) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if op.IsMainnet && op.Account == eos.AccountName("eosio.disco") {
+		return
+	}
+
 	wasmFileRef, err := b.GetContentsCacheRef(fmt.Sprintf("%s.wasm", op.ContractNameRef))
 	if err != nil {
 		return nil, err
@@ -130,10 +138,18 @@ type OpNewAccount struct {
 	Creator    eos.AccountName
 	NewAccount eos.AccountName `json:"new_account"`
 	Pubkey     string
+	IsMainnet  bool
 }
 
-func (op *OpNewAccount) ResetTestnetOptions() { return }
+func (op *OpNewAccount) ResetTestnetOptions() {
+	op.IsMainnet = true
+}
+
 func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
+	if op.IsMainnet && op.NewAccount == eos.AccountName("eosio.disco") {
+		return
+	}
+
 	pubKey := b.EphemeralPublicKey
 
 	if op.Pubkey != "ephemeral" {
@@ -534,10 +550,12 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 type OpResignAccounts struct {
 	Accounts            []eos.AccountName
 	TestnetKeepAccounts bool `json:"TESTNET_KEEP_ACCOUNTS"`
+	IsMainnet           bool
 }
 
 func (op *OpResignAccounts) ResetTestnetOptions() {
 	op.TestnetKeepAccounts = false
+	op.IsMainnet = true
 }
 
 func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
@@ -551,7 +569,7 @@ func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 	//nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
 	for _, acct := range op.Accounts {
-		if acct == systemAccount {
+		if acct == systemAccount || (op.IsMainnet && acct == eos.AccountName("eosio.disco")) {
 			continue // special treatment for `eosio` below
 		}
 		out = append(out,
