@@ -69,8 +69,8 @@ target_contents:
     comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
 
   - name: eosio.system.abi
-    ref: /ipfs/QmSLpcCBqedCa7XH5JJjaxLNr6k1bxqsukmK8ynardjDhL
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    ref: /ipfs/QmYf6gxQ6sDBcmeJgJFGGvwhCKk5QzzEucux51HeTKmH3C
+    comment: "https://github.com/EOS-Mainnet/governance/tree/v1.0.1"
   - name: eosio.system.wasm
     ref: /ipfs/QmVTwpwBSWEWYT1dWHhgueZf2MmjsTuMRQXygvh7VxJHUE
     comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
@@ -83,8 +83,8 @@ target_contents:
     comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
 
   - name: eosio.token.abi
-    ref: /ipfs/QmPqC7HAwCzKTsoskec7jTohyXZ2YFUQ9SHep6JpTFcXbY
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    ref: /ipfs/QmTgfMfMw2zQgtkeSu7iJfaVcWbmU8werBjYuf6iVseFXL
+    comment: "https://github.com/EOS-Mainnet/governance/tree/v1.0.1"
   - name: eosio.token.wasm
     ref: /ipfs/QmNfVCvXgiXCwbRkd8yakK5LLF8SK2xzrpmKsiHyouzhWL
     comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
