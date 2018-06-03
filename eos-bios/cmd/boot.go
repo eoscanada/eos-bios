@@ -59,6 +59,7 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 
 		b.SingleOnly = viper.GetBool("single")
 		b.OverrideBootSequenceFile = viper.GetString("override-bootseq")
+		b.ReuseGenesis = viper.GetBool("reuse-genesis")
 
 		if err := b.Init(); err != nil {
 			log.Fatalf("BIOS initialization error: %s", err)
@@ -76,10 +77,11 @@ func init() {
 	RootCmd.AddCommand(bootCmd)
 
 	bootCmd.Flags().BoolP("single", "s", false, "Don't try to discover the world, just boot a local instance.")
+	bootCmd.Flags().BoolP("reuse-genesis", "", false, "Re-load genesis data from genesis.json, genesis.pub and genesis.key instead of creating a new one.")
 	bootCmd.Flags().BoolP("reset", "", false, "Remove the published genesis data from the seed_network, so that others don't accidentally join a defunc or restarted network.")
 	bootCmd.Flags().StringP("override-bootseq", "", "", "Override the boot_sequence.yaml file with a local file path (don't used the published one)")
 
-	for _, flag := range []string{"single", "override-bootseq", "reset"} {
+	for _, flag := range []string{"single", "override-bootseq", "reset", "reuse-genesis"} {
 		if err := viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag)); err != nil {
 			panic(err)
 		}

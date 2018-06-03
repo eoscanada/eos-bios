@@ -35,6 +35,7 @@ type BIOS struct {
 	BootSequence       []*OperationType
 	WriteActions       bool
 	HackVotingAccounts bool
+	ReuseGenesis       bool
 
 	Genesis *GenesisJSON
 
@@ -233,22 +234,46 @@ func (b *BIOS) PrintProducerSchedule(orderedPeers []*Peer) {
 func (b *BIOS) RunBootSequence() error {
 	b.Log.Println("START BOOT SEQUENCE...")
 
-	ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
-	if err != nil {
-		return err
+	var genesisData string
+	var pubKey ecc.PublicKey
+	var privKey string
+	if b.ReuseGenesis {
+		ephemeralPrivateKey, err := readPrivKeyFromFile("genesis.key")
+		if err != nil {
+			return err
+		}
+
+		b.EphemeralPrivateKey = ephemeralPrivateKey
+		pubKey = ephemeralPrivateKey.PublicKey()
+		b.EphemeralPublicKey = pubKey
+		privKey = ephemeralPrivateKey.String()
+
+		genesisData, err = b.LoadGenesisFromFile(pubKey.String())
+		if err != nil {
+			return err
+		}
+
+		b.Log.Printf("REUSING previously generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:4], privKey[len(privKey)-4:])
+
+	} else {
+		ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
+		if err != nil {
+			return err
+		}
+
+		b.EphemeralPrivateKey = ephemeralPrivateKey
+		pubKey = ephemeralPrivateKey.PublicKey()
+		b.EphemeralPublicKey = pubKey
+		privKey = ephemeralPrivateKey.String()
+
+		// b.TargetNetAPI.Debug = true
+
+		genesisData = b.GenerateGenesisJSON(pubKey.String())
+
+		b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:4], privKey[len(privKey)-4:])
+		b.writeToFile("genesis.pub", pubKey.String())
+		b.writeToFile("genesis.key", privKey)
 	}
-
-	b.EphemeralPrivateKey = ephemeralPrivateKey
-	pubKey := ephemeralPrivateKey.PublicKey()
-	b.EphemeralPublicKey = pubKey
-
-	// b.TargetNetAPI.Debug = true
-
-	privKey := ephemeralPrivateKey.String()
-
-	b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:4], privKey[len(privKey)-4:])
-	b.writeToFile("genesis.pub", pubKey.String())
-	b.writeToFile("genesis.key", privKey)
 
 	// Don't get `get_required_keys` from the blockchain, this adds
 	// latency.. and we KNOW the key you're going to ask :) It's the
@@ -265,8 +290,6 @@ func (b *BIOS) RunBootSequence() error {
 	if err := b.writeAllActionsToDisk(true); err != nil {
 		return fmt.Errorf("writing actions to disk: %s", err)
 	}
-
-	genesisData := b.GenerateGenesisJSON(pubKey.String())
 
 	if len(b.Network.MyPeer.Discovery.SeedNetworkPeers) > 0 && !b.SingleOnly {
 
@@ -849,6 +872,27 @@ func (b *BIOS) GenerateGenesisJSON(pubKey string) string {
 	return string(cnt)
 }
 
+func (b *BIOS) LoadGenesisFromFile(pubkey string) (string, error) {
+	cnt, err := ioutil.ReadFile("genesis.json")
+	if err != nil {
+		return "", err
+	}
+
+	var gendata *GenesisJSON
+	err = json.Unmarshal(cnt, &gendata)
+	if err != nil {
+		return "", err
+	}
+
+	if pubkey != gendata.InitialKey {
+		return "", fmt.Errorf("attempting to reuse genesis.json: genesis.key doesn't match genesis.json")
+	}
+
+	out, _ := json.Marshal(gendata)
+
+	return string(out), nil
+}
+
 func (b *BIOS) GetContentsCacheRef(filename string) (string, error) {
 	for _, fl := range b.LaunchDisco.TargetContents {
 		if fl.Name == filename {
@@ -1018,8 +1062,19 @@ func accountVariation(acct eos.AccountName, variation int) eos.AccountName {
 	return eos.AccountName(variedName)
 }
 
+func readPrivKeyFromFile(filename string) (*ecc.PrivateKey, error) {
+	cnt, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	strCnt := strings.TrimSpace(string(cnt))
+
+	return ecc.NewPrivateKey(strCnt)
+}
+
 func (b *BIOS) writeToFile(filename, content string) {
-	fl, err := os.Create(filename)
+	fl, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		b.Log.Println("Unable to write to file", filename, err)
 		return
