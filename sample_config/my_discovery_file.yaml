@@ -51,7 +51,7 @@ target_initial_authority:
 target_contents:
   - name: boot_sequence.yaml
     ref: /ipfs/QmaQnce6FBNJKNbA35kKMfTnq4UtfBR2h8fhma4EKkNVv2
-    comment: "Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml. Updated to dawn-v4.2.0."
+    comment: "Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml."
 
   - name: snapshot.csv
     ref: /ipfs/QmaEBLxhP7Ea7xUAKPVaabw3zDzKY4qrfD5hfdmggDnPrL
@@ -63,31 +63,31 @@ target_contents:
 
   - name: eosio.bios.abi
     ref: /ipfs/QmUeci9zVkhzctMktea8UNa5fZCizteXieT8Z21M8GpZoU
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
   - name: eosio.bios.wasm
     ref: /ipfs/QmSit9SXVBjd5oAKxFzT9hwMUwDS5njdb4wihxRNmw5JQn
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.system.abi
     ref: /ipfs/QmYf6gxQ6sDBcmeJgJFGGvwhCKk5QzzEucux51HeTKmH3C
     comment: "https://github.com/EOS-Mainnet/governance/tree/v1.0.1"
   - name: eosio.system.wasm
-    ref: /ipfs/QmVTwpwBSWEWYT1dWHhgueZf2MmjsTuMRQXygvh7VxJHUE
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    ref: /ipfs/QmQQDuMAaYBySGfjEuii7Ss2sf99Z5vkCTV8EdG7dnqv8Y
+    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
   - name: eosio.msig.wasm
     ref: /ipfs/QmadUdTbjJWuqccmFZUfaNT7PTAvwVh6ffhnd8HfzMmuvL
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.token.abi
     ref: /ipfs/QmTgfMfMw2zQgtkeSu7iJfaVcWbmU8werBjYuf6iVseFXL
     comment: "https://github.com/EOS-Mainnet/governance/tree/v1.0.1"
   - name: eosio.token.wasm
     ref: /ipfs/QmNfVCvXgiXCwbRkd8yakK5LLF8SK2xzrpmKsiHyouzhWL
-    comment: "master from github.com/EOS-Mainnet/eos June 1st 2018, ~21:15 GMT-4"
+    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.disco.abi
     ref: /ipfs/QmYzxhhE9f9aZTV7rqqYSNQy9pZVKk2pur9ccRZfY7yfs9
