@@ -139,7 +139,7 @@ boot_sequence:
   data:
     account: eosio
     amount: 1000011821.0000 EOS  # 1B coins, as per distribution model + gift of RAM to new users.
-    memo: "Creation of EOS" # Add "Credits and Acknowledgments: eosacknowledgments.io" ?
+    memo: "Creation of EOS"  # Add "Credits and Acknowledgments: eosacknowledgments.io" ?
 
 - op: system.setcode
   label: Replacing eosio account from eosio.bios contract to eosio.system

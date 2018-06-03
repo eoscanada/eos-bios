@@ -29,7 +29,7 @@ gmt_offset: -700  # in HourMinutes format
 
 target_network_is_test: 0  # 0 = mainnet, anything else is a testnet
 target_p2p_address: stage1.example.com:9876  # you can put "none" to be excluded from the automated meshing
-target_http_address: http://stage1.example.com
+target_http_address: http://localhost:8888
 target_account_name: examplecom12
 target_appointed_block_producer_signing_key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 target_initial_authority:
@@ -72,7 +72,7 @@ target_contents:
     ref: /ipfs/QmP51RGzn2q9q1QX9rqVnKJ2DaQUG55AMD8FamoSuy6AET
     comment: "EOS-Mainnet/governance ce5a7cae04b78ccba944f07ae24b7a96b0808f54"
   - name: eosio.system.wasm
-    ref: /ipfs/QmQQDuMAaYBySGfjEuii7Ss2sf99Z5vkCTV8EdG7dnqv8Y
+    ref: /ipfs/QmVTwpwBSWEWYT1dWHhgueZf2MmjsTuMRQXygvh7VxJHUE
     comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.msig.abi
