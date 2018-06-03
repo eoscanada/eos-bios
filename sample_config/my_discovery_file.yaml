@@ -69,8 +69,8 @@ target_contents:
     comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.system.abi
-    ref: /ipfs/QmYf6gxQ6sDBcmeJgJFGGvwhCKk5QzzEucux51HeTKmH3C
-    comment: "https://github.com/EOS-Mainnet/governance/tree/v1.0.1"
+    ref: /ipfs/Qmdu59gycpnXGqoZPB3vepCymtMDFkWkDdpjut9ENQqUaV
+    comment: "EOS-Mainnet/governance 7f05ea2134dc47617b2b799f5bed8cc2fa9c794e"
   - name: eosio.system.wasm
     ref: /ipfs/QmQQDuMAaYBySGfjEuii7Ss2sf99Z5vkCTV8EdG7dnqv8Y
     comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
@@ -84,7 +84,7 @@ target_contents:
 
   - name: eosio.token.abi
     ref: /ipfs/QmTgfMfMw2zQgtkeSu7iJfaVcWbmU8werBjYuf6iVseFXL
-    comment: "https://github.com/EOS-Mainnet/governance/tree/v1.0.1"
+    comment: "EOS-Mainnet/governance 7f05ea2134dc47617b2b799f5bed8cc2fa9c794e"
   - name: eosio.token.wasm
     ref: /ipfs/QmNfVCvXgiXCwbRkd8yakK5LLF8SK2xzrpmKsiHyouzhWL
     comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
