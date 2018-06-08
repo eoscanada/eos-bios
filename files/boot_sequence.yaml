@@ -86,13 +86,6 @@ boot_sequence:
     pubkey: ephemeral
 
 - op: system.newaccount
-  label: Create account eosio.disco (for eos-bios launch consensus)
-  data:
-    creator: eosio
-    new_account: eosio.disco
-    pubkey: ephemeral
-
-- op: system.newaccount
   label: Create account eosio.unregd (to eventually honor unregistered crowdsale accounts)
   data:
     creator: eosio
@@ -115,12 +108,6 @@ boot_sequence:
   data:
     account: eosio.token
     contract_name_ref: eosio.token
-
-- op: system.setcode
-  label: Setting eosio.disco code for account eosio.disco
-  data:
-    account: eosio.disco
-    contract_name_ref: eosio.disco
 
 - op: system.setcode
   label: Setting eosio.unregd code for account eosio.unregd
@@ -196,6 +183,5 @@ boot_sequence:
     - eosio.bpay
     - eosio.vpay
 
-    - eosio.disco
     - eosio.unregd
     - eosio.burned

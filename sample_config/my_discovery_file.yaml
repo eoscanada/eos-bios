@@ -50,7 +50,7 @@ target_initial_authority:
 
 target_contents:
   - name: boot_sequence.yaml
-    ref: /ipfs/Qmb7FdFoXXuXgWo9bCUXFKZHGErSQD6J9bYnyoH8GZkMMH
+    ref: /ipfs/QmRPzXQhwT8sf6s39Xaabkux4FNcW5nE6Fzb6QfvPmRgbh
     comment: "Refers to github.com/eoscanada/eos-bios/files/boot_sequence.yaml."
 
   - name: snapshot.csv
@@ -63,38 +63,31 @@ target_contents:
 
   - name: eosio.bios.abi
     ref: /ipfs/QmUeci9zVkhzctMktea8UNa5fZCizteXieT8Z21M8GpZoU
-    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
+    comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
   - name: eosio.bios.wasm
     ref: /ipfs/QmSit9SXVBjd5oAKxFzT9hwMUwDS5njdb4wihxRNmw5JQn
-    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
+    comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.system.abi
     ref: /ipfs/QmdiEnPy2ZprjGe3vfxikg9fNaJR77bbMcVMBwWh64ajCm
-    comment: "EOS-Mainnet/governance c7bb6e2547f61f72af19cc1d9ceb99d013a643a0"
+    comment: "EOS-Mainnet/governance c7bb6e2547f61f72af19cc1d9ceb99d013a643a0. Missing sync with v1.0.2. Should contain namebids"
   - name: eosio.system.wasm
-    ref: /ipfs/QmVTwpwBSWEWYT1dWHhgueZf2MmjsTuMRQXygvh7VxJHUE
-    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
+    ref: /ipfs/QmaeVdYAehYsxWa6FKYTvKXfR5pXT5qy4HvF5Ht1vaZGcE
+    comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.msig.abi
     ref: /ipfs/QmRgNd9Jm6UX8qseBvMhfh8Pu3kdyJDNE1StGQWoYdp7Wx
-    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
+    comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
   - name: eosio.msig.wasm
     ref: /ipfs/QmadUdTbjJWuqccmFZUfaNT7PTAvwVh6ffhnd8HfzMmuvL
-    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
+    comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.token.abi
     ref: /ipfs/QmTgfMfMw2zQgtkeSu7iJfaVcWbmU8werBjYuf6iVseFXL
     comment: "EOS-Mainnet/governance 7f05ea2134dc47617b2b799f5bed8cc2fa9c794e"
   - name: eosio.token.wasm
     ref: /ipfs/QmNfVCvXgiXCwbRkd8yakK5LLF8SK2xzrpmKsiHyouzhWL
-    comment: "~v1.0.1 from github.com/EOS-Mainnet/eos"
-
-  - name: eosio.disco.abi
-    ref: /ipfs/QmYzxhhE9f9aZTV7rqqYSNQy9pZVKk2pur9ccRZfY7yfs9
-    comment: "eos-bios revision 4c6fc8b7a4f26ef81978d796e2e953c96c83b941"
-  - name: eosio.disco.wasm
-    ref: /ipfs/QmUNo5jMFn1BqT8msuw7ZtW37d1FP2PJSeWu7fDQ7H4Syn
-    comment: "eos-bios revision a03aad3c18f07d277e44de5443850f951df551be"
+    comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.unregd.abi
     ref: /ipfs/QmfTP1RDACUHUB95pYDzmtowNovjvqkt9caVdtSQ69QFyK
