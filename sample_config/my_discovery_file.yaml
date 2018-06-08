@@ -69,8 +69,8 @@ target_contents:
     comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
 
   - name: eosio.system.abi
-    ref: /ipfs/QmdiEnPy2ZprjGe3vfxikg9fNaJR77bbMcVMBwWh64ajCm
-    comment: "EOS-Mainnet/governance c7bb6e2547f61f72af19cc1d9ceb99d013a643a0. Missing sync with v1.0.2. Should contain namebids"
+    ref: /ipfs/QmP1oaFRPVQhVjnXgogDdzcmSq8NLoT29fmLQqRMEp9Jqi
+    comment: "EOS-Mainnet/governance 7df7104d96b71c0878c95a53caa2704033f357b7."
   - name: eosio.system.wasm
     ref: /ipfs/QmaeVdYAehYsxWa6FKYTvKXfR5pXT5qy4HvF5Ht1vaZGcE
     comment: "~v1.0.2 from github.com/EOS-Mainnet/eos"
