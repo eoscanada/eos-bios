@@ -543,7 +543,7 @@ type ValidationError struct {
 	RawAction         []byte
 	Index             int
 	ActionHexData     string
-	PackedTransaction eos.PackedTransaction
+	PackedTransaction *eos.PackedTransaction
 }
 
 func (e ValidationError) Error() string {
