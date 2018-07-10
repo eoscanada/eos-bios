@@ -23,14 +23,8 @@ import (
 // bootCmd represents the boot command
 var bootCmd = &cobra.Command{
 	Use:   "boot [boot_sequence.yaml]",
-	Short: "Triggers hooks to boot a new network or node",
-	Long: `This will run the "boot_node" hook with data generated locally for a new network.
-
-The "publish_kickstart_data" will also be run, giving you the opportunity to disseminate what is required for people to join your network.
-
-Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
-`,
-	Args: cobra.ExactArgs(1),
+	Short: "Boots a new nodeos and injects the boot sequence.",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		b, err := setupBIOS()
 		if err != nil {
