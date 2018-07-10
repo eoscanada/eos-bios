@@ -15,7 +15,6 @@ import (
 
 type Operation interface {
 	Actions(b *BIOS) ([]*eos.Action, error)
-	ResetTestnetOptions() // TODO: implement the DISABLING of all testnet options when `mainnet` is voted in the `discovery`.
 }
 
 var operationsRegistry = map[string]Operation{
@@ -25,9 +24,6 @@ var operationsRegistry = map[string]Operation{
 	"system.setpriv":             &OpSetPriv{},
 	"token.create":               &OpCreateToken{},
 	"token.issue":                &OpIssueToken{},
-	"producers.create_accounts":  &OpCreateProducers{},
-	"producers.stake":            &OpStakeProducers{},
-	"producers.enrich":           &OpEnrichProducers{},
 	"system.setprods":            &OpSetProds{},
 	"snapshot.create_accounts":   &OpSnapshotCreateAccounts{},
 	"snapshot.load_unregistered": &OpInjectUnregdSnapshot{},
@@ -87,18 +83,9 @@ func (o *OperationType) UnmarshalJSON(data []byte) error {
 type OpSetCode struct {
 	Account         eos.AccountName
 	ContractNameRef string `json:"contract_name_ref"`
-	IsMainnet       bool
-}
-
-func (op *OpSetCode) ResetTestnetOptions() {
-	op.IsMainnet = true
 }
 
 func (op *OpSetCode) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if op.IsMainnet && op.Account == eos.AccountName("eosio.disco") {
-		return
-	}
-
 	wasmFileRef, err := b.GetContentsCacheRef(fmt.Sprintf("%s.wasm", op.ContractNameRef))
 	if err != nil {
 		return nil, err
@@ -110,8 +97,8 @@ func (op *OpSetCode) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 	setCode, err := system.NewSetCodeTx(
 		op.Account,
-		b.Network.FileNameFromCache(wasmFileRef),
-		b.Network.FileNameFromCache(abiFileRef),
+		b.FileNameFromCache(wasmFileRef),
+		b.FileNameFromCache(abiFileRef),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("NewSetCodeTx %s: %s", op.ContractNameRef, err)
@@ -126,7 +113,6 @@ type OpSetRAM struct {
 	MaxRAMSize uint64 `json:"max_ram_size"`
 }
 
-func (op *OpSetRAM) ResetTestnetOptions() { return }
 func (op *OpSetRAM) Actions(b *BIOS) (out []*eos.Action, err error) {
 	return append(out, system.NewSetRAM(op.MaxRAMSize)), nil
 }
@@ -137,18 +123,9 @@ type OpNewAccount struct {
 	Creator    eos.AccountName
 	NewAccount eos.AccountName `json:"new_account"`
 	Pubkey     string
-	IsMainnet  bool
-}
-
-func (op *OpNewAccount) ResetTestnetOptions() {
-	op.IsMainnet = true
 }
 
 func (op *OpNewAccount) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if op.IsMainnet && op.NewAccount == eos.AccountName("eosio.disco") {
-		return
-	}
-
 	pubKey := b.EphemeralPublicKey
 
 	if op.Pubkey != "ephemeral" {
@@ -167,7 +144,6 @@ type OpCreateVoters struct {
 	Count   int
 }
 
-func (op *OpCreateVoters) ResetTestnetOptions() { return }
 func (op *OpCreateVoters) Actions(b *BIOS) (out []*eos.Action, err error) {
 	pubKey := b.EphemeralPublicKey
 
@@ -202,7 +178,6 @@ type OpSetPriv struct {
 	Account eos.AccountName
 }
 
-func (op *OpSetPriv) ResetTestnetOptions() { return }
 func (op *OpSetPriv) Actions(b *BIOS) (out []*eos.Action, err error) {
 	return append(out, system.NewSetPriv(op.Account)), nil
 }
@@ -214,7 +189,6 @@ type OpCreateToken struct {
 	Amount  eos.Asset       `json:"amount"`
 }
 
-func (op *OpCreateToken) ResetTestnetOptions() {}
 func (op *OpCreateToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 	act := token.NewCreate(op.Account, op.Amount)
 	return append(out, act), nil
@@ -228,7 +202,6 @@ type OpIssueToken struct {
 	Memo    string
 }
 
-func (op *OpIssueToken) ResetTestnetOptions() {}
 func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 	act := token.NewIssue(op.Account, op.Amount, op.Memo)
 	return append(out, act), nil
@@ -236,105 +209,9 @@ func (op *OpIssueToken) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 //
 
-type OpCreateProducers struct {
-	IsMainnet bool
-}
-
-func (op *OpCreateProducers) ResetTestnetOptions() {
-	op.IsMainnet = true
-}
-
-func (op *OpCreateProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if op.IsMainnet {
-		return
-	}
-
-	for _, prod := range b.ShuffledProducers {
-		prodName := prod.Discovery.TargetAccountName
-		if prodName == AN("eosio") {
-			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
-		}
-
-		newAccount := system.NewNewAccount(AN("eosio"), prodName, ecc.PublicKey{}) // overridden just below
-		newAccount.ActionData = eos.NewActionData(system.NewAccount{
-			Creator: AN("eosio"),
-			Name:    prodName,
-			Owner:   prod.Discovery.TargetInitialAuthority.Owner,
-			Active:  prod.Discovery.TargetInitialAuthority.Active,
-		})
-		out = append(out, newAccount, nil)
-	}
-	return
-}
-
-//
-
-type OpStakeProducers struct {
-	IsMainnet bool
-}
-
-func (op *OpStakeProducers) ResetTestnetOptions() {
-	op.IsMainnet = true
-}
-
-func (op *OpStakeProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if op.IsMainnet {
-		return
-	}
-
-	for _, prod := range b.ShuffledProducers {
-		prodName := prod.Discovery.TargetAccountName
-		if prodName == AN("eosio") {
-			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
-		}
-
-		buyRAMBytes := system.NewBuyRAMBytes(AN("eosio"), prodName, 8192) // 8kb gift !
-		delegateBW := system.NewDelegateBW(AN("eosio"), prodName, eos.NewEOSAsset(100000), eos.NewEOSAsset(100000), true)
-
-		out = append(out, buyRAMBytes, delegateBW, nil)
-	}
-	return
-}
-
-//
-
-type OpEnrichProducers struct {
-	// TestnetEnrichProducers will provide each producer account with some EOS, only on testnets.
-	TestnetEnrichProducers bool `json:"TESTNET_ENRICH_PRODUCERS"`
-}
-
-func (op *OpEnrichProducers) ResetTestnetOptions() {
-	op.TestnetEnrichProducers = false
-}
-
-func (op *OpEnrichProducers) Actions(b *BIOS) (out []*eos.Action, err error) {
-	if !op.TestnetEnrichProducers {
-		return
-	}
-
-	for _, prod := range b.ShuffledProducers {
-		prodName := prod.Discovery.TargetAccountName
-		if prodName == AN("eosio") {
-			prodName = prod.Discovery.SeedNetworkAccountName // only happens with --single
-		}
-
-		b.Log.Debugf("- DEBUG: Enriching producer %q\n", prodName)
-
-		act := token.NewIssue(prodName, eos.NewEOSAsset(100000000000), "To play around") // You need to be 15 to unlock the chain with that amount.
-		out = append(out, act, nil)
-	}
-	return
-}
-
-//
-
 type OpSnapshotCreateAccounts struct {
-	BuyRAM                  uint64 `json:"buy_ram_bytes"`
+	BuyRAMBytes             uint64 `json:"buy_ram_bytes"`
 	TestnetTruncateSnapshot int    `json:"TESTNET_TRUNCATE_SNAPSHOT"`
-}
-
-func (op *OpSnapshotCreateAccounts) ResetTestnetOptions() {
-	op.TestnetTruncateSnapshot = 0
 }
 
 func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
@@ -343,7 +220,7 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 		return nil, err
 	}
 
-	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
+	rawSnapshot, err := b.ReadFromCache(snapshotFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading snapshot file: %s", err)
 	}
@@ -373,18 +250,13 @@ func (op *OpSnapshotCreateAccounts) Actions(b *BIOS) (out []*eos.Action, err err
 			destPubKey = wellKnownPubkey
 		}
 
-		// we should have created the account before loading `eosio.system`, otherwise
-		// b1 wouldn't have been accepted.
-		if hodler.EthereumAddress != "0x00000000000000000000000000000000000000b1" {
-			// create all other accounts, but not `b1`.. because it's a short name..
-			out = append(out, system.NewNewAccount(AN("eosio"), destAccount, destPubKey))
-		}
+		out = append(out, system.NewNewAccount(AN("eosio"), destAccount, destPubKey))
 
 		cpuStake, netStake, rest := splitSnapshotStakes(hodler.Balance)
 
 		// special case `transfer` for `b1` ?
 		out = append(out, system.NewDelegateBW(AN("eosio"), destAccount, cpuStake, netStake, true))
-		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAM)))
+		out = append(out, system.NewBuyRAMBytes(AN("eosio"), destAccount, uint32(op.BuyRAMBytes)))
 		out = append(out, nil) // end transaction
 
 		memo := "Welcome " + hodler.EthereumAddress[len(hodler.EthereumAddress)-6:]
@@ -427,17 +299,13 @@ type OpInjectUnregdSnapshot struct {
 	TestnetTruncateSnapshot int `json:"TESTNET_TRUNCATE_SNAPSHOT"`
 }
 
-func (op *OpInjectUnregdSnapshot) ResetTestnetOptions() {
-	op.TestnetTruncateSnapshot = 0
-}
-
 func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error) {
 	snapshotFile, err := b.GetContentsCacheRef("snapshot_unregistered.csv")
 	if err != nil {
 		return nil, err
 	}
 
-	rawSnapshot, err := b.Network.ReadFromCache(snapshotFile)
+	rawSnapshot, err := b.ReadFromCache(snapshotFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading snapshot file: %s", err)
 	}
@@ -473,9 +341,8 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 
 //
 
-type OpSetProds struct{}
-
-func (op *OpSetProds) ResetTestnetOptions() {}
+type OpSetProds struct {
+}
 
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// We he can at least process the last few blocks, that wrap up
@@ -487,22 +354,6 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 
 	// WARN: this makes it a SOLO producer on mainnet.
 
-	//prodkeys := []system.ProducerKey{}
-	for idx, prod := range b.ShuffledProducers {
-		if idx == 0 {
-			continue
-		}
-		targetKey := prod.Discovery.TargetAppointedBlockProducerSigningKey
-		targetAcct := prod.Discovery.TargetAccountName
-		if targetAcct == AN("eosio") {
-			targetKey = b.EphemeralPublicKey
-		}
-		prodkeys = append(prodkeys, system.ProducerKey{targetAcct, targetKey})
-		if len(prodkeys) >= 21 {
-			break
-		}
-	}
-
 	out = append(out, system.NewSetProds(prodkeys))
 
 	return
@@ -513,12 +364,6 @@ func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 type OpResignAccounts struct {
 	Accounts            []eos.AccountName
 	TestnetKeepAccounts bool `json:"TESTNET_KEEP_ACCOUNTS"`
-	IsMainnet           bool
-}
-
-func (op *OpResignAccounts) ResetTestnetOptions() {
-	op.TestnetKeepAccounts = false
-	op.IsMainnet = true
 }
 
 func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
@@ -530,11 +375,13 @@ func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 	systemAccount := AN("eosio")
 	prodsAccount := AN("eosio.prods") // this is a special system account that is granted by 2/3 + 1 of the current BP schedule.
 
-	//nullKey := ecc.PublicKey{Curve: ecc.CurveK1, Content: make([]byte, 33, 33)}
+	eosioPresent := false
 	for _, acct := range op.Accounts {
-		if acct == systemAccount || (op.IsMainnet && acct == eos.AccountName("eosio.disco")) {
-			continue // special treatment for `eosio` below
+		if acct == systemAccount {
+			eosioPresent = true
+			continue
 		}
+
 		out = append(out,
 			system.NewUpdateAuth(acct, PN("active"), PN("owner"), eos.Authority{
 				Threshold: 1,
@@ -563,32 +410,34 @@ func (op *OpResignAccounts) Actions(b *BIOS) (out []*eos.Action, err error) {
 		)
 	}
 
-	out = append(out,
-		system.NewUpdateAuth(systemAccount, PN("active"), PN("owner"), eos.Authority{
-			Threshold: 1,
-			Accounts: []eos.PermissionLevelWeight{
-				eos.PermissionLevelWeight{
-					Permission: eos.PermissionLevel{
-						Actor:      prodsAccount,
-						Permission: PN("active"),
+	if eosioPresent {
+		out = append(out,
+			system.NewUpdateAuth(systemAccount, PN("active"), PN("owner"), eos.Authority{
+				Threshold: 1,
+				Accounts: []eos.PermissionLevelWeight{
+					eos.PermissionLevelWeight{
+						Permission: eos.PermissionLevel{
+							Actor:      prodsAccount,
+							Permission: PN("active"),
+						},
+						Weight: 1,
 					},
-					Weight: 1,
 				},
-			},
-		}, PN("active")),
-		system.NewUpdateAuth(systemAccount, PN("owner"), PN(""), eos.Authority{
-			Threshold: 1,
-			Accounts: []eos.PermissionLevelWeight{
-				eos.PermissionLevelWeight{
-					Permission: eos.PermissionLevel{
-						Actor:      prodsAccount,
-						Permission: PN("active"),
+			}, PN("active")),
+			system.NewUpdateAuth(systemAccount, PN("owner"), PN(""), eos.Authority{
+				Threshold: 1,
+				Accounts: []eos.PermissionLevelWeight{
+					eos.PermissionLevelWeight{
+						Permission: eos.PermissionLevel{
+							Actor:      prodsAccount,
+							Permission: PN("active"),
+						},
+						Weight: 1,
 					},
-					Weight: 1,
 				},
-			},
-		}, PN("owner")),
-	)
+			}, PN("owner")),
+		)
+	}
 
 	out = append(out, nil)
 

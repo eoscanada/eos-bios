@@ -1,9 +1,9 @@
-config.ini
-genesis.json
-.ipfs-data
-.eos-bios-cache
-.cache
-ipfs
-cbillett_config
 .idea
 
+config.ini
+genesis.json
+
+actions.jsonl
+output.log
+genesis.key
+genesis.pub

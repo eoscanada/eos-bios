@@ -4,9 +4,8 @@ EOS.IO Software-based blockchain boot tool
 [点击查看中文](./README-cn.md)
 
 `eos-bios` is a command-line tool for people who want to kickstart a
-blockchain using EOS.IO Software.
+blockchain using EOS.IO Software. For example:
 
-It implements the following:
 * Booting local development environments
 * Booting testnets
 * Booting consortium or private networks
@@ -71,8 +70,8 @@ Add `-u` to `go get` to pull updates.
 Join the discussion
 -------------------
 
-On Telegram through this invite link:
-https://t.me/joinchat/GSUv1UaI5QIuifHZs8k_eA (EOSIO BIOS Boot channel)
+On Telegram through this link:
+https://t.me/joinchat/GSUv1UaI5QIuifHZs8k_eA (`EOSIO BIOS Boot` channel)
 
 
 
