@@ -136,13 +136,6 @@ boot_sequence:
     new_account: eosio.unregd
     pubkey: ephemeral
 
-- op: system.newaccount
-  label: "TEST ACCOUNT: Create an eos-bios test account, using the genesis.key private key"
-  data:
-    creator: eosio
-    new_account: eosbios
-    pubkey: ephemeral
-
 - op: system.setpriv
   label: Setting privileged account for eosio.msig
   data:
@@ -200,7 +193,7 @@ boot_sequence:
   label: Disabling authorization for system accounts, pointing `eosio` to the `eosio.prods` account.
   data:
     accounts:
-    #- eosio
+    - eosio
 
     - eosio.msig
     - eosio.token

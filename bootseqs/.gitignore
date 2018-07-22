@@ -1,0 +1,9 @@
+.idea
+
+config.ini
+genesis.json
+
+actions.jsonl
+output.log
+genesis.key
+genesis.pub

@@ -107,7 +107,7 @@ func (b *BIOS) Boot() error {
 		return fmt.Errorf("ImportWIF: %s", err)
 	}
 
-	if err := b.writeAllActionsToDisk(true); err != nil {
+	if err := b.writeAllActionsToDisk(); err != nil {
 		return fmt.Errorf("writing actions to disk: %s", err)
 	}
 
@@ -216,8 +216,8 @@ func (b *BIOS) RunChainValidation() (bool, error) {
 	return true, nil
 }
 
-func (b *BIOS) writeAllActionsToDisk(alwaysRun bool) error {
-	if !b.WriteActions && !alwaysRun {
+func (b *BIOS) writeAllActionsToDisk() error {
+	if !b.WriteActions {
 		b.Log.Println("Not writing actions to 'actions.jsonl'. Activate with --write-actions")
 		return nil
 	}

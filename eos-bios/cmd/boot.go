@@ -24,14 +24,19 @@ import (
 var bootCmd = &cobra.Command{
 	Use:   "boot [boot_sequence.yaml]",
 	Short: "Boots a new nodeos and injects the boot sequence.",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		b, err := setupBIOS()
 		if err != nil {
 			log.Fatalln("bios setup:", err)
 		}
 
-		b.BootSequenceFile = args[0]
+		if len(args) == 0 {
+			b.BootSequenceFile = "boot_sequence.yaml"
+		} else {
+			b.BootSequenceFile = args[0]
+		}
+
 		b.ReuseGenesis = viper.GetBool("reuse-genesis")
 
 		if err := b.Boot(); err != nil {
