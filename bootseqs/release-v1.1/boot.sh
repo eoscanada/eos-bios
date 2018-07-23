@@ -33,9 +33,7 @@ docker run -ti --rm --detach --name nodeos-bios \
        gcr.io/eoscanada-public/eosio-nodeos-prod:v1.1.0 \
        /opt/eosio/bin/nodeos --data-dir=/data \
                              --config-dir=/etc/nodeos \
-                             --genesis-json=/etc/nodeos/genesis.json \
-                             --p2p-listen-endpoint=127.0.0.1:9876 \
-                             --max-transaction-time=5000
+                             --genesis-json=/etc/nodeos/genesis.json
 
 #~/build/eos/build/programs/nodeos/nodeos --data-dir /tmp/nodeos-data --genesis-json `pwd`/genesis.json --max-transaction-time=5000 --p2p-listen-endpoint=127.0.0.1:65432 --config-dir `pwd` &
 
