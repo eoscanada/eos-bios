@@ -8,7 +8,7 @@
 #
 # This process must not BLOCK.
 
-docker kill nodeos-bios || true
+docker kill -s TERM nodeos-bios || true
 docker rm nodeos-bios || true
 
 echo "Copying base config"
@@ -31,8 +31,7 @@ docker run -ti --rm --detach --name nodeos-bios \
        eoscanada/eos:v1.0.1 \
        /opt/eosio/bin/nodeos --data-dir=/data \
                              --config-dir=/etc/nodeos \
-                             --genesis-json=/etc/nodeos/genesis.json \
-                             --max-transaction-time=5000
+                             --genesis-json=/etc/nodeos/genesis.json
 
 #~/build/eos/build/programs/nodeos/nodeos --data-dir /tmp/nodeos-data --genesis-json `pwd`/genesis.json --max-transaction-time=5000 --p2p-listen-endpoint=127.0.0.1:65432 --config-dir `pwd` &
 
