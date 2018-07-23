@@ -7,3 +7,7 @@ actions.jsonl
 output.log
 genesis.key
 genesis.pub
+
+env.sh
+start.sh
+
