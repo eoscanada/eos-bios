@@ -1,9 +1,33 @@
 #include <functional>
 #include <string>
+#include <cmath>
 
-#include <eosiolib/asset.hpp>
+#include <eosiolib/transaction.h>
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/asset.hpp>
+#include <eosiolib/multi_index.hpp>
 #include <eosiolib/fixed_key.hpp>
+#include <eosiolib/public_key.hpp>
+
+#include "ram/exchange_state.cpp"
+
+#define USE_KECCAK
+#include "sha3/byte_order.c"
+#include "sha3/sha3.c"
+
+#define uECC_SUPPORTS_secp160r1 0
+#define uECC_SUPPORTS_secp192r1 0
+#define uECC_SUPPORTS_secp224r1 0
+#define uECC_SUPPORTS_secp256r1 0
+#define uECC_SUPPORTS_secp256k1 1
+#define uECC_SUPPORT_COMPRESSED_POINT 1
+#include "ecc/uECC.c"
+
+using namespace eosio;
+using namespace std;
+
+#include "utils/inline_calls_helper.hpp"
+#include "utils/snapshot.hpp"
 
 // Macro
 #define TABLE(X) ::eosio::string_to_name(#X)
@@ -27,6 +51,7 @@ class unregd : public contract {
 
   // Actions
   void add(const ethereum_address& ethereum_address, const asset& balance);
+  void regaccount(const bytes& signature, const string& account, const eosio::public_key& eos_pubkey);
 
  private:
   static uint8_t hex_char_to_uint(char character) {
@@ -47,6 +72,11 @@ class unregd : public contract {
     }
 
     const uint32_t* p32 = reinterpret_cast<const uint32_t*>(&ethereum_key);
+    return key256::make_from_word_sequence<uint32_t>(p32[0], p32[1], p32[2], p32[3], p32[4]);
+  }
+
+  static key256 compute_ethereum_address_key256(uint8_t* ethereum_key) {
+    const uint32_t* p32 = reinterpret_cast<const uint32_t*>(ethereum_key);
     return key256::make_from_word_sequence<uint32_t>(p32[0], p32[1], p32[2], p32[3], p32[4]);
   }
 
