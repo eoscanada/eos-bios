@@ -8,8 +8,11 @@
 #
 # This process must not BLOCK.
 
-docker kill -s TERM nodeos-bios || true
-docker rm nodeos-bios || true
+# Just in case, maybe delete the previous temp that might have not been deleted before
+docker rm nodeos-bios-temp &> /dev/null || true
+
+docker rename nodeos-bios nodeos-bios-temp || true
+docker kill -s TERM nodeos-bios-temp || true
 
 echo "Copying base config"
 cp base_config.ini config.ini
@@ -43,3 +46,6 @@ echo "Waiting 2 secs for nodeos to launch through Docker"
 sleep 2
 
 echo "See output.log for details logs"
+
+# We put this here to let time for the actual kill to happen
+docker rm nodeos-bios-temp || true
