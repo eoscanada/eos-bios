@@ -17,18 +17,18 @@ Local development environment
 -----------------------------
 
 [Download `eos-bios` from the releases section here on GitHub](https://github.com/eoscanada/eos-bios/releases),
-clone this repository and copy the `sample_config` to a directory of
+clone this repository and copy the `bootseqs/release-v1.1` to a directory of
 your choice.
 
-Modify the `my_discovery_file.yaml` to point to a local address:
+In directory copied, modify the `base_config.ini` to fit your needs. Usually,
+for development purposes, the bind address should be changed from `0.0.0.0` to
+`127.0.0.1` for config keys `http-server-address`, `p2p-listen-endpoint`,
+and `p2p-server-address` so you are not exposing you development node to
+the external world.
 
-```
-target_http_address: http://localhost:8888
-```
+Once configuration is done, simply run:
 
-Then run:
-
-    ./eos-bios boot --single
+    ./eos-bios boot
 
 This gives you a fully fledged development environment, a chain loaded
 with all system contracts, very similar to what you will get on the
@@ -36,8 +36,6 @@ main network once launched.
 
 The sample configuration sets up a single node, as it doesn't point to
 other block producer candidates (skips the `peers` discovery).
-
-
 
 Staged launches
 ---------------
