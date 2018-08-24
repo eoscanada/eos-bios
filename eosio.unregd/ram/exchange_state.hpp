@@ -2,8 +2,7 @@
 
 #include <eosiolib/asset.hpp>
 
-namespace eosio {
-   
+namespace eosiosystem {
    using eosio::asset;
    using eosio::symbol_type;
 

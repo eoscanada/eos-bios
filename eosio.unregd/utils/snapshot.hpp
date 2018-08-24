@@ -3,7 +3,7 @@
 namespace eosio {
 
    asset buyrambytes( uint32_t bytes ) {
-      rammarket market(N(eosio),N(eosio));
+      eosiosystem::rammarket market(N(eosio),N(eosio));
       auto itr = market.find(S(4,RAMCORE));
       eosio_assert(itr != market.end(), "RAMCORE market not found");
       auto tmp = *itr;
