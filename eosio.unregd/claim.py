@@ -8,6 +8,7 @@ from hashlib import sha256
 from bitcoin import ecdsa_raw_sign, encode_privkey
 from tempfile import mktemp
 from subprocess import Popen, PIPE
+from sha3 import keccak_256
 
 def url_for(url):
   return 'http://127.0.0.1:8888{0}'.format(url)
@@ -35,11 +36,17 @@ priv = sys.argv[1]
 eos_account = sys.argv[2]
 eos_pub = sys.argv[3]
 
-msg = '%d,%d'%(ref_block_num, ref_block_prefix)
+msg = '%d,%d,%s,%s' % (ref_block_num, ref_block_prefix, eos_pub, eos_account)
+msg = '%s%s%d%s' % ("\x19", "Ethereum Signed Message:\n", len(msg), msg)
 
-msghash = sha256(msg).digest()
+msghash = keccak_256(msg).digest()
+# sys.stderr.write("HASH----\n")
+# sys.stderr.write(msghash.encode('hex')+"\n")
+
 v, r, s = ecdsa_raw_sign(msghash, encode_privkey(priv,'hex').decode('hex'))
 signature = '00%x%x%x' % (v,r,s)
+# sys.stderr.write("SIG----\n")
+# sys.stderr.write(signature+"\n")
 
 binargs = req.post(url_for('/v1/chain/abi_json_to_bin'),json.dumps({
   "code"   : "eosio.unregd",
@@ -86,9 +93,6 @@ tx_json = """
 tmpf = mktemp()
 with open(tmpf,"w") as f:
   f.write(tx_json)
-
-# print tmpf
-# sys.exit(0)
 
 with open(os.devnull, 'w') as devnull:
   cmd = ["cleos","sign","-p","-k","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3",tmpf]

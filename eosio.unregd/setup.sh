@@ -2,8 +2,8 @@
 rm -rf ~/eosio-wallet/./default.wallet
 cleos wallet create 2>&1 | tail -n1 | tail -c+2 | head -c-2 > /tmp/pass
 
-#cleos wallet import --private-key  5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
-cleos wallet import 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+cleos wallet import --private-key  5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+#cleos wallet import 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 cleos create account eosio eosio.token  EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 cleos create account eosio eosio.bpay   EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 cleos create account eosio eosio.msig   EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
@@ -20,8 +20,8 @@ cleos push action eosio.token issue '[ "eosio", "1000000000.0000 EOS"]' -p eosio
 cleos set contract eosio.msig ~/eos/build/contracts/eosio.msig -p eosio.msig
 
 cleos create account eosio eosio.unregd EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
-cleos set code eosio.unregd ~/dev/eosio.claim/eosio.unregd.wasm -p eosio.unregd
-cleos set abi eosio.unregd ~/dev/eosio.claim/eosio.unregd.abi -p eosio.unregd
+cleos set code eosio.unregd ./eosio.unregd.wasm -p eosio.unregd
+cleos set abi eosio.unregd ./eosio.unregd.abi -p eosio.unregd
 
 cleos set contract eosio ~/dev/eos/build/contracts/eosio.system -p eosio
 cleos push action eosio setpriv '["eosio.unregd",1]' -p eosio

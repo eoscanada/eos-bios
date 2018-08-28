@@ -35,11 +35,13 @@ EOSPUB=$(tail -n1 $TMP | awk '{n=split($0,a," "); print a[n];}')
 echo "* Using $EOSPUB for account $ACCOUNT"
 
 # Claim
-r=-1
-while [ "$r" != "0" ]; do
-  sleep 0.5
+while true; do
   RES=$(python claim.py $PRIV_HEX $ACCOUNT $EOSPUB)
-  r=$?
+  if [ $? -eq 0 ]; then
+    break
+  fi
+  echo "Error: press ENTER to try again"
+  read dummy
 done
 #echo $RES
 USAGE=$(cat $RES | jq '.processed.receipt.cpu_usage_us')
