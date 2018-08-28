@@ -40,6 +40,8 @@ namespace eosio {
 
    vector<asset> split_snapshot_abp(const asset& balance) {
 
+      eosio_assert( balance >= asset(1000), "insuficient balance" );
+
       asset floatingAmount;
 
       if (balance > asset(110000)) { 
