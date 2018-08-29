@@ -47,12 +47,14 @@ namespace eosio {
 
 class unregd : public contract {
  public:
-  unregd(account_name contract_account)
-      : eosio::contract(contract_account), addresses(contract_account, contract_account) {}
+  unregd(account_name contract_account) : eosio::contract(contract_account),
+      addresses(_self, _self),
+      settings(_self, _self) {}
 
   // Actions
   void add(const ethereum_address& ethereum_address, const asset& balance);
   void regaccount(const bytes& signature, const string& account, const string& eos_pubkey);
+  void setmaxeos(const asset& maxeos);
 
  private:
   static uint8_t hex_char_to_uint(char character) {
@@ -98,9 +100,21 @@ class unregd : public contract {
       indexed_by<N(ethereum_address), const_mem_fun<address, key256, &address::by_ethereum_address>>>
       addresses_index;
 
+  //@abi table settings i64
+  struct settings {
+    uint64_t id;
+    asset    max_eos_for_8k_of_ram;
+
+    uint64_t primary_key() const { return id; }
+    EOSLIB_SERIALIZE(settings, (id)(max_eos_for_8k_of_ram))
+  };
+
+  typedef eosio::multi_index<TABLE(settings), settings> settings_index;
+
   void update_address(const ethereum_address& ethereum_address, const function<void(address&)> updater);
 
   addresses_index addresses;
+  settings_index settings;
 };
 
 }  // namespace eosio

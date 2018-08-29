@@ -2,7 +2,7 @@
 #include <eosiolib/crypto.h>
 using eosio::unregd;
 
-EOSIO_ABI(eosio::unregd, (add)(regaccount))
+EOSIO_ABI(eosio::unregd, (add)(regaccount)(setmaxeos))
 
 /**
  * Add a mapping between an ethereum_address and an initial EOS token balance.
@@ -19,6 +19,28 @@ void unregd::add(const ethereum_address& ethereum_address, const asset& balance)
     address.ethereum_address = ethereum_address;
     address.balance = balance;
   });
+}
+
+/**
+ * Sets the maximum amount of EOS this contract is willing to pay when creating a new account
+ */
+void unregd::setmaxeos(const asset& maxeos) {
+  require_auth(_self);
+
+  auto symbol = maxeos.symbol;
+  eosio_assert(symbol.is_valid() && symbol == CORE_SYMBOL, "maxeos invalid symbol");
+
+  auto itr = settings.find(1);
+  if (itr == settings.end()) {
+    settings.emplace(_self, [&](auto& s) {
+      s.id = 1;
+      s.max_eos_for_8k_of_ram = maxeos;
+    });
+  } else {
+    settings.modify(itr, 0, [&](auto& s) {
+      s.max_eos_for_8k_of_ram = maxeos;
+    });
+  }
 }
 
 /**
@@ -95,25 +117,29 @@ void unregd::regaccount(const bytes& signature, const string& account, const str
   eosio_assert(balances.size() == 3, "Unable to split snapshot");
   eosio_assert(itr->balance == balances[0] + balances[1] + balances[2], "internal error");
 
+  // Get max EOS willing to spend for 8kb of RAM
+  asset max_eos_for_8k_of_ram = asset(0);
+  auto sitr = settings.find(1);
+  if( sitr != settings.end() ) {
+    max_eos_for_8k_of_ram = sitr->max_eos_for_8k_of_ram;
+  }
+
   // Calculate the amount of EOS to purchase 8k of RAM
   auto amount_to_purchase_8kb_of_RAM = buyrambytes(8*1024);
+  eosio_assert(amount_to_purchase_8kb_of_RAM <= max_eos_for_8k_of_ram, "price of RAM too high");
 
   // Build authority with the pubkey passed as parameter
   const auto auth = authority{
     1, {{{(uint8_t)eos_pubkey.type, eos_pubkey.data} , 1}}, {}, {}
   };
 
-  // Issue to eosio.unregd the necesary EOS to buy 8K of RAM
-  INLINE_ACTION_SENDER(call::token, issue)( N(eosio.token), {{N(eosio),N(active)}},
-    {N(eosio), amount_to_purchase_8kb_of_RAM,""});
-
   // Create account with the same key for owner/active
-  INLINE_ACTION_SENDER(call::eosio, newaccount)( N(eosio), {{N(eosio),N(active)}},
-    {N(eosio), naccount, auth, auth});
+  INLINE_ACTION_SENDER(call::eosio, newaccount)( N(eosio), {{N(eosio.unregd),N(active)}},
+    {N(eosio.unregd), naccount, auth, auth});
 
   // Buy RAM for this account (8k)
-  INLINE_ACTION_SENDER(call::eosio, buyram)( N(eosio), {{N(eosio),N(active)}},
-    {N(eosio), naccount, amount_to_purchase_8kb_of_RAM});
+  INLINE_ACTION_SENDER(call::eosio, buyram)( N(eosio), {{N(eosio.regram),N(active)}},
+    {N(eosio.regram), naccount, amount_to_purchase_8kb_of_RAM});
 
   // Delegate bandwith
   INLINE_ACTION_SENDER(call::eosio, delegatebw)( N(eosio), {{N(eosio.unregd),N(active)}},
