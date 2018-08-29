@@ -95,7 +95,7 @@ with open(tmpf,"w") as f:
   f.write(tx_json)
 
 with open(os.devnull, 'w') as devnull:
-  cmd = ["cleos","sign","-p","-k","5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3",tmpf]
+  cmd = ["cleos","sign","-p","-k","5JNxyTXH4Uu4nxfBG97aQKoKYxTcmeyGjqds5LHHNh88xCTjSTw",tmpf]
   p = Popen(cmd, stdout=PIPE, stderr=devnull)
   output, err = p.communicate("")
 
