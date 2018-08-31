@@ -1,6 +1,6 @@
 #!/bin/sh
 rm -rf ~/eosio-wallet/./default.wallet
-cleos wallet create 2>&1 | tail -n1 | tail -c+2 | head -c-2 > /tmp/pass
+cleos wallet create --to-console 2>&1 | tail -n1 | tail -c+2 | head -c-2 > /tmp/pass
 
 cleos wallet import --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 cleos wallet import --private-key 5KFDkQMpWu9chAEfgQNiEDwRdJePEVJiK92jx6vvUrQA8qFBXUd
@@ -43,8 +43,8 @@ cleos system newaccount \
 --stake-net "2.5000 EOS" \
 --stake-cpu "2.5000 EOS" \
 eosio thisisatesta \
-EOS6dS7ERirP2UKoBwVt3C29DVZ1u9Jj1CH9EAVqhzUvgmykncEcY \
-EOS6dS7ERirP2UKoBwVt3C29DVZ1u9Jj1CH9EAVqhzUvgmykncEcY
+EOS6qKoPuTnXK1bh3wHZ6jcuSnJT5T2Ruhkoou8fFKGwRrWqUtB8h \
+EOS6qKoPuTnXK1bh3wHZ6jcuSnJT5T2Ruhkoou8fFKGwRrWqUtB8h
 
 #Add eosio.unregd@eosio.code to eosio.unreg@active 
 tmp=$(mktemp)
