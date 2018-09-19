@@ -55,6 +55,7 @@ class unregd : public contract {
   void add(const ethereum_address& ethereum_address, const asset& balance);
   void regaccount(const bytes& signature, const string& account, const string& eos_pubkey);
   void setmaxeos(const asset& maxeos);
+  void chngaddress(const ethereum_address& old_address, const ethereum_address& new_address);
 
  private:
   static uint8_t hex_char_to_uint(char character) {

@@ -2,7 +2,7 @@
 #include <eosiolib/crypto.h>
 using eosio::unregd;
 
-EOSIO_ABI(eosio::unregd, (add)(regaccount)(setmaxeos))
+EOSIO_ABI(eosio::unregd, (add)(regaccount)(setmaxeos)(chngaddress))
 
 /**
  * Add a mapping between an ethereum_address and an initial EOS token balance.
@@ -18,6 +18,25 @@ void unregd::add(const ethereum_address& ethereum_address, const asset& balance)
   update_address(ethereum_address, [&](auto& address) {
     address.ethereum_address = ethereum_address;
     address.balance = balance;
+  });
+}
+
+/**
+ * Change the ethereum address that owns a balance
+ */
+void unregd::chngaddress(const ethereum_address& old_address, const ethereum_address& new_address) {
+  require_auth(_self);
+
+  eosio_assert(old_address.length() == 42, "Old Ethereum address should have exactly 42 characters");
+  eosio_assert(new_address.length() == 42, "New Ethereum address should have exactly 42 characters");
+
+  auto index = addresses.template get_index<N(ethereum_address)>();
+  auto itr = index.find(compute_ethereum_address_key256(old_address));
+
+  eosio_assert( itr != index.end(), "Old Ethereum address not found");
+
+  index.modify(itr, _self, [&](auto& address) {
+    address.ethereum_address = new_address;
   });
 }
 
