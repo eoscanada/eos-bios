@@ -57,40 +57,23 @@ func (b *BIOS) Boot() error {
 	var genesisData string
 	var pubKey ecc.PublicKey
 	var privKey string
+
+	err = b.setEphemeralKeypair()
+	if err != nil {
+		return err
+	}
+
+	pubKey = b.EphemeralPublicKey
+	privKey = b.EphemeralPrivateKey.String()
+
 	if b.ReuseGenesis {
-		ephemeralPrivateKey, err := readPrivKeyFromFile("genesis.key")
-		if err != nil {
-			return err
-		}
-
-		b.EphemeralPrivateKey = ephemeralPrivateKey
-		pubKey = ephemeralPrivateKey.PublicKey()
-		b.EphemeralPublicKey = pubKey
-		privKey = ephemeralPrivateKey.String()
-
 		genesisData, err = b.LoadGenesisFromFile(pubKey.String())
 		if err != nil {
 			return err
 		}
-
-		b.Log.Printf("REUSING previously generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:4], privKey[len(privKey)-4:])
-
 	} else {
-		ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
-		if err != nil {
-			return err
-		}
-
-		b.EphemeralPrivateKey = ephemeralPrivateKey
-		pubKey = ephemeralPrivateKey.PublicKey()
-		b.EphemeralPublicKey = pubKey
-		privKey = ephemeralPrivateKey.String()
-
-		// b.TargetNetAPI.Debug = true
-
 		genesisData = b.GenerateGenesisJSON(pubKey.String())
 
-		b.Log.Printf("Generated ephemeral keys:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", pubKey, privKey[:4], privKey[len(privKey)-4:])
 		b.writeToFile("genesis.pub", pubKey.String())
 		b.writeToFile("genesis.key", privKey)
 	}
@@ -169,6 +152,50 @@ func (b *BIOS) Boot() error {
 	}
 
 	return nil
+}
+
+func (b *BIOS) setEphemeralKeypair() error {
+	if _, ok := b.BootSequence.Keys["ephemeral"]; ok {
+		cnt := b.BootSequence.Keys["ephemeral"]
+		privKey, err := ecc.NewPrivateKey(strings.TrimSpace(string(cnt)))
+		if err != nil {
+			return fmt.Errorf("unable to correctly decode ephemeral private key %q: %s", cnt, err)
+		}
+
+		b.EphemeralPrivateKey = privKey
+		b.EphemeralPublicKey = privKey.PublicKey()
+
+		b.logEphemeralKey("Using user provider custom ephemeral keys from boot sequence")
+	} else if b.ReuseGenesis {
+		genesisPrivateKey, err := readPrivKeyFromFile("genesis.key")
+		if err != nil {
+			return err
+		}
+
+		b.EphemeralPrivateKey = genesisPrivateKey
+		b.EphemeralPublicKey = genesisPrivateKey.PublicKey()
+
+		b.logEphemeralKey("REUSING previously generated ephemeral keys from genesis")
+	} else {
+		ephemeralPrivateKey, err := b.GenerateEphemeralPrivKey()
+		if err != nil {
+			return err
+		}
+
+		b.EphemeralPrivateKey = ephemeralPrivateKey
+		b.EphemeralPublicKey = ephemeralPrivateKey.PublicKey()
+
+		b.logEphemeralKey("Generated ephemeral keys")
+	}
+
+	return nil
+}
+
+func (b *BIOS) logEphemeralKey(tag string) {
+	pubKey := b.EphemeralPublicKey.String()
+	privKey := b.EphemeralPrivateKey.String()
+
+	b.Log.Printf("%s:\n\n\tPublic key: %s\n\tPrivate key: %s..%s\n\n", tag, pubKey, privKey[:4], privKey[len(privKey)-4:])
 }
 
 func (b *BIOS) RunChainValidation() (bool, error) {

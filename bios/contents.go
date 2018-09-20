@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -45,25 +46,26 @@ func (b *BIOS) ensureCacheExists() error {
 }
 
 func (b *BIOS) DownloadURL(ref string, hash string) error {
-	if b.isInCache(ref) {
-		//net.Log.Printf("ipfs ref: %q in cache\n", ref)
+	if hash != "" && b.isInCache(ref) {
 		return nil
 	}
 
-	b.Log.Printf("Downloading and caching content from %q\n", ref)
-	cnt, err := b.downloadURL(ref)
+	cnt, err := b.downloadRef(ref)
 	if err != nil {
 		return err
 	}
 
-	h := sha256.New()
-	_, _ = h.Write(cnt)
-	contentHash := hex.EncodeToString(h.Sum(nil))
+	if hash != "" {
+		h := sha256.New()
+		_, _ = h.Write(cnt)
+		contentHash := hex.EncodeToString(h.Sum(nil))
 
-	if contentHash != hash {
-		return fmt.Errorf("hash in boot sequence [%q] not equal to computed hash on downloaded file [%q]", hash, contentHash)
+		if contentHash != hash {
+			return fmt.Errorf("hash in boot sequence [%q] not equal to computed hash on downloaded file [%q]", hash, contentHash)
+		}
 	}
 
+	b.Log.Printf("Caching content from %q.\n", ref)
 	if err := b.writeToCache(ref, cnt); err != nil {
 		return err
 	}
@@ -73,8 +75,38 @@ func (b *BIOS) DownloadURL(ref string, hash string) error {
 	return nil
 }
 
-func (b *BIOS) downloadURL(destURL string) ([]byte, error) {
-	req, err := http.NewRequest("GET", destURL, nil)
+func (b *BIOS) downloadRef(ref string) ([]byte, error) {
+	b.Log.Printf("Downloading content from %q.\n", ref)
+	if _, err := os.Stat(ref); err == nil {
+		return b.downloadLocalFile(ref)
+	}
+
+	destURL, err := url.Parse(ref)
+	if err != nil {
+		return nil, fmt.Errorf("ref %q is not a valid URL: %s", ref, err)
+	}
+
+	switch destURL.Scheme {
+	case "file":
+		return b.downloadFileURL(destURL)
+	case "http", "https":
+		return b.downloadHTTPURL(destURL)
+	default:
+		return nil, fmt.Errorf("don't know how to handle scheme %q (from ref %q)", destURL.Scheme, destURL)
+	}
+}
+
+func (b *BIOS) downloadLocalFile(ref string) ([]byte, error) {
+	return ioutil.ReadFile(ref)
+}
+
+func (b *BIOS) downloadFileURL(destURL *url.URL) ([]byte, error) {
+	fmt.Printf("Path %s, Raw path: %s\n", destURL.Path, destURL.RawPath)
+	return []byte{}, nil
+}
+
+func (b *BIOS) downloadHTTPURL(destURL *url.URL) ([]byte, error) {
+	req, err := http.NewRequest("GET", destURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}

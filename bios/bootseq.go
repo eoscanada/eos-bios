@@ -6,8 +6,9 @@ import (
 )
 
 type BootSeq struct {
-	Contents     []*ContentRef    `json:"contents"`
-	BootSequence []*OperationType `json:"boot_sequence"`
+	Keys         map[string]string `json:"keys"`
+	Contents     []*ContentRef     `json:"contents"`
+	BootSequence []*OperationType  `json:"boot_sequence"`
 }
 
 func ReadBootSeq(filename string) (out *BootSeq, err error) {
