@@ -63,7 +63,7 @@ while True:
   msghash = keccak_256(msg).digest()
   
   v, r, s = ecdsa_raw_sign(msghash, encode_privkey(priv,'hex').decode('hex'))
-  signature = '00%x%x%x' % (v,r,s)
+  signature = '00%02x%064x%064x' % (v,r,s)
   
   if is_canonical(bytearray(signature.decode('hex'))):
     break
@@ -79,7 +79,7 @@ with open(tempf,'w') as fp:
   }))
 
 with open(os.devnull, 'w') as devnull:
-  cmd = ["cleos","-u", API_URL, "push", "action", "eosio.unregd", "regaccount", tempf, "-p", pusher]
+  cmd = ["cleos","-u", API_URL, "push", "action", "-r", block_id, "eosio.unregd", "regaccount", tempf, "-p", pusher]
   p = Popen(cmd)
   output, err = p.communicate("")
 
