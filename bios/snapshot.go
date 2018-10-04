@@ -50,6 +50,7 @@ type UnregdSnapshot []UnregdSnapshotLine
 
 type UnregdSnapshotLine struct {
 	EthereumAddress string
+	AccountName     string
 	Balance         eos.Asset
 }
 
@@ -61,16 +62,16 @@ func NewUnregdSnapshot(content []byte) (out UnregdSnapshot, err error) {
 	}
 
 	for _, el := range allRecords {
-		if len(el) != 2 {
+		if len(el) != 3 {
 			return nil, fmt.Errorf("should have 2 elements per line")
 		}
 
-		newAsset, err := eos.NewEOSAssetFromString(el[1])
+		newAsset, err := eos.NewEOSAssetFromString(el[2])
 		if err != nil {
 			return out, err
 		}
 
-		out = append(out, UnregdSnapshotLine{el[0], newAsset})
+		out = append(out, UnregdSnapshotLine{el[0], el[1], newAsset})
 	}
 
 	return

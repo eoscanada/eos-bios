@@ -37,11 +37,7 @@ var seedNetworkContract = "eosio.disco"
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "eos-bios",
-	Short: "A tool to launch EOS.IO Software-based networks",
-	Long: `A tool to launch EOS.IO Software-based networks
-
-It provides orchestration of community launches for the mainnet, test
-networks, in-house networks as well as local development nodes.`,
+	Short: "A tool to launch EOS.IO Software-based networks and envs",
 }
 
 func Execute() {
@@ -60,19 +56,14 @@ func init() {
 		os.Exit(1)
 	}
 
-	RootCmd.PersistentFlags().StringP("my-discovery", "", "my_discovery_file.yaml", "path to your local discovery file")
-	RootCmd.PersistentFlags().StringP("ipfs", "", "https://ipfs.io", "Address to reach an IPFS gateway. There are a few fallbacks anyway.")
-	RootCmd.PersistentFlags().StringP("seednet-api", "", "", "HTTP address of the seed network pointed to by your discovery file")
-	RootCmd.PersistentFlags().StringP("seednet-keys", "", "./seed_network.keys", "File containing private keys to your account on the seed network")
-	RootCmd.PersistentFlags().StringP("target-api", "", "", "HTTP address to reach the node you are starting (for injection and validation)")
-	RootCmd.PersistentFlags().BoolP("fast-inject", "", false, "Inject the boot sequence assuming an HTTP/1.1 API endpoint (nodeos does only 1.0 and closes connections). You can use that if you front your nodeos node with some reverse proxy.")
+	RootCmd.PersistentFlags().StringP("api-url", "", "http://localhost:8888", "HTTP address to reach the node you are starting (for injection and validation)")
+	RootCmd.PersistentFlags().BoolP("hack-voting-accounts", "", false, "This will take accounts with large stakes and put a well known public key in place, so the community can test voting.")
 
 	RootCmd.PersistentFlags().BoolP("write-actions", "", false, "Write actions to actions.jsonl upon join or boot")
 	RootCmd.PersistentFlags().StringP("cache-path", "", filepath.Join(homedir, ".eos-bios-cache"), "directory to store cached data from discovered network")
 	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "Display verbose output (also see 'output.log')")
-	RootCmd.PersistentFlags().String("elect", "", "Force the election of the given BIOS Boot node")
 
-	for _, flag := range []string{"cache-path", "my-discovery", "ipfs", "seednet-keys", "write-actions", "seednet-api", "target-api", "verbose", "elect", "fast-inject"} {
+	for _, flag := range []string{"cache-path", "write-actions", "api-url", "verbose", "hack-voting-accounts"} {
 		if err := viper.BindPFlag(flag, RootCmd.PersistentFlags().Lookup(flag)); err != nil {
 			panic(err)
 		}

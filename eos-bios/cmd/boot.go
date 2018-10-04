@@ -14,60 +14,33 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
-	"os"
 
-	"github.com/eoscanada/eos-bios/bios/disco"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 // bootCmd represents the boot command
 var bootCmd = &cobra.Command{
-	Use:   "boot",
-	Short: "Triggers hooks to boot a new network or node",
-	Long: `This will run the "boot_node" hook with data generated locally for a new network.
-
-The "publish_kickstart_data" will also be run, giving you the opportunity to disseminate what is required for people to join your network.
-
-Boot is what happens when you run "eos-bios orchestrate" and you are selected to be the BIOS Boot node.
-`,
+	Use:   "boot [boot_sequence.yaml]",
+	Short: "Boots a new nodeos and injects the boot sequence.",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		net, err := fetchNetwork(viper.GetBool("single"), true)
-		if err != nil {
-			log.Fatalln("fetch network:", err)
-		}
-
-		if viper.GetBool("reset") {
-			fmt.Println("Resetting genesis data on seed network")
-			_, err := net.SeedNetAPI.SignPushActions(
-				disco.NewDeleteGenesis(net.MyPeer.Discovery.SeedNetworkAccountName),
-			)
-			if err != nil {
-				fmt.Println("Error deleting:", err)
-				os.Exit(1)
-			}
-			fmt.Println("Done")
-			os.Exit(0)
-		}
-
-		b, err := setupBIOS(net)
+		b, err := setupBIOS()
 		if err != nil {
 			log.Fatalln("bios setup:", err)
 		}
 
-		b.SingleOnly = viper.GetBool("single")
-		b.OverrideBootSequenceFile = viper.GetString("override-bootseq")
-
-		if err := b.Init(); err != nil {
-			log.Fatalf("BIOS initialization error: %s", err)
+		if len(args) == 0 {
+			b.BootSequenceFile = "boot_sequence.yaml"
+		} else {
+			b.BootSequenceFile = args[0]
 		}
 
-		//b.TargetNetAPI.Debug=true
+		b.ReuseGenesis = viper.GetBool("reuse-genesis")
 
-		if err := b.StartBoot(); err != nil {
-			log.Fatalf("error booting network: %s", err)
+		if err := b.Boot(); err != nil {
+			log.Fatalf("BIOS boot error: %s", err)
 		}
 	},
 }
@@ -75,11 +48,9 @@ Boot is what happens when you run "eos-bios orchestrate" and you are selected to
 func init() {
 	RootCmd.AddCommand(bootCmd)
 
-	bootCmd.Flags().BoolP("single", "s", false, "Don't try to discover the world, just boot a local instance.")
-	bootCmd.Flags().BoolP("reset", "", false, "Remove the published genesis data from the seed_network, so that others don't accidentally join a defunc or restarted network.")
-	bootCmd.Flags().StringP("override-bootseq", "", "", "Override the boot_sequence.yaml file with a local file path (don't used the published one)")
+	bootCmd.Flags().BoolP("reuse-genesis", "", false, "Re-load genesis data from genesis.json, genesis.pub and genesis.key instead of creating a new one.")
 
-	for _, flag := range []string{"single", "override-bootseq", "reset"} {
+	for _, flag := range []string{"reuse-genesis"} {
 		if err := viper.BindPFlag(flag, bootCmd.Flags().Lookup(flag)); err != nil {
 			panic(err)
 		}

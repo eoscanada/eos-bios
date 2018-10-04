@@ -22,7 +22,7 @@ import (
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Show the program version (hint hint, it's " + Version + ")",
+	Short: "Show the program version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("eos-bios version", Version, "- https://github.com/eoscanada/eos-bios")
 	},
