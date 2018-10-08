@@ -1,6 +1,6 @@
-# Action - `{{ chngaddress }}`
+## ACTION NAME : chngaddress
 
-## Description
+### Description
 
 The intent of the `{{ chngaddress }}` action is to update the the stored information by updating the old Ethereum address {{old_address}} to a new Ethereum address {{new_address}}.
 

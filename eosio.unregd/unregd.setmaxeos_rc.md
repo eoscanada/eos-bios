@@ -1,0 +1,1 @@
+ricardian contracts/eosio.unregd-setmaxeos-rc.md

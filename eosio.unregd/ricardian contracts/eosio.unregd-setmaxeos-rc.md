@@ -1,4 +1,4 @@
-# Action - `{{ setmaxeos }}`
+## ACTION NAME : setmaxeos
 
 ## Description
 

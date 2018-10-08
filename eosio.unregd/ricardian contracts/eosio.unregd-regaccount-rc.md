@@ -1,6 +1,6 @@
-# Action - `{{ regaccount }}`
+## ACTION NAME : regaccount
 
-## Description
+### Description
 
 The intent of the `regaccount` action is to create an EOS account using the stored information {{ Ethereum address }} and token balance from the `eosio.unregd` contract, after verifying the submitted Ethereum {{ signature }}. This is intended to be used only once for each Ethereum address stored in the `eosio.unregd` contract.
 

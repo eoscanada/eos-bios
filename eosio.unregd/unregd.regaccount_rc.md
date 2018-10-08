@@ -1,0 +1,1 @@
+ricardian contracts/eosio.unregd-regaccount-rc.md
