@@ -1,4 +1,4 @@
-## In Progress
+## 1.2.0 (October 30, 2018)
 
 - Made it possible to specify a custom fixed ephemeral key to use in the boot sequence.
 - Made it possible to pass a `file://` URL in boot sequence to specify file.
