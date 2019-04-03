@@ -278,7 +278,7 @@ func splitSnapshotStakes(balance eos.Asset) (cpu, net, xfer eos.Asset) {
 	cpu = eos.NewEOSAsset(2500)
 	net = eos.NewEOSAsset(2500)
 
-	remainder := eos.NewEOSAsset(balance.Amount - cpu.Amount - net.Amount)
+	remainder := eos.NewEOSAsset(int64(balance.Amount - cpu.Amount - net.Amount))
 
 	if remainder.Amount <= 100000 /* 10.0 EOS */ {
 		return cpu, net, remainder
