@@ -341,29 +341,46 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 
 //
 
+type producerKeyString struct {
+	ProducerName          eos.AccountName `json:"producer_name"`
+	BlockSigningKeyString string          `json:"block_signing_key"`
+}
+
 type OpSetProds struct {
-	Prods []system.ProducerKey
+	Prods []producerKeyString
 }
 
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// We he can at least process the last few blocks, that wrap up
 	// and resigns the system accounts.
 
+	var prodKeys []system.ProducerKey
+
 	for _, key := range op.Prods {
-		if len(key.BlockSigningKey.Content) == 0 {
-			key.BlockSigningKey = b.EphemeralPublicKey
+		prodKey := system.ProducerKey{
+			ProducerName: key.ProducerName,
 		}
+		if key.BlockSigningKeyString == "" || key.BlockSigningKeyString == "ephemeral" {
+			prodKey.BlockSigningKey = b.EphemeralPublicKey
+		} else {
+			k, err := ecc.NewPublicKeyFromData([]byte(key.BlockSigningKeyString))
+			if err != nil {
+				panic(err)
+			}
+			prodKey.BlockSigningKey = k
+		}
+		prodKeys = append(prodKeys, prodKey)
 	}
 
-	if len(op.Prods) == 0 {
-		op.Prods = []system.ProducerKey{system.ProducerKey{
+	if len(prodKeys) == 0 {
+		prodKeys = []system.ProducerKey{system.ProducerKey{
 			ProducerName:    AN("eosio"),
 			BlockSigningKey: b.EphemeralPublicKey,
 		}}
 	}
 
-	out = append(out, system.NewSetProds(op.Prods))
-
+	fmt.Println("prodkeys", prodKeys)
+	out = append(out, system.NewSetProds(prodKeys))
 	return
 }
 
