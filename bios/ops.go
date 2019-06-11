@@ -342,19 +342,27 @@ func (op *OpInjectUnregdSnapshot) Actions(b *BIOS) (out []*eos.Action, err error
 //
 
 type OpSetProds struct {
+	Prods []system.ProducerKey
 }
 
 func (op *OpSetProds) Actions(b *BIOS) (out []*eos.Action, err error) {
 	// We he can at least process the last few blocks, that wrap up
 	// and resigns the system accounts.
-	prodkeys := []system.ProducerKey{system.ProducerKey{
-		ProducerName:    AN("eosio"),
-		BlockSigningKey: b.EphemeralPublicKey,
-	}}
 
-	// WARN: this makes it a SOLO producer on mainnet.
+	for _, key := range op.Prods {
+		if len(key.BlockSigningKey.Content) == 0 {
+			key.BlockSigningKey = b.EphemeralPublicKey
+		}
+	}
 
-	out = append(out, system.NewSetProds(prodkeys))
+	if len(op.Prods) == 0 {
+		op.Prods = []system.ProducerKey{system.ProducerKey{
+			ProducerName:    AN("eosio"),
+			BlockSigningKey: b.EphemeralPublicKey,
+		}}
+	}
+
+	out = append(out, system.NewSetProds(op.Prods))
 
 	return
 }
